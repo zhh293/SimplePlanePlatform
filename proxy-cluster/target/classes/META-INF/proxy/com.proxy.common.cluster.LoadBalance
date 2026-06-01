@@ -1,0 +1,5 @@
+# LoadBalance SPI 扩展配置
+roundrobin=com.proxy.cluster.loadbalance.RoundRobinLoadBalance
+random=com.proxy.cluster.loadbalance.RandomLoadBalance
+leastactive=com.proxy.cluster.loadbalance.LeastActiveLoadBalance
+consistenthash=com.proxy.cluster.loadbalance.ConsistentHashLoadBalance

@@ -1,0 +1,2 @@
+# Transporter SPI 扩展配置
+netty=com.proxy.transport.netty.NettyTransporter

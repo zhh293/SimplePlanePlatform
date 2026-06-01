@@ -1,0 +1,37 @@
+# ============================================
+# 本地代理服务配置
+# ============================================
+
+# 本地监听端口（浏览器/系统代理指向此端口）
+localPort: 1080
+
+# 远程代理服务器列表（支持多节点负载均衡）
+remoteServers:
+  - host: "your-server.com"
+    port: 8443
+    ssl: true
+    cipher: "aes-gcm"
+    cipherKey: "your-32-byte-secret-key-here!!!"
+
+# 集群容错策略
+# failover  - 失败自动切换（默认，推荐）
+# failfast  - 快速失败
+# forking   - 并行调用多个节点
+# failback  - 失败后台重试
+cluster: "failover"
+
+# 负载均衡策略
+# roundrobin     - 加权轮询（默认）
+# random         - 随机
+# leastactive    - 最少活跃调用
+# consistenthash - 一致性哈希
+loadBalance: "roundrobin"
+
+# 请求超时时间（毫秒）
+timeoutMs: 30000
+
+# 每个远程节点的连接数（HTTP/2 多路复用，通常 1-2 条即可）
+connectionsPerNode: 2
+
+# 是否同时支持 HTTP CONNECT 代理（与 SOCKS5 共用端口）
+httpProxyEnabled: true

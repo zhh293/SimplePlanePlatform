@@ -1,0 +1,2 @@
+# Exchanger SPI 扩展配置
+header=com.proxy.exchange.header.HeaderExchanger

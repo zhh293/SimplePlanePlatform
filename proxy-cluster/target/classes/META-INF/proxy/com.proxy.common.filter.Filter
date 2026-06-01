@@ -1,0 +1,6 @@
+# Filter SPI 扩展配置
+router=com.proxy.cluster.filter.RouterFilter
+rate-limit=com.proxy.cluster.filter.RateLimitFilter
+monitor=com.proxy.cluster.filter.MonitorFilter
+access-log=com.proxy.cluster.filter.AccessLogFilter
+traffic=com.proxy.cluster.filter.TrafficFilter

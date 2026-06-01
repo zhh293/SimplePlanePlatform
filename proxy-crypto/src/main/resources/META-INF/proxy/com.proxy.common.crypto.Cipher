@@ -1,0 +1,5 @@
+# Cipher SPI 扩展配置
+aes-gcm=com.proxy.crypto.AesGcmCipher
+chacha20=com.proxy.crypto.ChaCha20Cipher
+aes-ctr-hmac=com.proxy.crypto.AesCtrHmacCipher
+none=com.proxy.crypto.NoneCipher

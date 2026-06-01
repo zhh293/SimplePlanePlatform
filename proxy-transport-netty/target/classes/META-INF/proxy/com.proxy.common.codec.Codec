@@ -1,0 +1,2 @@
+# Codec SPI 扩展配置
+proxy=com.proxy.transport.netty.codec.ProxyCodec

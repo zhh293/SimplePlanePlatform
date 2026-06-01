@@ -1,0 +1,2 @@
+# FilterChainBuilder SPI 扩展配置
+sequential=com.proxy.cluster.filter.SequentialFilterChainBuilder
