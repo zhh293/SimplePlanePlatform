@@ -531,7 +531,137 @@ public void channelRead(ChannelHandlerContext ctx, Object msg) {
 
 这种方式最为简洁：`ServerChannelHandler` 本身就是 Netty Handler，天然持有 ctx，无需额外的接口抽象。`ServerExchangeHandler` 的逻辑实际内聚到 `ServerChannelHandler` 中即可。
 
-#### 3.2.4 `HeaderExchangeServer` 实现
+> **说明**：上述「内聚一层」是本期落地选用的方案，理由见下一节的取舍分析。它的代价是牺牲了一点与客户端的结构对称性（客户端是 `ClientMessageHandler` + `ExchangeHandler` 两层，服务端被压成一层）。如果更看重架构对称性，可采用下一节的 **Map 路由表方案** 恢复两层结构。
+
+#### 3.2.4 方案对比：Map 路由表恢复两层结构（可选增强）
+
+##### 3.2.4.1 问题回顾
+
+上一节的根本矛盾在于：`MessageHandler.onMessage(ProxyMessage)` 的签名**不携带 `ChannelHandlerContext`**，导致位于 Exchange 层的 `ServerExchangeHandler` 在 `invoke()` 完成后**无法定位到要写回响应的那条 Channel**。「内聚一层」是通过让持有 ctx 的 `ServerChannelHandler` 自己把活全干完来回避这个问题的，代价是丢失了与客户端的两层对称结构。
+
+##### 3.2.4.2 方案思路
+
+既然 ctx 不能从参数传入，就在外部维护一张 **`requestId → Channel` 的全局映射表**，让 `ServerExchangeHandler` 在回写时**反查**出目标 Channel。这样 `ServerChannelHandler` 只需「登记映射 + 向下转发」，业务逻辑回到 `ServerExchangeHandler`，两层结构得以恢复。
+
+**这张表与客户端的 `requestId → DefaultFuture` 表是完全同构的设计**——`requestId` 在两端都扮演「对暗号的钥匙」：客户端用它找「哪个等待的业务线程（Future）」，服务端用它找「哪条要回写的连接（Channel）」。
+
+| | 客户端 | 服务端（Map 方案） |
+|---|---|---|
+| 全局表 | `requestId → DefaultFuture` | `requestId → Channel` |
+| 谁登记 | `request()` 发请求时登记 Future | `ServerChannelHandler` 收请求时登记 Channel |
+| 谁查表 | `ExchangeHandler.onMessage` 收响应时查 Future 唤醒 | `ServerExchangeHandler` 回写时查 Channel 并 writeAndFlush |
+| 分层 | 两层（MessageHandler 不碰 ctx） | **两层（MessageHandler 不碰 ctx）** |
+
+##### 3.2.4.3 实现示例
+
+```java
+// ServerChannelHandler（Netty 层，持有 ctx）——退化为「登记 + 转发」
+public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessage> {
+
+    private final MessageHandler messageHandler; // 即 ServerExchangeHandler
+
+    public ServerChannelHandler(MessageHandler messageHandler) {
+        this.messageHandler = messageHandler;
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, ProxyMessage msg) {
+        // 收到请求时，登记 requestId → channel 映射
+        // 注意：key 必须全局唯一，跨连接共享，故使用复合 key 防止不同客户端的 requestId 撞车
+        ChannelRouter.register(routingKey(ctx, msg), ctx.channel());
+        // 纯转发，自己不碰业务，两层结构恢复
+        messageHandler.onMessage(msg);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        // 连接断开时，批量清理该 channel 名下所有未完成的映射，防止泄漏
+        ChannelRouter.evictByChannel(ctx.channel());
+    }
+
+    private static String routingKey(ChannelHandlerContext ctx, ProxyMessage msg) {
+        return ctx.channel().id().asShortText() + ":" + msg.getRequestId();
+    }
+}
+```
+
+```java
+// ServerExchangeHandler（Exchange 层，不持有 ctx）——恢复为真正干活的一层
+public class ServerExchangeHandler implements MessageHandler {
+
+    private final Invoker invoker;
+
+    public ServerExchangeHandler(Invoker invoker) {
+        this.invoker = invoker;
+    }
+
+    @Override
+    public void onMessage(ProxyMessage message) {
+        if (message == null || message.getType() == null) {
+            return;
+        }
+        if (message.getType() == ProxyMessage.MessageType.HEARTBEAT_REQUEST) {
+            handleHeartbeat(message);
+            return;
+        }
+
+        String key = message.getRoutingKey(); // 与 ServerChannelHandler 约定一致的 key
+        Invocation invocation = toInvocation(message);
+
+        invoker.invoke(invocation).whenComplete((response, throwable) -> {
+            ProxyMessage reply = buildReply(message.getRequestId(), response, throwable);
+            // 回写时按 key 反查 channel，查完即删
+            Channel ch = ChannelRouter.remove(key);
+            if (ch != null && ch.isActive()) {
+                ch.writeAndFlush(reply);
+            }
+            // ch 为 null 通常意味着连接已断开（已被 channelInactive 清理），丢弃响应即可
+        });
+    }
+
+    @Override
+    public void onError(Throwable cause) { /* 记录错误日志 */ }
+
+    @Override
+    public void onDisconnected() { /* 清理连接相关资源 */ }
+}
+```
+
+```java
+// ChannelRouter —— 全局路由表，需配套生命周期管理
+public final class ChannelRouter {
+
+    private static final ConcurrentMap<String, Channel> MAP = new ConcurrentHashMap<>();
+
+    public static void register(String key, Channel channel) { MAP.put(key, channel); }
+
+    public static Channel remove(String key) { return MAP.remove(key); }
+
+    // 连接断开时按 channel 批量清理，防止未完成请求的映射永久泄漏
+    public static void evictByChannel(Channel channel) {
+        MAP.entrySet().removeIf(e -> e.getValue() == channel);
+    }
+}
+```
+
+##### 3.2.4.4 取舍对比
+
+| 维度 | 内聚一层（本期选用） | Map 路由表两层（可选增强） |
+|------|---------------------|---------------------------|
+| 架构对称性 | 弱（服务端与客户端结构不对称） | **强（两端完全镜像对称）** |
+| 实现复杂度 | 低（ctx 由 lambda 闭包捕获，零额外结构） | 中（需维护全局表 + 生命周期管理） |
+| 内存泄漏风险 | 无（闭包随回调结束自动 GC） | **有**（`invoke` 不 complete 或异常路径会残留映射，需超时清理 / 连接断开清理兜底） |
+| 并发开销 | 零（引用直传） | 每请求一次 `put` + 一次 `remove`，高 QPS 下有哈希与锁竞争开销 |
+| requestId 约束 | 无（不跨连接共享） | **更严**（表跨所有连接共享，需复合 key `channelId:requestId` 防撞车，否则响应会串台） |
+| 可扩展性 | 一般 | 好（与客户端共用同一套「标识 → 上下文」心智模型，易于演进） |
+
+##### 3.2.4.5 选型结论
+
+本期**选用「内聚一层」**：当前为单服务、轻量、追求零管理成本的场景，闭包捕获 ctx 是最简洁且无泄漏风险的实现。
+
+**Map 路由表方案是更优雅的演进路径**，工业级框架（如 Dubbo 服务端基于 channel 上下文 + 请求标识路由响应）正是此思路。当框架向「多服务、强对称、高可扩展」方向演进时，可平滑切换到该方案——届时只需让 `ServerChannelHandler` 退化为「登记 + 转发」、并补齐 `ChannelRouter` 的超时与断连清理机制即可，`ServerExchangeHandler` 的对外契约不变。
+
+#### 3.2.5 `HeaderExchangeServer` 实现
 
 ```java
 package com.proxy.exchange.header;
@@ -558,7 +688,7 @@ public class HeaderExchangeServer implements ExchangeServer {
 }
 ```
 
-#### 3.2.5 `HeaderExchanger.bind()` 实现
+#### 3.2.6 `HeaderExchanger.bind()` 实现
 
 ```java
 @Override
@@ -1120,6 +1250,7 @@ proxy-remote/src/main/java/com/proxy/remote/
 | HTTP/2 服务端 Multiplex 实现复杂度超预期 | 中 | 中 | 优先使用 Netty 内置的 Http2MultiplexHandler；可降级为单 Stream 模式验证 |
 | 客户端/服务端加密配置不一致导致静默失败 | 中 | 中 | 解码失败时明确打印错误日志并主动断连；考虑握手阶段协商加密方式 |
 | 业务线程池配置不当导致 OOM 或请求堆积 | 中 | 低 | 使用有界队列 + CallerRunsPolicy；配置项提供合理默认值和注释说明 |
+| （若采用 Map 路由表方案）`requestId → Channel` 映射在异常路径下残留导致内存泄漏 | 中 | 中 | 连接断开时按 channel 批量清理（`channelInactive`）+ 为映射项设置超时扫描兜底；本期默认采用「内聚一层」方案规避此风险 |
 
 ---
 
@@ -1173,6 +1304,8 @@ Filter 链    @Activate(group="client")           @Activate(group="server")
 ```
 
 这种对称性确保了框架的概念一致性：无论客户端还是服务端，开发者面对的都是同一套 SPI 抽象，学习成本最低，扩展最为自然。
+
+> **关于 Handler 一行的说明**：上表展示的是**概念上的理想对称态**（服务端 `ServerExchangeHandler` 独立成层，与客户端 `ExchangeHandler` 镜像）。本期落地受 `MessageHandler.onMessage` 不携带 ctx 的限制，采用「内聚一层」方案（`ServerExchangeHandler` 逻辑合并进 `ServerChannelHandler`），详见 3.2.3。若需完全实现此对称结构，可采用 3.2.4 的 **Map 路由表方案**。
 
 ---
 
