@@ -30,9 +30,10 @@
 
 ### 1.3 非目标（本期不涉及）
 
-- Outbound 出站连接：远程服务器接收到客户端请求后，去连接真正的目标网站（如 google.com:443）的逻辑，将作为后续迭代单独设计。
 - 服务注册与发现：多节点远程服务器的注册中心接入不在本期范围。
 - TLS 证书管理：底层 HTTP/2 连接的 TLS 握手沿用现有实现，不做额外改造。
+- Outbound 连接池/连接复用：代理场景目标地址多变，不做池化。一 Stream 一连接，按需建连。
+- 异步 DNS 解析：本期直接使用 Netty Bootstrap 默认的 DNS 解析，后续增强可引入异步 DNS + 本地缓存。
 
 ---
 
@@ -1177,16 +1178,594 @@ proxy-remote/src/main/java/com/proxy/remote/
 
 **Phase 1 合计预估：~22h**
 
-### Phase 2：Outbound 出站连接（后续迭代）
+### Phase 2：Outbound 出站连接
 
 | 序号 | 任务项 | 优先级 |
 |------|--------|--------|
-| 2.1 | Outbound 连接池设计与实现（连接目标网站的 Netty Client Pool） | P1 |
-| 2.2 | CONNECT 请求处理（建立到目标站点的 TCP 连接） | P1 |
-| 2.3 | DATA 双向透明转发（服务端 ↔ 目标站点） | P1 |
-| 2.4 | DISCONNECT 优雅关闭 Outbound 连接 | P1 |
-| 2.5 | 异步 DNS 解析 + 本地缓存 | P2 |
-| 2.6 | Outbound 连接复用策略（HTTP Keep-Alive 场景） | P2 |
+| 2.1 | 实现 `OutboundSession`（出站会话，持有目标连接 + 回写上下文） | P0 |
+| 2.2 | 实现 `OutboundConnector`（异步建连器，按需建连，不做池化） | P0 |
+| 2.3 | 实现 `OutboundHandler`（目标响应中继，收字节 → 推回客户端 Stream） | P0 |
+| 2.4 | 实现 `SessionManager`（streamId → OutboundSession 映射管理） | P0 |
+| 2.5 | 升级 `DispatchInvoker`（桩实现 → 完整 Outbound 逻辑） | P0 |
+| 2.6 | 修改 `ProxyRemoteServer`（初始化 OutboundConnector 并注入） | P0 |
+| 2.7 | 修改 `RemoteConfig`（新增 Outbound 配置项） | P0 |
+| 2.8 | 集成测试：完整 CONNECT → DATA 透传 → DISCONNECT 链路验证 | P0 |
+| 2.9 | 异步 DNS 解析 + 本地缓存（后续增强） | P2 |
+
+---
+
+## 8.1 Phase 2 详细设计：Outbound 出站连接
+
+### 8.1.1 定位与边界
+
+Outbound 是远程服务端收到客户端请求后，向真正的目标网站（如 google.com:443）发起连接并双向透传流量的子系统。它与 Inbound（客户端到服务端）链路完全独立，本质上是一个**轻量级的按需建连器 + 透明字节流中继器**。
+
+**不使用连接池**的原因：代理场景下用户访问的目标地址千变万化，连接池中缓存的连接几乎无法复用，反而增加管理复杂度和资源占用。因此采用一 Stream 一连接的简单模型，Stream 关闭时连接即销毁。
+
+**目标地址获取方式**：proxy-local 在收到用户的 SOCKS5/HTTP CONNECT 请求时，已经解析出了目标 host 和 port，并将其填入 `ProxyMessage` 的 `host` 和 `port` 字段。proxy-remote 的 `ServerChannelHandler` 在构建 `Invocation` 时会从 `ProxyMessage` 中提取这两个字段，`DispatchInvoker` 通过 `invocation.getTargetHost()` 和 `invocation.getTargetPort()` 即可获得目标地址。**不需要额外定义 CONNECT 帧类型或从流量中嗅探目标地址**——现有协议已经原生支持。
+
+关键约束：
+- **裸 TCP 透传**：目标网站不理解 ProxyMessage 协议，也不走 HTTP/2 多路复用。Outbound 连接就是普通的 TCP 连接（或由客户端与目标端到端 TLS 加密的字节流），服务端只做字节搬运，不解析内容。
+- **一 Stream 一连接，按需建连不池化**：客户端的每个 HTTP/2 Stream 对应一条到目标网站的独立 TCP 连接。不做连接池，连接随 Stream 生命周期创建和销毁。HTTPS 场景下客户端与目标直接握手 TLS，服务端看到的是密文字节流，无法复用。
+- **全异步非阻塞**：Outbound 建连、数据转发、关闭全部在业务线程池 + Netty EventLoop 中异步完成，不阻塞 Inbound IO 线程。
+
+### 8.1.2 整体数据流
+
+```
+客户端 HTTP/2 Stream                 远程服务端                          目标网站
+─────────────────                  ─────────────                      ──────────
+                                        
+CONNECT(host:port) ─────────→ DispatchInvoker.handleConnect()
+                                    │ 异步建连：Bootstrap.connect(host, port)
+                                    │ 注册映射：streamId → OutboundChannel
+                                    │ 返回 Response.ok()
+                    ←───────── OK 响应                              ←── TCP 握手完成
+                                        
+DATA(payload) ──────────────→ DispatchInvoker.handleData()
+                                    │ 按 streamId 取出 OutboundChannel
+                                    │ outboundChannel.writeAndFlush(payload)
+                                    │                                ─→ 字节到达目标
+                                    │                                ←─ 目标响应字节
+                                    │ OutboundHandler.channelRead() 收到响应
+                                    │ 通过 inboundCtx.writeAndFlush() 推回客户端
+                    ←───────── DATA(response payload)
+                                        
+DISCONNECT ─────────────────→ DispatchInvoker.handleDisconnect()
+                                    │ 按 streamId 取出 OutboundChannel
+                                    │ outboundChannel.close()
+                                    │ 移除映射，释放资源
+                    ←───────── OK 响应
+```
+
+### 8.1.3 核心组件设计
+
+#### `OutboundSession` —— 出站会话
+
+每个客户端 Stream 对应一个 `OutboundSession`，持有到目标网站的 TCP 连接和回写客户端的上下文。
+
+```java
+package com.proxy.remote.outbound;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+
+/**
+ * 出站会话 —— 绑定一个客户端 Stream 到一条目标 TCP 连接
+ * <p>
+ * 生命周期：
+ *   CONNECT 到达 → 创建 Session → 异步建连 → 建连成功(ACTIVE)
+ *   DATA 到达    → 通过 outboundChannel 转发
+ *   DISCONNECT   → 关闭 outboundChannel → 销毁 Session
+ * </p>
+ */
+public class OutboundSession {
+
+    /** 出站连接（到目标网站的 TCP Channel） */
+    private volatile Channel outboundChannel;
+
+    /** 入站上下文（回写客户端响应用，通过闭包从 ServerChannelHandler 传入） */
+    private final ChannelHandlerContext inboundCtx;
+
+    /** 目标地址 */
+    private final String targetHost;
+    private final int targetPort;
+
+    /** 会话状态 */
+    private volatile SessionState state = SessionState.CONNECTING;
+
+    public enum SessionState {
+        CONNECTING,  // 正在建连
+        ACTIVE,      // 连接就绪，可转发数据
+        CLOSED       // 已关闭
+    }
+
+    public OutboundSession(ChannelHandlerContext inboundCtx, 
+                           String targetHost, int targetPort) {
+        this.inboundCtx = inboundCtx;
+        this.targetHost = targetHost;
+        this.targetPort = targetPort;
+    }
+
+    /** 建连完成后设置 outbound channel */
+    public void setOutboundChannel(Channel channel) {
+        this.outboundChannel = channel;
+        this.state = SessionState.ACTIVE;
+    }
+
+    /** 转发数据到目标 */
+    public void forward(byte[] data) {
+        if (state == SessionState.ACTIVE && outboundChannel.isActive()) {
+            outboundChannel.writeAndFlush(
+                    outboundChannel.alloc().buffer().writeBytes(data));
+        }
+    }
+
+    /** 回写响应到客户端 Stream */
+    public void writeBack(byte[] data) {
+        if (inboundCtx.channel().isActive()) {
+            // 构建 ProxyMessage 响应，通过 inbound Stream 回推客户端
+            ProxyMessage reply = ProxyMessage.builder()
+                    .type(ProxyMessage.MessageType.DATA)
+                    .data(data)
+                    .build();
+            inboundCtx.writeAndFlush(reply);
+        }
+    }
+
+    /** 关闭出站连接 */
+    public void close() {
+        state = SessionState.CLOSED;
+        if (outboundChannel != null && outboundChannel.isActive()) {
+            outboundChannel.close();
+        }
+    }
+
+    // getter methods...
+}
+```
+
+#### `OutboundConnector` —— 出站连接器
+
+负责异步建立到目标网站的 TCP 连接，使用共享的 EventLoopGroup（复用 Inbound 的 Worker 线程）。
+
+```java
+package com.proxy.remote.outbound;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * 出站连接器 —— 异步建立到目标网站的 TCP 连接
+ * <p>
+ * 设计要点：
+ * - 复用 Worker EventLoopGroup 作为 Outbound 的 IO 线程（避免额外线程池开销）
+ * - 纯裸 TCP 连接，不加任何协议层（字节流透传）
+ * - Pipeline 仅挂载一个 OutboundHandler 做数据中继
+ * </p>
+ */
+public class OutboundConnector {
+
+    private final Bootstrap bootstrap;
+
+    public OutboundConnector(EventLoopGroup workerGroup, int connectTimeoutMs) {
+        this.bootstrap = new Bootstrap()
+                .group(workerGroup)
+                .channel(NioSocketChannel.class)
+                .option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMs);
+    }
+
+    /**
+     * 异步连接目标地址
+     *
+     * @param host    目标主机
+     * @param port    目标端口
+     * @param session 关联的出站会话（用于回写数据到客户端）
+     * @return 连接结果 Future
+     */
+    public CompletableFuture<Channel> connect(String host, int port, 
+                                               OutboundSession session) {
+        CompletableFuture<Channel> future = new CompletableFuture<>();
+
+        bootstrap.clone()
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) {
+                        ch.pipeline().addLast("outbound-handler",
+                                new OutboundHandler(session));
+                    }
+                })
+                .connect(host, port)
+                .addListener((ChannelFutureListener) cf -> {
+                    if (cf.isSuccess()) {
+                        future.complete(cf.channel());
+                    } else {
+                        future.completeExceptionally(cf.cause());
+                    }
+                });
+
+        return future;
+    }
+}
+```
+
+#### `OutboundHandler` —— 目标站点响应中继器
+
+挂在 Outbound Channel Pipeline 上，收到目标网站的响应字节后，通过 `OutboundSession.writeBack()` 推回客户端。
+
+```java
+package com.proxy.remote.outbound;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+
+/**
+ * Outbound Channel Pipeline 上的唯一 Handler
+ * <p>
+ * 职责极简：
+ *   目标网站返回字节 → 读取 ByteBuf → 通过 session.writeBack() 推回客户端 Inbound Stream
+ * 
+ * Pipeline 结构：
+ *   Outbound Channel (到目标网站的裸 TCP):
+ *     └── OutboundHandler (仅此一个)
+ * 
+ * 与 Inbound Pipeline（HTTP/2 + 加密 + 编解码）的对比：
+ *   Outbound 不需要任何编解码——它透传的是客户端与目标网站之间的原始字节流
+ *   （HTTPS 场景下这些字节就是 TLS 密文，服务端不解析也不需要解析）
+ * </p>
+ */
+public class OutboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
+
+    private final OutboundSession session;
+
+    public OutboundHandler(OutboundSession session) {
+        this.session = session;
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+        // 目标网站返回的数据 → 推回客户端
+        byte[] data = new byte[msg.readableBytes()];
+        msg.readBytes(data);
+        session.writeBack(data);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        // 目标网站主动断开连接 → 通知客户端
+        session.close();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        session.close();
+        ctx.close();
+    }
+}
+```
+
+#### `SessionManager` —— 会话管理器
+
+管理 `streamId → OutboundSession` 的全局映射，提供增删查和生命周期管理。
+
+```java
+package com.proxy.remote.outbound;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+/**
+ * 会话管理器 —— streamId 到 OutboundSession 的映射
+ * <p>
+ * 核心数据结构极简：一张 ConcurrentHashMap。
+ * 
+ * 生命周期管理：
+ *   CONNECT  → register(streamId, session)
+ *   DATA     → get(streamId) → session.forward(data)
+ *   DISCONNECT → remove(streamId) → session.close()
+ *   连接异常  → remove(streamId) → session.close()
+ * </p>
+ */
+public class SessionManager {
+
+    private final ConcurrentMap<String, OutboundSession> sessions = new ConcurrentHashMap<>();
+
+    /** CONNECT 时注册会话 */
+    public void register(String streamId, OutboundSession session) {
+        sessions.put(streamId, session);
+    }
+
+    /** DATA 时获取会话 */
+    public OutboundSession get(String streamId) {
+        return sessions.get(streamId);
+    }
+
+    /** DISCONNECT 或异常时移除并关闭会话 */
+    public OutboundSession remove(String streamId) {
+        OutboundSession session = sessions.remove(streamId);
+        if (session != null) {
+            session.close();
+        }
+        return session;
+    }
+
+    /** 获取当前活跃会话数（监控用） */
+    public int activeCount() {
+        return sessions.size();
+    }
+
+    /** 服务关闭时清理所有会话 */
+    public void closeAll() {
+        sessions.values().forEach(OutboundSession::close);
+        sessions.clear();
+    }
+}
+```
+
+### 8.1.4 DispatchInvoker 完整实现（Phase 2）
+
+Phase 1 的桩实现升级为完整的出站逻辑：
+
+```java
+public class DispatchInvoker implements Invoker {
+
+    private final ExecutorService bizExecutor;
+    private final OutboundConnector connector;
+    private final SessionManager sessionManager;
+
+    public DispatchInvoker(ExecutorService bizExecutor, 
+                           OutboundConnector connector) {
+        this.bizExecutor = bizExecutor;
+        this.connector = connector;
+        this.sessionManager = new SessionManager();
+    }
+
+    @Override
+    public CompletableFuture<Response> invoke(Invocation invocation) {
+        CompletableFuture<Response> future = new CompletableFuture<>();
+
+        bizExecutor.execute(() -> {
+            try {
+                Response response = dispatch(invocation);
+                future.complete(response);
+            } catch (RejectedExecutionException e) {
+                future.complete(Response.error(503, "Server overloaded"));
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+
+        return future;
+    }
+
+    private Response dispatch(Invocation invocation) {
+        switch (invocation.getType()) {
+            case CONNECT:    return handleConnect(invocation);
+            case DATA:       return handleData(invocation);
+            case DISCONNECT: return handleDisconnect(invocation);
+            default:         return Response.error("Unsupported type: " + invocation.getType());
+        }
+    }
+
+    private Response handleConnect(Invocation invocation) {
+        String targetHost = invocation.getTargetHost();
+        int targetPort = invocation.getTargetPort();
+        String streamId = (String) invocation.getAttachment("streamId");
+        ChannelHandlerContext inboundCtx = 
+                (ChannelHandlerContext) invocation.getAttachment("inboundCtx");
+
+        // 1. 创建 OutboundSession
+        OutboundSession session = new OutboundSession(inboundCtx, targetHost, targetPort);
+        sessionManager.register(streamId, session);
+
+        // 2. 异步建连到目标（不阻塞当前业务线程等结果）
+        connector.connect(targetHost, targetPort, session)
+                .whenComplete((channel, ex) -> {
+                    if (ex != null) {
+                        // 建连失败，清理 session
+                        sessionManager.remove(streamId);
+                    } else {
+                        // 建连成功，绑定 outbound channel
+                        session.setOutboundChannel(channel);
+                    }
+                });
+
+        // 3. 立即返回 OK —— 利用 CONNECT 与首个 DATA 之间的时间窗口完成建连
+        //    如果建连比首个 DATA 慢，handleData 中有等待/缓冲机制兜底
+        return Response.ok();
+    }
+
+    private Response handleData(Invocation invocation) {
+        String streamId = (String) invocation.getAttachment("streamId");
+        OutboundSession session = sessionManager.get(streamId);
+
+        if (session == null) {
+            return Response.error("No session found for stream: " + streamId);
+        }
+
+        if (session.getState() == OutboundSession.SessionState.CONNECTING) {
+            // Outbound 连接尚未就绪 → 等待（带超时）
+            // 实现方式：轮询 + Thread.sleep 或使用 session 内部的 CountDownLatch/CompletableFuture
+            if (!session.awaitActive(5000)) {
+                return Response.error("Outbound connection timeout");
+            }
+        }
+
+        // 转发数据到目标网站
+        session.forward(invocation.getData());
+
+        // 注意：目标网站的响应不在这里返回
+        // 响应由 OutboundHandler.channelRead0() 异步推回客户端
+        // 这里只确认"转发成功"
+        return Response.ok();
+    }
+
+    private Response handleDisconnect(Invocation invocation) {
+        String streamId = (String) invocation.getAttachment("streamId");
+        sessionManager.remove(streamId); // 内部会 close outbound channel
+        return Response.ok();
+    }
+
+    /** 服务关闭时清理所有会话 */
+    public void shutdown() {
+        sessionManager.closeAll();
+    }
+}
+```
+
+### 8.1.5 线程模型（含 Outbound）
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                     Thread Model (Full)                                    │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  [Inbound Worker EventLoop]  (CPU×2 threads)                            │
+│     └── 接收客户端 HTTP/2 Stream 数据                                     │
+│     └── 解码 → 解密 → ServerChannelHandler → invoker.invoke()            │
+│     └── 【不阻塞，立即返回 Future】                                       │
+│                                                                          │
+│  [Business ThreadPool]  (可配置，默认200线程)                             │
+│     └── DispatchInvoker.dispatch()                                       │
+│         ├── CONNECT: 创建 Session + 异步建连（fire-and-forget）           │
+│         ├── DATA: 取 Session → forward() → outboundChannel.writeAndFlush │
+│         └── DISCONNECT: remove Session → close outbound channel          │
+│                                                                          │
+│  [Outbound IO] (复用 Inbound Worker EventLoopGroup)                      │
+│     └── OutboundConnector.connect() 的实际 IO 在 Worker 线程完成          │
+│     └── OutboundHandler.channelRead0() 收到目标响应                       │
+│         → session.writeBack() → inboundCtx.writeAndFlush()              │
+│         （跨 EventLoop 提交任务到 Inbound Stream 的 EventLoop 队列）      │
+│                                                                          │
+│  关键点：Outbound 复用 Worker EventLoopGroup，不新建线程池                │
+│          Netty 的 EventLoop 是线程安全的，跨 Channel 的 writeAndFlush     │
+│          会自动提交到目标 Channel 的 EventLoop 执行                        │
+│                                                                          │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 8.1.6 Outbound Pipeline 设计
+
+```
+Outbound Channel (到目标网站的裸 TCP 连接):
+┌───────────────────────────────────────────────────┐
+│  SocketChannel (NioSocketChannel)                    │
+│                                                       │
+│  Pipeline（极简，只有一个 Handler）:                    │
+│    └── OutboundHandler                               │
+│          ├── channelRead0: 收到目标响应 → writeBack   │
+│          ├── channelInactive: 目标断开 → close session│
+│          └── exceptionCaught: 异常 → close all       │
+│                                                       │
+│  不需要：                                              │
+│    ✗ Http2FrameCodec（目标不说 HTTP/2）               │
+│    ✗ CipherHandler（TLS 是端到端的，服务端不解密）     │
+│    ✗ ProxyMessage 编解码（透传原始字节）               │
+│    ✗ HeartbeatHandler（TCP 级别 keepalive 即可）      │
+└───────────────────────────────────────────────────┘
+
+对比 Inbound Stream SubChannel（功能丰富）:
+┌───────────────────────────────────────────────────┐
+│  Http2StreamChannel (子 Channel)                     │
+│                                                       │
+│  Pipeline（完整处理链）:                               │
+│    ├── CipherDecodeHandler                           │
+│    ├── ProxyMessageDecoder                           │
+│    ├── IdleStateHandler                              │
+│    ├── HeartbeatHandler                              │
+│    ├── ServerChannelHandler                          │
+│    ├── CipherEncodeHandler                           │
+│    └── ProxyMessageEncoder                           │
+└───────────────────────────────────────────────────┘
+```
+
+### 8.1.7 关键设计决策
+
+#### 为什么一 Stream 一 TCP 连接（不做连接复用）
+
+| 因素 | 分析 |
+|------|------|
+| HTTPS 场景 | 客户端与目标站点端到端 TLS，服务端只看到密文。不同 Stream（不同域名/不同会话）的 TLS 会话无法共享，强制一对一。 |
+| HTTP 场景 | 理论上同域名可复用 TCP 连接（HTTP Keep-Alive），但引入连接池 + 请求队列 + Host 路由逻辑的复杂度远超收益。 |
+| 隧道语义 | SOCKS5/HTTP CONNECT 建立的隧道本身就是"一个逻辑连接"，天然一对一映射最简单。 |
+| 简单可靠 | 一对一映射无状态串扰风险，Stream 关闭时直接 close TCP，资源释放干净利落。 |
+
+结论：采用**一 Stream 一 TCP 连接**的简单模型，**不做连接池**。目标地址千变万化的代理场景下，池化连接几乎不会被复用，徒增管理成本。
+
+#### 为什么 Outbound 复用 Worker EventLoopGroup
+
+- 建连和 IO 读写本身是轻量操作（微秒级），不需要独立线程池。
+- 减少线程数量，降低上下文切换开销。
+- Netty 的 `Bootstrap.group(existingGroup)` 天然支持共享 EventLoopGroup。
+- 如果未来目标站点数量极大（>10K 并发出站连接），可独立拆分 Outbound EventLoopGroup，当前不需要。
+
+#### inboundCtx 如何传递到 DispatchInvoker
+
+`ServerChannelHandler` 在构建 Invocation 时，将 `ctx` 作为 attachment 传入：
+
+```java
+// ServerChannelHandler.channelRead0() 中
+invocation.setAttachment("inboundCtx", ctx);
+invocation.setAttachment("streamId", ctx.channel().id().asShortText());
+```
+
+`DispatchInvoker.handleConnect()` 从 attachment 中取出 ctx，传给 `OutboundSession`。后续 `OutboundHandler` 通过 session 持有的 inboundCtx 回写响应，形成完整的数据环路。
+
+### 8.1.8 模块结构（Phase 2 新增）
+
+```
+proxy-remote/src/main/java/com/proxy/remote/
+├── ProxyRemoteServer.java           [修改：初始化 OutboundConnector]
+├── config/
+│   └── RemoteConfig.java            [修改：加载 outbound 配置]
+├── dispatch/
+│   ├── DispatchInvoker.java         [修改：接入 SessionManager + Connector]
+│   └── ServerInvokerBuilder.java    [不变]
+└── outbound/
+    ├── OutboundConnector.java       [新增：异步建连器]
+    ├── OutboundHandler.java         [新增：目标响应中继]
+    ├── OutboundSession.java         [新增：出站会话]
+    └── SessionManager.java          [新增：会话管理]
+```
+
+### 8.1.9 配置项（Phase 2 补充）
+
+```yaml
+# Outbound 出站连接配置
+outbound:
+  # 连接目标服务器超时（毫秒）
+  connectTimeoutMs: 5000
+  # 等待 Outbound 连接就绪超时（毫秒，用于 handleData 中 CONNECTING 状态的等待）
+  activeWaitTimeoutMs: 5000
+  # TCP SO_KEEPALIVE
+  keepAlive: true
+  # TCP_NODELAY
+  tcpNoDelay: true
+```
+
+### 8.1.10 异常处理与资源回收
+
+| 异常场景 | 处理策略 |
+|---------|---------|
+| Outbound 建连超时 | `connector.connect()` Future 超时 → remove session → 回写错误响应给客户端 |
+| Outbound 建连被拒绝（目标不可达） | connect Future 异常完成 → remove session → 回写 502 错误给客户端 |
+| 目标网站主动断开 | `OutboundHandler.channelInactive()` → session.close() → 通知客户端 DISCONNECT |
+| 客户端 Inbound Stream 断开 | `ServerChannelHandler.channelInactive()` → sessionManager.remove(streamId) → close outbound |
+| 服务端 shutdown | `sessionManager.closeAll()` → 批量关闭所有 outbound 连接 |
+| DATA 到达但 session 不存在 | 返回错误 Response（可能是 CONNECT 未到或已 DISCONNECT） |
+| DATA 到达但 outbound 仍在 CONNECTING | `session.awaitActive(timeout)` 阻塞等待（在 bizExecutor 线程中，不影响 IO 线程） |
+
+### 8.1.11 性能考量
+
+- **零拷贝优化（后续增强）**：当前 `OutboundHandler.channelRead0()` 中 `msg.readBytes(data)` 会产生一次内存拷贝。后续可通过 `ByteBuf.retain()` + `CompositeByteBuf` 实现零拷贝透传，减少 GC 压力。
+- **背压联动**：如果客户端消费慢导致 Inbound Channel 不可写（`channel.isWritable()` 为 false），Outbound 应暂停从目标读取数据（`outboundChannel.config().setAutoRead(false)`），形成端到端背压。目标站点的 TCP 窗口自然缩小。
+- **首包延迟优化**：当前 CONNECT 帧到达后异步建连，利用 CONNECT 与首个 DATA 之间的时间窗口完成 TCP 握手。绝大多数场景下 DATA 到达时连接已就绪，无额外等待。极端情况下 `session.awaitActive(timeout)` 在业务线程中短暂等待，不影响 IO 线程。
 
 ---
 
