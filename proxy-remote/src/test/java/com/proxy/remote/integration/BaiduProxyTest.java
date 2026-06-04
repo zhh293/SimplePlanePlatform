@@ -102,6 +102,10 @@ class BaiduProxyTest {
                 "Host: www.baidu.com\r\n" +
                 "Connection: close\r\n" +
                 "\r\n";
+        // 数据面已统一为流式 push：注册回调收集百度的响应回包
+        BlockingQueue<ProxyMessage> pushQueue = new LinkedBlockingQueue<>();
+        proxyClient.setPushHandler(pushQueue::offer);
+
         ProxyMessage dataMsg = ProxyMessage.builder()
                 .type(ProxyMessage.MessageType.DATA)
                 .host("www.baidu.com")
@@ -109,16 +113,17 @@ class BaiduProxyTest {
                 .streamId(streamId)
                 .data(httpRequest.getBytes(StandardCharsets.UTF_8))
                 .build();
-        CompletableFuture<Response> dataFuture = proxyClient.request(dataMsg, TIMEOUT);
-        Response dataResp = dataFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
-        assertTrue(dataResp.isSuccess(), "DATA forward should succeed");
+        // 发后即忘发送
+        proxyClient.stream(dataMsg);
 
-        // 3. 等待百度响应通过 writeBack 推回
-        // writeBack 会通过 inboundCtx 写回 ProxyMessage(DATA) 到客户端 stream
-        // 但当前的 ExchangeHandler 只处理带 requestId 的响应消息
-        // 服务端推送的 DATA 没有 requestId，需要另外处理
-        // 所以这里我们只验证 forward 成功（连通性验证）
-        Thread.sleep(2000);
+        // 3. 等待百度响应通过 writeBack 推回（requestId=0 + streamId + type=DATA）
+        ProxyMessage pushed = pushQueue.poll(TIMEOUT, TimeUnit.MILLISECONDS);
+        assertNotNull(pushed, "Should receive baidu HTTP response via server push");
+        assertEquals(streamId, pushed.getStreamId());
+        String responseText = new String(pushed.getData(), StandardCharsets.UTF_8);
+        assertTrue(responseText.contains("HTTP") || responseText.toLowerCase().contains("baidu"),
+                "Response should look like an HTTP reply from baidu, got: "
+                        + responseText.substring(0, Math.min(80, responseText.length())));
 
         // 4. 验证 session 仍然存活（连接成功）
         assertEquals(1, dispatchInvoker.getSessionManager().activeCount(),

@@ -60,10 +60,10 @@ public class OutboundConnector {
 
         bootstrap.connect(host, port).addListener((ChannelFutureListener) cf -> {
             if (cf.isSuccess()) {
-                log.debug("Outbound connected: target={}:{}, streamId={}", host, port, session.getStreamId());
+                log.debug("Outbound connected: target={}:{}, sessionKey={}", host, port, session.getSessionKey());
                 future.complete(cf.channel());
             } else {
-                log.warn("Outbound connect failed: target={}:{}, streamId={}", host, port, session.getStreamId(), cf.cause());
+                log.warn("Outbound connect failed: target={}:{}, sessionKey={}", host, port, session.getSessionKey(), cf.cause());
                 future.completeExceptionally(cf.cause());
             }
         });

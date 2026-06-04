@@ -22,6 +22,7 @@ com/proxy/common/spi/ExtensionLoader$ActivatedExtension.class
 com/proxy/common/model/URL.class
 com/proxy/common/filter/Invocation.class
 com/proxy/common/spi/SPI.class
+com/proxy/common/exchange/PushHandler.class
 com/proxy/common/spi/Activate.class
 com/proxy/common/cluster/LoadBalance.class
 com/proxy/common/exchange/ProxyResponse.class

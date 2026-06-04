@@ -9,6 +9,7 @@ import com.proxy.common.model.URL;
 import com.proxy.common.spi.ExtensionLoader;
 import com.proxy.remote.dispatch.DispatchInvoker;
 import com.proxy.remote.outbound.OutboundConnector;
+import com.proxy.remote.outbound.OutboundSession;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -118,7 +119,11 @@ class OutboundIntegrationTest {
         // 等待出站连接建立
         Thread.sleep(200);
 
-        // 2. 发送 DATA
+        // 注册 push 回调收集 echo 回包（数据面已统一为流式 push）
+        BlockingQueue<ProxyMessage> pushQueue = new LinkedBlockingQueue<>();
+        proxyClient.setPushHandler(pushQueue::offer);
+
+        // 2. 发送 DATA（发后即忘）
         byte[] payload = "Hello Echo Server!".getBytes();
         ProxyMessage dataMsg = ProxyMessage.builder()
                 .type(ProxyMessage.MessageType.DATA)
@@ -127,13 +132,15 @@ class OutboundIntegrationTest {
                 .streamId(streamId)
                 .data(payload)
                 .build();
-        CompletableFuture<Response> dataFuture = proxyClient.request(dataMsg, TIMEOUT);
-        Response dataResp = dataFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
-        assertNotNull(dataResp);
-        assertTrue(dataResp.isSuccess(), "DATA forward should succeed");
+        proxyClient.stream(dataMsg);
 
-        // 注意：DATA 的响应只是 OK（表示转发成功），echo 回包通过 writeBack 推回客户端
-        // 在完整系统中客户端会收到一条 DATA 类型的推送消息，但当前测试框架下仅验证 forward 成功
+        // echo 回包通过 OutboundSession.writeBack 经 inboundCtx 推回客户端，
+        // 客户端经 PushHandler 落地（requestId=0 + streamId + type=DATA）
+        ProxyMessage pushed = pushQueue.poll(TIMEOUT, TimeUnit.MILLISECONDS);
+        assertNotNull(pushed, "Should receive echo data via server push");
+        assertEquals(ProxyMessage.MessageType.DATA, pushed.getType());
+        assertEquals(streamId, pushed.getStreamId());
+        assertArrayEquals(payload, pushed.getData(), "Echo data should match");
     }
 
     /**
@@ -156,20 +163,13 @@ class OutboundIntegrationTest {
         // CONNECT 本身立即返回 OK（异步建连）
         assertTrue(response.isSuccess());
 
-        // 等待异步连接失败
+        // 等待异步连接失败 → session 被清理
         Thread.sleep(500);
 
-        // 发送 DATA 应该返回错误（session 已被清理）
-        ProxyMessage dataMsg = ProxyMessage.builder()
-                .type(ProxyMessage.MessageType.DATA)
-                .host(HOST)
-                .port(19999)
-                .streamId(streamId)
-                .data("test".getBytes())
-                .build();
-        CompletableFuture<Response> dataFuture = proxyClient.request(dataMsg, TIMEOUT);
-        Response dataResp = dataFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
-        assertFalse(dataResp.isSuccess(), "DATA to failed session should return error");
+        // 数据面已改为发后即忘，无错误响应可等；
+        // 改为直接验证服务端 session 已被清理（连接失败的副作用）
+        assertNull(dispatchInvoker.getSessionManager().get(String.valueOf(streamId)),
+                "Session should be cleaned up after outbound connect failure");
     }
 
     /**
@@ -200,18 +200,10 @@ class OutboundIntegrationTest {
         Response disconnectResp = disconnectFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
         assertTrue(disconnectResp.isSuccess(), "DISCONNECT should succeed");
 
-        // 再次发送 DATA 应该失败
+        // DISCONNECT 后 session 应已被清理（数据面发后即忘，直接验证服务端状态）
         Thread.sleep(100);
-        ProxyMessage dataMsg = ProxyMessage.builder()
-                .type(ProxyMessage.MessageType.DATA)
-                .host(HOST)
-                .port(echoServerPort)
-                .streamId(streamId)
-                .data("after disconnect".getBytes())
-                .build();
-        CompletableFuture<Response> dataFuture = proxyClient.request(dataMsg, TIMEOUT);
-        Response dataResp = dataFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
-        assertFalse(dataResp.isSuccess(), "DATA after DISCONNECT should fail");
+        assertNull(dispatchInvoker.getSessionManager().get(String.valueOf(streamId)),
+                "Session should be cleaned up after DISCONNECT");
     }
 
     /**
@@ -236,17 +228,13 @@ class OutboundIntegrationTest {
         echoServerWorkerGroup.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS).sync();
         Thread.sleep(500);
 
-        // 发送 DATA 应该失败（session 已关闭）
-        ProxyMessage dataMsg = ProxyMessage.builder()
-                .type(ProxyMessage.MessageType.DATA)
-                .host(HOST)
-                .port(echoServerPort)
-                .streamId(streamId)
-                .data("after target close".getBytes())
-                .build();
-        CompletableFuture<Response> dataFuture = proxyClient.request(dataMsg, TIMEOUT);
-        Response dataResp = dataFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
-        assertFalse(dataResp.isSuccess(), "DATA after target close should fail");
+        // 数据面已改为发后即忘，无错误响应可等；
+        // 改为直接验证目标关闭后服务端 session 已进入 CLOSED 状态
+        OutboundSession session =
+                dispatchInvoker.getSessionManager().get(String.valueOf(streamId));
+        assertNotNull(session, "Session entry should still exist before next DATA cleanup");
+        assertEquals(OutboundSession.SessionState.CLOSED, session.getState(),
+                "Session should be CLOSED after target server closes");
     }
 
     /**

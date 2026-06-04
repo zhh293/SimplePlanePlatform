@@ -51,10 +51,18 @@ public class ClientInvoker implements Invoker {
             message.setStreamId(Long.parseLong((String) streamIdObj));
         }
 
+        // 数据面（DATA）：发后即忘的流式发送，不生成 requestId/Future。
+        // 上行数据仅依赖 streamId 寻址，服务端回包经由 PushHandler 异步推送。
+        if (invocation.getType() == ProxyMessage.MessageType.DATA) {
+            exchangeClient.stream(message);
+            // 流式发送无响应可等，返回已完成的 OK 供上层 whenComplete 错误处理保持一致
+            return CompletableFuture.completedFuture(Response.ok());
+        }
+
+        // 控制面（CONNECT/DISCONNECT）：请求-响应，生成 requestId + DefaultFuture
         // 活跃计数 +1
         activeCount.incrementAndGet();
 
-        // 通过 ExchangeClient 发送请求
         return exchangeClient.request(message, timeoutMs)
                 .whenComplete((response, throwable) -> {
                     // 活跃计数 -1

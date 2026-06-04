@@ -674,3 +674,341 @@ Unable to commit systemconfig database.
 2026-06-04 12:23:54.104 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
 2026-06-04 12:23:54.105 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
 2026-06-04 12:23:54.105 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
+2026-06-04 16:55:47.725 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 16:55:47.808 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 16:55:47.816 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 16:55:47.915 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 16:55:47.915 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 16:55:47.915 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 16:55:47.916 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 16:55:47.917 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 1)
+2026-06-04 16:55:47.918 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 16:55:47.919 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 16:55:47.920 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 16:55:47.920 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 16:55:47.920 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 16:55:47.920 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 2)
+2026-06-04 16:55:47.920 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 16:55:47.927 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 16:55:47.927 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 16:55:47.927 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 16:55:48.053 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 16:55:48.216 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 16:56:10.441 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:58678
+2026-06-04 16:56:10.604 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 16:56:10.806 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=361ms status=200
+2026-06-04 16:56:10.807 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.baidu.com:443, streamId=1
+2026-06-04 16:58:50.379 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 16:58:50.393 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=15ms status=200
+2026-06-04 16:58:50.397 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 16:59:45.509 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:59638
+2026-06-04 16:59:45.511 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 16:59:45.516 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=6ms status=200
+2026-06-04 16:59:45.517 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.baidu.com:443, streamId=2
+2026-06-04 16:59:45.518 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 16:59:45.521 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=4ms status=500
+2026-06-04 17:00:38.559 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=8ms status=200
+2026-06-04 17:00:38.560 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 17:05:04.618 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+2026-06-04 17:05:04.627 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 17:05:04.627 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
+2026-06-04 17:05:04.627 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 17:05:04.628 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+2026-06-04 17:05:04.628 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
+2026-06-04 17:05:29.056 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 17:05:29.139 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 17:05:29.146 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 17:05:29.268 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 17:05:29.268 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 17:05:29.268 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 17:05:29.270 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 17:05:29.271 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 1)
+2026-06-04 17:05:29.272 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 17:05:29.273 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 17:05:29.273 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 17:05:29.274 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 17:05:29.274 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 17:05:29.274 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 2)
+2026-06-04 17:05:29.274 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 17:05:29.281 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 17:05:29.281 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 17:05:29.281 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 17:05:29.412 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 17:05:29.592 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 17:05:40.121 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:61332
+2026-06-04 17:05:40.295 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 17:05:40.488 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=1, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:05:40.488 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=364ms status=200
+2026-06-04 17:05:40.490 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.baidu.com:443, streamId=1
+2026-06-04 17:05:40.491 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 17:05:40.495 [nioEventLoopGroup-5-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=2, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:05:40.496 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=5ms status=500
+2026-06-04 17:05:50.124 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=3, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:05:50.125 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=4ms status=200
+2026-06-04 17:05:50.126 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 17:07:05.325 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 17:07:05.335 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+2026-06-04 17:07:05.339 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
+2026-06-04 17:07:05.340 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+2026-06-04 17:07:05.340 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
+2026-06-04 17:07:30.696 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 17:07:30.777 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 17:07:30.784 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 17:07:30.882 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 17:07:30.882 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 17:07:30.883 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 17:07:30.883 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 17:07:30.884 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 1)
+2026-06-04 17:07:30.885 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 17:07:30.886 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 17:07:30.886 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 17:07:30.886 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 17:07:30.886 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 17:07:30.886 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 2)
+2026-06-04 17:07:30.886 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 17:07:30.892 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 17:07:30.892 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 17:07:30.892 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 17:07:31.028 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 17:07:31.236 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 17:07:44.142 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:61940
+2026-06-04 17:07:44.313 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 17:07:44.518 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=1, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:07:44.519 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=373ms status=200
+2026-06-04 17:07:44.520 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.baidu.com:443, streamId=1
+2026-06-04 17:07:44.521 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 17:07:44.537 [nioEventLoopGroup-5-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=2, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:07:44.538 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=17ms status=200
+2026-06-04 17:07:44.559 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=0, type=DATA, streamId=1, dataLen=2048
+2026-06-04 17:07:44.560 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=0, type=DATA, streamId=1, dataLen=3182
+2026-06-04 17:07:44.567 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=3, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:07:44.568 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 17:07:44.582 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=0, type=DATA, streamId=1, dataLen=51
+2026-06-04 17:07:44.585 [nioEventLoopGroup-5-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=4, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:07:44.585 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 17:07:44.601 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=0, type=DATA, streamId=1, dataLen=2865
+2026-06-04 17:07:44.605 [nioEventLoopGroup-4-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=5, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:07:44.605 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 17:07:44.606 [nioEventLoopGroup-5-1] INFO  c.p.l.h.ServerPushDispatchHandler - ServerPushDispatchHandler received: requestId=6, type=CONNECT_RESPONSE, streamId=0, dataLen=0
+2026-06-04 17:07:44.606 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 17:07:44.608 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 17:08:22.592 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 17:08:22.612 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+2026-06-04 17:08:22.617 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
+2026-06-04 17:08:22.618 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+2026-06-04 17:08:22.618 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
+2026-06-04 20:33:21.435 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 20:33:21.524 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 20:33:21.530 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 20:33:21.639 [main] ERROR c.proxy.transport.netty.NettyClient - Failed to connect to 127.0.0.1:9090
+io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: /127.0.0.1:9090
+Caused by: java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:716)
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:337)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:339)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+2026-06-04 20:34:13.784 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 20:34:13.866 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 20:34:13.872 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 20:34:13.982 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 20:34:13.983 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 20:34:13.983 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 20:34:13.984 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 20:34:13.985 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 1)
+2026-06-04 20:34:13.985 [main] INFO  c.p.t.netty.pool.ConnectionPool - Loaded 1 StreamPipelineCustomizer(s)
+2026-06-04 20:34:13.987 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 20:34:13.987 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 20:34:13.987 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 20:34:13.987 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 20:34:13.987 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 2)
+2026-06-04 20:34:13.987 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 20:34:13.995 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 20:34:13.996 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 20:34:13.996 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 20:34:14.150 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 20:34:14.334 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 20:36:28.004 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.apple.com:443 from /127.0.0.1:49257
+2026-06-04 20:36:28.005 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: captive.apple.com:443 from /127.0.0.1:49258
+2026-06-04 20:36:28.210 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:28.210 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:28.448 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.apple.com:443 elapsed=437ms status=200
+2026-06-04 20:36:28.448 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] captive.apple.com:443 elapsed=437ms status=200
+2026-06-04 20:36:28.895 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catpaw-api.meituan.net:443 from /127.0.0.1:49269
+2026-06-04 20:36:28.896 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:28.901 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=5ms status=200
+2026-06-04 20:36:28.902 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: catpaw-api.meituan.net:443, streamId=3
+2026-06-04 20:36:28.902 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:28.935 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:49272
+2026-06-04 20:36:28.935 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:28.939 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=4ms status=200
+2026-06-04 20:36:28.939 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: mep.sankuai.com:443, streamId=4
+2026-06-04 20:36:28.941 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:29.783 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=2ms status=200
+2026-06-04 20:36:29.784 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 20:36:29.785 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] catpaw-api.meituan.net:443 elapsed=883ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.785 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.786 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:29.787 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] catpaw-api.meituan.net:443 elapsed=858ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.787 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.787 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] catpaw-api.meituan.net:443 elapsed=857ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.787 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.788 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] catpaw-api.meituan.net:443 elapsed=857ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.788 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.788 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=848ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.788 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.790 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=734ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.790 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.791 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=735ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.791 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=4ms status=500
+2026-06-04 20:36:29.791 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.792 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=735ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.792 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.792 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=4ms status=500
+2026-06-04 20:36:29.793 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=710ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.793 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.793 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=460ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.793 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.794 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.DefaultFuture - All pending futures failed due to: Connection disconnected
+2026-06-04 20:36:29.794 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=9ms status=500
+2026-06-04 20:36:29.794 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=7ms status=500
+2026-06-04 20:36:29.802 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=1ms status=500
+2026-06-04 20:36:29.803 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=2ms status=200
+2026-06-04 20:36:29.803 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 20:36:29.803 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=13ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.803 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.804 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=14ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.804 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.804 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:29.805 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=13ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.805 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.805 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=1ms status=500
+2026-06-04 20:36:29.805 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=13ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.805 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.806 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=13ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.806 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.806 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=13ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.806 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.806 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=1ms status=500
+2026-06-04 20:36:29.806 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=2ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.807 [nioEventLoopGroup-4-1] ERROR c.p.cluster.FailoverClusterInvoker - All invokers failed after 3 attempts: java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.807 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] mep.sankuai.com:443 elapsed=2ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.807 [nioEventLoopGroup-4-1] ERROR c.p.cluster.FailoverClusterInvoker - All invokers failed after 3 attempts: java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:29.807 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.DefaultFuture - All pending futures failed due to: Connection disconnected
+2026-06-04 20:36:29.807 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=1ms status=500
+2026-06-04 20:36:29.807 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.DefaultFuture - Received response for unknown/expired requestId=29, discarding
+2026-06-04 20:36:29.807 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.DefaultFuture - Received response for unknown/expired requestId=31, discarding
+2026-06-04 20:36:29.807 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=1ms status=500
+2026-06-04 20:36:30.839 [nioEventLoopGroup-3-5] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.google.com:443 from /127.0.0.1:49279
+2026-06-04 20:36:30.840 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:30.849 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.google.com:443 elapsed=10ms status=200
+2026-06-04 20:36:30.854 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.google.com:443, streamId=5
+2026-06-04 20:36:30.856 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:30.948 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.google.com:443 from /127.0.0.1:49282
+2026-06-04 20:36:30.951 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:30.957 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.google.com:443 elapsed=7ms status=200
+2026-06-04 20:36:30.958 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.google.com:443, streamId=6
+2026-06-04 20:36:30.961 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.064 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catpaw-api.meituan.net:443 from /127.0.0.1:49294
+2026-06-04 20:36:31.064 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.068 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=4ms status=200
+2026-06-04 20:36:31.068 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: catpaw-api.meituan.net:443, streamId=7
+2026-06-04 20:36:31.070 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.128 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.google.com:443 elapsed=5ms status=500
+2026-06-04 20:36:31.130 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.google.com:443 from /127.0.0.1:49300
+2026-06-04 20:36:31.134 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.135 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.google.com:443 elapsed=12ms status=200
+2026-06-04 20:36:31.138 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 20:36:31.138 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: lh3.google.com:443 from /127.0.0.1:49301
+2026-06-04 20:36:31.138 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.google.com:443 elapsed=4ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.139 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.139 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.143 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.google.com:443 elapsed=288ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.143 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.144 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.google.com:443 elapsed=183ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.144 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.145 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.google.com:443 elapsed=90ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.145 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:31.146 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.DefaultFuture - Received response for unknown/expired requestId=48, discarding
+2026-06-04 20:36:31.149 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.google.com:443 elapsed=5ms status=500
+2026-06-04 20:36:31.179 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ogads-pa.clients6.google.com:443 from /127.0.0.1:49304
+2026-06-04 20:36:31.180 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.182 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] ogads-pa.clients6.google.com:443 elapsed=3ms status=200
+2026-06-04 20:36:31.182 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: ogads-pa.clients6.google.com:443, streamId=10
+2026-06-04 20:36:31.211 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.google.com:443 elapsed=1ms status=500
+2026-06-04 20:36:31.872 [nioEventLoopGroup-3-11] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.bilibili.com:443 from /127.0.0.1:49310
+2026-06-04 20:36:31.873 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.877 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.bilibili.com:443 elapsed=4ms status=200
+2026-06-04 20:36:31.877 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.bilibili.com:443, streamId=11
+2026-06-04 20:36:31.901 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: app.vocabgo.com:443 from /127.0.0.1:49313
+2026-06-04 20:36:31.901 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: app.vocabgo.com:443 from /127.0.0.1:49312
+2026-06-04 20:36:31.902 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:31.904 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] app.vocabgo.com:443 elapsed=3ms status=200
+2026-06-04 20:36:31.905 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: app.vocabgo.com:443, streamId=12
+2026-06-04 20:36:31.986 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:49315
+2026-06-04 20:36:32.173 [nioEventLoopGroup-3-15] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: play.google.com:443 from /127.0.0.1:49316
+2026-06-04 20:36:32.174 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:32.177 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] play.google.com:443 elapsed=3ms status=200
+2026-06-04 20:36:32.178 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: play.google.com:443, streamId=15
+2026-06-04 20:36:32.614 [nioEventLoopGroup-3-16] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: s3plus.meituan.net:443 from /127.0.0.1:49318
+2026-06-04 20:36:32.615 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:32.620 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] s3plus.meituan.net:443 elapsed=6ms status=200
+2026-06-04 20:36:32.620 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: s3plus.meituan.net:443, streamId=16
+2026-06-04 20:36:32.982 [nioEventLoopGroup-3-17] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: app.vocabgo.com:443 from /127.0.0.1:49322
+2026-06-04 20:36:32.982 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:32.985 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] app.vocabgo.com:443 elapsed=3ms status=200
+2026-06-04 20:36:32.986 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: app.vocabgo.com:443, streamId=17
+2026-06-04 20:36:33.120 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: lx1.meituan.net:443 from /127.0.0.1:49324
+2026-06-04 20:36:33.121 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:33.123 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] lx1.meituan.net:443 elapsed=3ms status=200
+2026-06-04 20:36:33.124 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: lx1.meituan.net:443, streamId=18
+2026-06-04 20:36:35.242 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:49338
+2026-06-04 20:36:35.243 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:35.246 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=3ms status=200
+2026-06-04 20:36:35.246 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: mep.sankuai.com:443, streamId=19
+2026-06-04 20:36:36.009 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:49342
+2026-06-04 20:36:36.009 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:49344
+2026-06-04 20:36:36.009 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:49345
+2026-06-04 20:36:36.009 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:49341
+2026-06-04 20:36:36.010 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:36.011 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:36.013 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=3ms status=200
+2026-06-04 20:36:36.013 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: mep.sankuai.com:443, streamId=20
+2026-06-04 20:36:36.014 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] mep.sankuai.com:443 elapsed=4ms status=200
+2026-06-04 20:36:36.014 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: mep.sankuai.com:443, streamId=22
+2026-06-04 20:36:38.121 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: lx1.meituan.net:443 from /127.0.0.1:49351
+2026-06-04 20:36:38.122 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 20:36:38.130 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] lx1.meituan.net:443 elapsed=8ms status=200
+2026-06-04 20:36:38.130 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: lx1.meituan.net:443, streamId=24
+2026-06-04 20:36:38.257 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] catpaw-api.meituan.net:443 elapsed=2ms status=200
+2026-06-04 20:36:38.257 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 20:36:38.257 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [FAIL] app.vocabgo.com:443 elapsed=6346ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:38.257 [nioEventLoopGroup-5-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 20:36:40.639 [nioEventLoopGroup-3-5] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:49361
+2026-06-04 20:36:41.155 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catpaw-api.meituan.net:443 from /127.0.0.1:49362
+2026-06-04 20:36:41.482 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catpaw-api.meituan.net:443 from /127.0.0.1:49363
+2026-06-04 20:36:43.078 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catpaw.sankuai.com:443 from /127.0.0.1:49374
+2026-06-04 20:37:01.072 [exchanger-timeout-checker] INFO  ACCESS_LOG - [FAIL] www.google.com:443 elapsed=30016ms error=java.util.concurrent.TimeoutException: Request timeout, requestId=39, timeout=30000ms, elapsed=30016ms
+2026-06-04 20:37:01.073 [exchanger-timeout-checker] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.util.concurrent.TimeoutException: Request timeout, requestId=39, timeout=30000ms, elapsed=30016ms
+2026-06-04 20:37:01.075 [exchanger-timeout-checker] WARN  c.p.exchange.header.DefaultFuture - Request timeout: requestId=39, timeout=30000ms, elapsed=30016ms
+2026-06-04 20:37:01.075 [exchanger-timeout-checker] INFO  ACCESS_LOG - [FAIL] www.google.com:443 elapsed=30019ms error=java.util.concurrent.TimeoutException: Request timeout, requestId=40, timeout=30000ms, elapsed=30019ms
+2026-06-04 20:37:01.075 [exchanger-timeout-checker] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.util.concurrent.TimeoutException: Request timeout, requestId=40, timeout=30000ms, elapsed=30019ms

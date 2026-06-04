@@ -1,6 +1,7 @@
 package com.proxy.exchange.header;
 
 import com.proxy.common.exchange.ExchangeClient;
+import com.proxy.common.exchange.PushHandler;
 import com.proxy.common.filter.Response;
 import com.proxy.common.model.ProxyMessage;
 import com.proxy.common.model.URL;
@@ -29,11 +30,21 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     private final Client client;
     private final URL url;
+    /**
+     * 持有 ExchangeHandler 引用，用于转发 PushHandler 注册（数据面推送出口）。
+     * 可为 null（若未传入，则不支持推送回调）。
+     */
+    private final ExchangeHandler exchangeHandler;
     private volatile boolean closed = false;
 
     public HeaderExchangeClient(Client client, URL url) {
+        this(client, url, null);
+    }
+
+    public HeaderExchangeClient(Client client, URL url, ExchangeHandler exchangeHandler) {
         this.client = client;
         this.url = url;
+        this.exchangeHandler = exchangeHandler;
     }
 
     @Override
@@ -72,6 +83,31 @@ public class HeaderExchangeClient implements ExchangeClient {
 
         // 6. 返回 Future
         return future;
+    }
+
+    @Override
+    public void stream(ProxyMessage message) {
+        if (!isAvailable()) {
+            log.warn("stream() called but ExchangeClient not available, dropping: streamId={}",
+                    message != null ? message.getStreamId() : -1);
+            return;
+        }
+        // 数据面：不生成 requestId、不创建 Future，仅依赖 streamId 发后即忘
+        message.setRequestId(0);
+        try {
+            client.send(message);
+        } catch (Exception e) {
+            log.error("stream() send failed: streamId={}", message.getStreamId(), e);
+        }
+    }
+
+    @Override
+    public void setPushHandler(PushHandler pushHandler) {
+        if (exchangeHandler != null) {
+            exchangeHandler.setPushHandler(pushHandler);
+        } else {
+            log.warn("setPushHandler called but no ExchangeHandler bound, push callbacks disabled");
+        }
     }
 
     @Override

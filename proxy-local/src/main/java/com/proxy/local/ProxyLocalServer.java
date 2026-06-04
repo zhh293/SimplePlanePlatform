@@ -201,7 +201,7 @@ public class ProxyLocalServer {
         // 3. 关闭 DefaultFuture 时间轮，唤醒所有 pending Future
         DefaultFuture.shutdown();
 
-        // 4. 关闭 ClusterInvoker 中的 Invoker（底层会关闭 ExchangeClient → ConnectionPool）
+        // 4. 关闭 ClusterInvoker 中的 Invoker（底层会关闭 ExchangeClient → Http2Connection）
         if (clusterInvoker instanceof ClusterInvoker) {
             List<Invoker> invokers = ((ClusterInvoker) clusterInvoker).getAvailableInvokers();
             for (Invoker inv : invokers) {

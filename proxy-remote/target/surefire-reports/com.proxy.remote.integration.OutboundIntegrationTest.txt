@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.proxy.remote.integration.OutboundIntegrationTest
--------------------------------------------------------------------------------
-Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.503 s -- in com.proxy.remote.integration.OutboundIntegrationTest

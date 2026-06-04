@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.proxy.local.sysproxy.SystemProxyManagerTest
--------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.126 s -- in com.proxy.local.sysproxy.SystemProxyManagerTest

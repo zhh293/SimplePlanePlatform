@@ -51,8 +51,8 @@ public class HeaderExchanger implements Exchanger {
         Transporter transporter = ExtensionLoader.getLoader(Transporter.class).getDefaultExtension();
         Client client = transporter.connect(url, handler);
 
-        // 3. 包装成 ExchangeClient 返回
-        HeaderExchangeClient exchangeClient = new HeaderExchangeClient(client, url);
+        // 3. 包装成 ExchangeClient 返回（传入 handler，以支持数据面推送回调注册）
+        HeaderExchangeClient exchangeClient = new HeaderExchangeClient(client, url, handler);
         log.info("HeaderExchanger created ExchangeClient to {}:{}", url.getHost(), url.getPort());
         return exchangeClient;
     }

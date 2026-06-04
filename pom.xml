@@ -31,7 +31,7 @@
         <!-- Dependencies versions -->
         <netty.version>4.1.108.Final</netty.version>
         <slf4j.version>1.7.36</slf4j.version>
-        <logback.version>1.2.12</logback.version>
+        <logback.version>1.2.11</logback.version>
         <snakeyaml.version>2.2</snakeyaml.version>
         <junit.version>5.10.2</junit.version>
         <bouncycastle.version>1.70</bouncycastle.version>

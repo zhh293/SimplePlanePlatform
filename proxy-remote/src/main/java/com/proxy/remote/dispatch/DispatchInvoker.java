@@ -117,18 +117,19 @@ public class DispatchInvoker implements Invoker {
             return Response.ok();
         }
 
-        String streamId = (String) invocation.getAttachment("streamId");
+        String sessionKey = (String) invocation.getAttachment("streamId");
+        long rawStreamId = (Long) invocation.getAttachment("rawStreamId");
         ChannelHandlerContext inboundCtx = (ChannelHandlerContext) invocation.getAttachment("inboundCtx");
 
-        // 创建出站会话
-        OutboundSession session = new OutboundSession(inboundCtx, targetHost, targetPort, streamId);
-        sessionManager.register(streamId, session);
+        // 创建出站会话（sessionKey 用于 SessionManager 查找，rawStreamId 用于回写消息）
+        OutboundSession session = new OutboundSession(inboundCtx, targetHost, targetPort, sessionKey, rawStreamId);
+        sessionManager.register(sessionKey, session);
 
         // 异步建立到目标的 TCP 连接
         connector.connect(targetHost, targetPort, session).whenComplete((channel, throwable) -> {
             if (throwable != null) {
-                log.error("Outbound connect failed: target={}:{}, streamId={}", targetHost, targetPort, streamId, throwable);
-                sessionManager.remove(streamId);
+                log.error("Outbound connect failed: target={}:{}, sessionKey={}", targetHost, targetPort, sessionKey, throwable);
+                sessionManager.remove(sessionKey);
             } else {
                 session.setOutboundChannel(channel);
             }
@@ -147,42 +148,65 @@ public class DispatchInvoker implements Invoker {
     private Response handleData(Invocation invocation) {
         byte[] data = invocation.getData();
 
-        // 桩模式（connector 未配置）：回显数据
+        // 桩模式（connector 未配置）：以“服务端推送”的方式回显数据。
+        // 数据面已统一为流式 push：不再走请求-响应，而是构造 requestId=0 + streamId 的
+        // DATA 消息直接经 inboundCtx 回写，模拟真实出站会话的反向数据路径。
         if (connector == null) {
-            log.debug("Handle DATA (stub): dataLength={}", data != null ? data.length : 0);
-            return Response.ok(data);
+            log.debug("Handle DATA (stub push): dataLength={}", data != null ? data.length : 0);
+            ChannelHandlerContext inboundCtx =
+                    (ChannelHandlerContext) invocation.getAttachment("inboundCtx");
+            Object rawStreamIdObj = invocation.getAttachment("rawStreamId");
+            if (inboundCtx != null && rawStreamIdObj instanceof Long
+                    && inboundCtx.channel().isActive()) {
+                ProxyMessage push = ProxyMessage.builder()
+                        .type(ProxyMessage.MessageType.DATA)
+                        .host(invocation.getTargetHost())
+                        .port(invocation.getTargetPort())
+                        .streamId((Long) rawStreamIdObj)
+                        .data(data)
+                        .build();
+                // requestId 默认 0：标记为服务端推送，客户端经 PushHandler 落地
+                inboundCtx.writeAndFlush(push);
+            } else {
+                log.warn("Stub DATA push skipped: inboundCtx unavailable or inactive, streamId={}",
+                        rawStreamIdObj);
+            }
+            // DATA 为发后即忘，无需 ServerChannelHandler 自动回写响应
+            return null;
         }
 
-        String streamId = (String) invocation.getAttachment("streamId");
+        String sessionKey = (String) invocation.getAttachment("streamId");
 
-        OutboundSession session = sessionManager.get(streamId);
+        OutboundSession session = sessionManager.get(sessionKey);
         if (session == null) {
-            log.warn("No session found for streamId={}, cannot forward DATA", streamId);
-            return Response.error("No session for streamId=" + streamId);
+            log.warn("No session found for sessionKey={}, cannot forward DATA", sessionKey);
+            return Response.error("No session for sessionKey=" + sessionKey);
         }
 
         // 如果还在 CONNECTING 状态，等待连接就绪
         if (session.getState() == OutboundSession.SessionState.CONNECTING) {
             if (!session.awaitActive(activeWaitTimeoutMs)) {
-                log.warn("Session not active after waiting {}ms: streamId={}", activeWaitTimeoutMs, streamId);
+                log.warn("Session not active after waiting {}ms: sessionKey={}", activeWaitTimeoutMs, sessionKey);
                 return Response.error("Outbound connection not ready, timeout");
             }
         }
 
         // 连接已关闭
         if (session.getState() == OutboundSession.SessionState.CLOSED) {
-            log.warn("Session already closed: streamId={}", streamId);
-            return Response.error("Session closed for streamId=" + streamId);
+            log.warn("Session already closed: sessionKey={}", sessionKey);
+            return Response.error("Session closed for sessionKey=" + sessionKey);
         }
 
         // 转发数据到目标
         session.forward(data);
 
-        log.debug("Handle DATA: streamId={}, target={}:{}, dataLength={}",
-                streamId, session.getTargetHost(), session.getTargetPort(),
+        log.debug("Handle DATA: sessionKey={}, target={}:{}, dataLength={}",
+                sessionKey, session.getTargetHost(), session.getTargetPort(),
                 data != null ? data.length : 0);
 
-        return Response.ok();
+        // DATA 为发后即忘：目标的回包由 OutboundSession 经 inboundCtx 主动推送，
+        // 此处无需 ServerChannelHandler 自动回写响应。
+        return null;
     }
 
     /**
@@ -199,8 +223,8 @@ public class DispatchInvoker implements Invoker {
             return Response.ok();
         }
 
-        String streamId = (String) invocation.getAttachment("streamId");
-        sessionManager.remove(streamId);
+        String sessionKey = (String) invocation.getAttachment("streamId");
+        sessionManager.remove(sessionKey);
         return Response.ok();
     }
 

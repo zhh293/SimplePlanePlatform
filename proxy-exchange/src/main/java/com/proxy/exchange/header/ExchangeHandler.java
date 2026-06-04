@@ -1,5 +1,6 @@
 package com.proxy.exchange.header;
 
+import com.proxy.common.exchange.PushHandler;
 import com.proxy.common.filter.Response;
 import com.proxy.common.model.ProxyMessage;
 import com.proxy.common.transport.MessageHandler;
@@ -18,6 +19,19 @@ public class ExchangeHandler implements MessageHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ExchangeHandler.class);
 
+    /**
+     * 服务端推送回调（数据面出口）。
+     * <p>
+     * requestId=0 的入站消息为服务端主动推送的流式数据，不走 Future，
+     * 而是回调此处理器，由上层按 streamId 路由。
+     * </p>
+     */
+    private volatile PushHandler pushHandler;
+
+    public void setPushHandler(PushHandler pushHandler) {
+        this.pushHandler = pushHandler;
+    }
+
     @Override
     public void onMessage(ProxyMessage message) {
         if (message == null || message.getType() == null) {
@@ -27,7 +41,7 @@ public class ExchangeHandler implements MessageHandler {
 
         long requestId = message.getRequestId();
 
-        // 只有带 requestId 的消息才走 Future 映射
+        // requestId > 0：控制面的请求-响应（CONNECT/DISCONNECT），走 Future 映射
         if (requestId > 0) {
             Response response;
             if (message.getStatus() == Response.OK || message.getStatus() == 0) {
@@ -38,7 +52,18 @@ public class ExchangeHandler implements MessageHandler {
             }
             DefaultFuture.received(requestId, response);
         } else {
-            log.debug("Received message without requestId: type={}", message.getType());
+            // requestId == 0：数据面的服务端推送，按 streamId 路由到 PushHandler
+            PushHandler handler = this.pushHandler;
+            if (handler != null) {
+                try {
+                    handler.onPush(message);
+                } catch (Exception e) {
+                    log.error("PushHandler.onPush failed: streamId={}", message.getStreamId(), e);
+                }
+            } else {
+                log.debug("Received push message but no PushHandler registered: type={}, streamId={}",
+                        message.getType(), message.getStreamId());
+            }
         }
     }
 

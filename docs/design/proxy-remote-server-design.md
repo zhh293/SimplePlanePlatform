@@ -2,13 +2,37 @@
 
 | 属性     | 内容                                              |
 | -------- | ------------------------------------------------- |
-| 文档版本 | v1.0                                              |
+| 文档版本 | v2.0                                              |
 | 项目名称 | Netty-Proxy 远程代理服务端                        |
 | 所属模块 | proxy-remote / proxy-common / proxy-exchange / proxy-transport-netty |
 | 作者     | zhanghonghao                                      |
-| 状态     | Draft                                             |
+| 状态     | Implemented                                       |
 
 ---
+
+> ## 变更说明（v1.0 → v2.0）
+>
+> v1.0 设计将**所有消息（CONNECT / DATA / DISCONNECT）统一按「请求-响应」语义处理**：
+> 每条消息都携带 `requestId`，客户端用 `requestId → DefaultFuture` 等待回包，服务端用
+> `requestId → Channel` 反查并回写响应。这一模型在数据面（DATA）上存在两个问题：
+>
+> 1. **职责重叠**：DATA 同时背着 `requestId/DefaultFuture`（请求-响应）和 `streamId`（流标识）
+>    两套机制，语义打架；目标站点的回包既可以"作为响应返回"，又可以"作为推送回写"，路径不唯一。
+> 2. **不符合代理本质**：浏览器隧道是**双向流式**的，目标站点何时回多少数据完全不可预测，
+>    强行套用"一问一答"既不自然也限制吞吐。
+>
+> v2.0 借鉴 Dubbo 的 `request()` / `send()` 二分，对**控制面与数据面做了彻底拆分**：
+>
+> - **控制面（CONNECT / DISCONNECT）**：保留请求-响应语义，`requestId + DefaultFuture`
+>   用于等待握手确认，确保隧道建立/拆除的可靠性与错误传播。
+> - **数据面（DATA）**：改为**纯单向流式推送（fire-and-forget）**。上行用 `ExchangeClient.stream()`
+>   （`requestId=0`，不生成 Future、不等回包）；下行由服务端通过 `requestId=0 + streamId` 主动
+>   **推送（push）**，客户端经 `PushHandler` 落地，本地按 `streamId` 写回浏览器。
+>
+> 由此，`requestId/DefaultFuture` 只服务控制面，`streamId` 只服务数据面，二者不再混用；
+> 且数据面的上行（`stream()` → forward）与下行（`writeBack()` → push）形成镜像对称。
+> 下文凡涉及 DATA 回写的章节，均以本节为准；v1.0 中"DATA 走请求-响应回写"的描述已废弃，
+> 相关旧方案（如 §3.2.4 Map 路由表）仅对**控制面**仍然适用。
 
 ## 1. 背景与目标
 
@@ -41,42 +65,66 @@
 
 ### 2.1 数据流全景
 
+整个链路被拆成两条语义不同的路径：**控制面**（CONNECT / DISCONNECT，请求-响应）与
+**数据面**（DATA，单向流式推送）。两者使用不同的标识与不同的返回路径，互不干扰。
+
+#### 控制面（CONNECT / DISCONNECT）—— 请求-响应
+
 ```
 客户端(proxy-local)                                    远程服务端(proxy-remote)
 ─────────────────                                    ──────────────────────
-浏览器 → SOCKS5/HTTP CONNECT                          Netty ServerBootstrap
+浏览器 CONNECT host:port                              Netty ServerBootstrap
   → Filter Chain                                       ← 监听端口(bind)
   → ClusterInvoker(容错+LB)                            │
-  → ExchangeClient.request()                           ▼
+  → ExchangeClient.request()  [生成 requestId + Future] ▼
   → [编码 → 加密 → HTTP/2 发送] ─────网络────→ [HTTP/2 接收 → 解密 → 解码]
                                                        │
-                                                       ▼
-                                                  ServerExchangeHandler.onMessage()
-                                                       │
-                                                       ▼
-                                                  Invoker.invoke(invocation)
-                                                  (Filter链 → 真实处理器)
-                                                       │
-                                                       ▼
-                                                  CompletableFuture<Response>
-                                                       │
-                                                       ▼ .whenComplete()
-                                                  ctx.writeAndFlush(响应消息)
-                                                  [编码 → 加密 → HTTP/2 发送]
-                                                       │
+                                                       ▼  ServerExchangeHandler.onMessage()
+                                                       ▼  Invoker.invoke()  (Filter链 → DispatchInvoker)
+                                                       │     · CONNECT：注册 OutboundSession，异步建连，立即回 OK
+                                                       │     · DISCONNECT：移除并关闭 OutboundSession，回 OK
+                                                       ▼  whenComplete → ctx.writeAndFlush(响应, requestId>0)
 客户端 ExchangeHandler.onMessage()  ←────网络────────────┘
-  → DefaultFuture.received(requestId, response)
-  → 唤醒业务线程
+  → requestId>0 → DefaultFuture.received(requestId, response)
+  → 唤醒等待握手的业务线程
 ```
+
+#### 数据面（DATA）—— 单向流式推送（fire-and-forget + push）
+
+```
+【上行：浏览器 → 目标站点】                            【远程服务端】
+─────────────────────                                ──────────────────────
+浏览器隧道字节                                          │
+  → RelayHandler.channelRead                            │
+  → ClusterInvoker → ClientInvoker                      │
+  → ExchangeClient.stream()  [requestId=0, 不生成Future] │
+  → [编码 → 加密 → HTTP/2 发送] ───网络──→ [接收 → 解码 → DispatchInvoker.handleData]
+        （发后即忘，不等回包）                            │  → SessionManager.get(sessionKey)
+                                                        │  → OutboundSession.forward(data) → 目标 TCP
+                                                        │  → return null（不回写响应）
+
+【下行：目标站点 → 浏览器】（与上行镜像）                  │
+─────────────────────                                  │
+浏览器 ← writeAndFlush(裸字节)                           │  目标站点回包
+  ← ServerPushDispatchHandler                           │  → OutboundHandler.channelRead0
+      · requestId==0 → 按 streamId 查 StreamChannelRegistry│  → OutboundSession.writeBack(data)
+      · 找到浏览器 ctx，写回                              │     封装 ProxyMessage(requestId=0, streamId, DATA)
+  ← ExchangeHandler.onMessage                            │  ← inboundCtx.writeAndFlush(push)
+      · requestId==0 → PushHandler.onPush  ←──网络───────┘  [编码 → 加密 → HTTP/2 发送]
+```
+
+> 关键点：数据面**没有任何线程在等回包**。上行 `stream()` 立即返回，目标站点的回包
+> 走另一条独立的下行推送路径回到浏览器。`requestId==0` 是"这是推送、不是响应"的统一标记。
 
 ### 2.2 模块职责划分
 
 | 模块                   | 本次新增/变更内容                                                                 |
 | ---------------------- | -------------------------------------------------------------------------------- |
-| `proxy-common`         | 新增 `Server` 接口、`Exchanger.bind()` 方法、`ExchangeServer` 接口               |
-| `proxy-exchange`       | 新增 `ServerExchangeHandler`、`HeaderExchangeServer`、`HeaderExchanger.bind()` 实现 |
-| `proxy-transport-netty`| 新增 `NettyServer`、`NettyTransporter.bind()` 实现                                |
-| `proxy-remote`         | 新增 `ProxyRemoteServer` 启动入口、`DispatchInvoker`、服务端 Filter 链组装        |
+| `proxy-common`         | 新增 `Server` 接口、`Exchanger.bind()` 方法、`ExchangeServer` 接口；**（v2.0）`ExchangeClient` 新增 `stream()` / `setPushHandler()`，新增 `PushHandler` 函数式接口** |
+| `proxy-exchange`       | 新增 `ServerExchangeHandler`、`HeaderExchangeServer`、`HeaderExchanger.bind()` 实现；**（v2.0）`HeaderExchangeClient` 实现 `stream()`（requestId=0 发后即忘）与 `setPushHandler()`；`ExchangeHandler` 对 requestId==0 的入站消息路由到 `PushHandler.onPush()`** |
+| `proxy-transport-netty`| 新增 `NettyServer`、`NettyTransporter.bind()` 实现；**（v2.0）`ServerChannelHandler` 支持 `response == null` 时跳过回写（数据面发后即忘）** |
+| `proxy-remote`         | 新增 `ProxyRemoteServer` 启动入口、`DispatchInvoker`、服务端 Filter 链组装；**（v2.0）`DispatchInvoker.handleData` 改为转发后 `return null`，回包由 `OutboundSession.writeBack()` 经 `inboundCtx` 主动推送（requestId=0 + streamId）** |
+| `proxy-local`          | **（v2.0）`RelayHandler` 上行 DATA 改为发后即忘（不消费响应）；新增 `StreamChannelRegistry`（streamId → 浏览器 ctx）与 `ServerPushDispatchHandler`（拦截 requestId==0 推送，按 streamId 写回浏览器）** |
 
 ---
 
@@ -518,12 +566,21 @@ public class ServerExchangeHandler implements MessageHandler {
 @Override
 public void channelRead(ChannelHandlerContext ctx, Object msg) {
     ProxyMessage message = (ProxyMessage) msg;
-    
+
     // 将 ctx 封装进 handler 调用，由 handler 内部通过闭包持有 ctx
+    // 注意：toInvocation 会把 inboundCtx、rawStreamId 一并塞进 attachment，
+    // 供 DispatchInvoker 在数据面建立 OutboundSession 与回写推送时使用。
     Invocation invocation = toInvocation(message);
     CompletableFuture<Response> future = invoker.invoke(invocation);
-    
+
     future.whenComplete((resp, ex) -> {
+        // 【v2.0】数据面（DATA）发后即忘：DispatchInvoker.handleData 返回 null，
+        // 这里直接跳过回写——目标站点的回包由 OutboundSession.writeBack() 经 inboundCtx
+        // 以 requestId=0 + streamId 主动推送，不再走请求-响应回写。
+        if (resp == null) {
+            return;
+        }
+        // 控制面（CONNECT / DISCONNECT）：仍按请求-响应回写，requestId>0。
         ProxyMessage reply = buildReply(message.getRequestId(), resp, ex);
         ctx.writeAndFlush(reply);  // ctx 通过闭包捕获，线程安全
     });
@@ -531,6 +588,13 @@ public void channelRead(ChannelHandlerContext ctx, Object msg) {
 ```
 
 这种方式最为简洁：`ServerChannelHandler` 本身就是 Netty Handler，天然持有 ctx，无需额外的接口抽象。`ServerExchangeHandler` 的逻辑实际内聚到 `ServerChannelHandler` 中即可。
+
+> **【v2.0 数据面例外】** 上述「请求-响应回写」仅适用于**控制面**（CONNECT / DISCONNECT）。
+> 对于**数据面**（DATA），`DispatchInvoker.handleData` 转发数据后返回 `null`，
+> `ServerChannelHandler` 据此跳过回写；目标站点的响应数据通过 `OutboundSession.writeBack()`
+> 封装为 `requestId=0 + streamId` 的 `ProxyMessage`，经入站 Stream 的 `inboundCtx` 主动
+> **推送**回客户端。客户端 `ExchangeHandler` 收到 `requestId==0` 的消息后路由给 `PushHandler`，
+> 最终由本地 `ServerPushDispatchHandler` 按 streamId 写回浏览器。详见 §3.3.2。
 
 > **说明**：上述「内聚一层」是本期落地选用的方案，理由见下一节的取舍分析。它的代价是牺牲了一点与客户端的结构对称性（客户端是 `ClientMessageHandler` + `ExchangeHandler` 两层，服务端被压成一层）。如果更看重架构对称性，可采用下一节的 **Map 路由表方案** 恢复两层结构。
 
@@ -747,9 +811,17 @@ import java.util.concurrent.ExecutorService;
  * 所有处理均在独立业务线程池中异步执行，确保不阻塞 IO 线程。
  * </p>
  * <p>
- * 后续迭代中，CONNECT 请求将触发 Outbound 连接建立（连接目标站点），
- * DATA 请求将触发数据转发，DISCONNECT 请求将触发连接清理。
- * 本期仅定义框架骨架，具体出站逻辑留白。
+ * 【v2.0 控制面 vs 数据面】
+ * <ul>
+ *   <li>CONNECT：创建 OutboundSession 注册到 SessionManager，异步发起到目标的 TCP 连接，
+ *       立即返回 {@code Response.ok()}（请求-响应，requestId>0）。</li>
+ *   <li>DATA：从 SessionManager 取出 session，{@code session.forward(data)} 转发到目标，
+ *       <strong>返回 {@code null}</strong> —— 发后即忘，回包由 {@link OutboundSession#writeBack}
+ *       经 inboundCtx 以 requestId=0 + streamId 主动推送，不走请求-响应回写。</li>
+ *   <li>DISCONNECT：从 SessionManager 移除并关闭 session，返回 {@code Response.ok()}。</li>
+ * </ul>
+ * 当 {@code connector == null} 时走桩模式：CONNECT/DISCONNECT 直接回 OK，
+ * DATA 以"服务端推送"的方式（requestId=0 + streamId 经 inboundCtx）回显，便于集成测试。
  * </p>
  */
 public class DispatchInvoker implements Invoker {
@@ -791,34 +863,62 @@ public class DispatchInvoker implements Invoker {
         }
     }
 
+    // 【控制面】CONNECT —— 请求-响应，立即回 OK，利用窗口期异步建连
     private Response handleConnect(Invocation invocation) {
-        // 隧道建立：客户端告知目标 host:port，服务端在此时机异步发起 Outbound 连接
-        // Phase 2 实现流程：
-        //   1. 从 invocation 中取出 targetHost:targetPort
-        //   2. 通过 Outbound Bootstrap 异步建连（DNS + TCP + 可能的 TLS）
-        //   3. 将连接 Future/引用注册到 streamId → OutboundSession 映射
-        //   4. 立即返回 OK（通知客户端隧道就绪，可以开始发送 DATA）
-        // 利用 CONNECT 与第一个 DATA 之间的时间窗口完成建连，减少用户首包延迟
+        String targetHost = invocation.getTargetHost();
+        int targetPort = invocation.getTargetPort();
+
+        String sessionKey = (String) invocation.getAttachment("streamId");      // remote 本地索引（复合 key）
+        long rawStreamId  = (Long) invocation.getAttachment("rawStreamId");      // 全链路数字 streamId
+        ChannelHandlerContext inboundCtx =
+                (ChannelHandlerContext) invocation.getAttachment("inboundCtx");  // 入站 Stream，用于后续 writeBack 推送
+
+        // 1. 创建出站会话（绑定 inboundCtx + rawStreamId），注册到 SessionManager
+        OutboundSession session =
+                new OutboundSession(inboundCtx, targetHost, targetPort, sessionKey, rawStreamId);
+        sessionManager.register(sessionKey, session);
+
+        // 2. 异步建立到目标的 TCP 连接（不阻塞，连接就绪后 session 迁移到 ACTIVE）
+        connector.connect(targetHost, targetPort, session).whenComplete((channel, ex) -> {
+            if (ex != null) {
+                sessionManager.remove(sessionKey);
+            } else {
+                session.setOutboundChannel(channel);
+            }
+        });
+
+        // 3. 立即回 OK —— 通知客户端隧道就绪，可开始发送 DATA
         return Response.ok();
     }
 
+    // 【数据面】DATA —— 发后即忘：转发到目标后返回 null，不回写响应
     private Response handleData(Invocation invocation) {
-        // 数据面核心路径：用户的实际流量到达
-        // Phase 2 实现流程：
-        //   1. 根据 streamId 从映射中取出 OutboundSession
-        //   2. 如果 Outbound 连接已 ready → 直接转发用户数据到目标站点
-        //      如果连接尚未建好 → 等待连接就绪（或缓冲排队）后再发
-        //   3. 异步等待目标站点响应
-        //   4. 将响应数据通过 CompletableFuture 返回，由上层通过 Stream Channel 推回客户端
-        return Response.ok(invocation.getData());
+        String sessionKey = (String) invocation.getAttachment("streamId");
+        OutboundSession session = sessionManager.get(sessionKey);
+        if (session == null) {
+            return Response.error("No session for sessionKey=" + sessionKey);
+        }
+        // 连接可能仍在建立中（CONNECT 与首个 DATA 的时间窗口），等待就绪
+        if (session.getState() == OutboundSession.SessionState.CONNECTING
+                && !session.awaitActive(activeWaitTimeoutMs)) {
+            return Response.error("Outbound connection not ready, timeout");
+        }
+        if (session.getState() == OutboundSession.SessionState.CLOSED) {
+            return Response.error("Session closed for sessionKey=" + sessionKey);
+        }
+
+        // 转发到目标站点
+        session.forward(invocation.getData());
+
+        // 返回 null：目标的回包由 OutboundSession.writeBack() 经 inboundCtx 主动推送
+        //（requestId=0 + streamId），ServerChannelHandler 见 null 即跳过回写。
+        return null;
     }
 
+    // 【控制面】DISCONNECT —— 请求-响应，移除并关闭会话
     private Response handleDisconnect(Invocation invocation) {
-        // 会话断开：客户端通知隧道关闭
-        // Phase 2 实现流程：
-        //   1. 根据 streamId 从映射中移除 OutboundSession
-        //   2. 关闭到目标站点的 Outbound 连接（或归还连接池）
-        //   3. 释放该会话占用的所有资源（缓冲区、计数器等）
+        String sessionKey = (String) invocation.getAttachment("streamId");
+        sessionManager.remove(sessionKey);  // 内部会 close()，关闭到目标的连接
         return Response.ok();
     }
 }
@@ -922,6 +1022,52 @@ public class ProxyRemoteServer {
 
 ---
 
+### 3.5 双标识设计：控制面 vs 数据面（v2.0 核心）
+
+这是 v2.0 重构的核心。系统中存在两个标识，职责严格分离，互不混用。
+
+#### 3.5.1 两个标识的职责
+
+| 标识 | 服务对象 | 语义 | 生命周期 / 配套结构 |
+|------|----------|------|---------------------|
+| `requestId` | **控制面**（CONNECT / DISCONNECT） | 请求-响应，需要等待确认 | 客户端 `request()` 生成，配 `DefaultFuture`；服务端回写时原样带回，`ExchangeHandler` 按 requestId 唤醒 Future |
+| `streamId` | **数据面**（DATA） | 单向流式推送，发后即忘 | 隧道建立时由 `StreamChannelRegistry` 分配，贯穿整条链路；上行 `stream()` / 下行 push 均以 `requestId=0 + streamId` 承载 |
+
+判定规则极简：**入站消息 `requestId > 0` → 走 DefaultFuture（响应）；`requestId == 0` → 走 PushHandler（推送）。**
+
+这与 Dubbo 的 `request()` / `send()` 二分同构：`request()` 走 `DefaultFuture` 等回包，
+`send()`（即本框架的 `stream()`）纯发后即忘。`requestId/DefaultFuture` 不再被数据流污染，
+`streamId` 也不再和 `requestId` 抢职责。
+
+#### 3.5.2 数据面的上下行对称
+
+数据面的两个方向是**镜像**的，使用完全相同的消息形态（`requestId=0 + streamId + 裸 data`），仅方向相反、查表不同：
+
+| | 上行（浏览器 → 目标） | 下行（目标 → 浏览器） |
+|---|---|---|
+| 触发 | `RelayHandler.channelRead` | `OutboundHandler.channelRead0` |
+| 封装 | `stream()` → `requestId=0 + streamId` | `writeBack()` → `requestId=0 + streamId` |
+| 路由依据 | `SessionManager.get(sessionKey)` | `StreamChannelRegistry.get(streamId)` |
+| 落地 | `OutboundSession.forward()` 写裸字节到目标 | `ServerPushDispatchHandler` 写裸字节到浏览器 |
+| 语义 | 发后即忘 | 发后即忘 |
+
+#### 3.5.3 为什么下行用 streamId 而非 sessionKey
+
+注意上表中，上行在 remote 端查表用的是 **`sessionKey`**，下行在 local 端查表用的是 **`streamId`** —— 这看似不对称，实则是**有意为之的合理设计**：
+
+- **`streamId`：全链路公共寻址 ID。** 由 local 端 `StreamChannelRegistry.nextStreamId()` 生成（数字），会被**写进 `ProxyMessage` 在网线上传输**，两端都能读到。它是浏览器那一路连接在整条链路上的"护照"。
+- **`sessionKey`：remote 端本地私有索引。** 在 `ServerChannelHandler.toInvocation()` 里现场拼出（设计上为复合 key `parentChannelId:streamId`），只活在 remote 进程内，作 `SessionManager` 这张表的 key。它的作用是：当**多个 local 实例**连同一个 remote 时，不同 local 的 streamId 可能撞号，故 remote 需加前缀做命名空间隔离。这个加了前缀的字符串，local 端既不知道也不需要知道。
+
+因此 `OutboundSession` 同时保存两者：`sessionKey`（给 `SessionManager` 查找）与 `rawStreamId`（写回推送消息时设置到 `ProxyMessage.streamId`）。下行写回时**必须**用两端共识、且能塞进协议 `long` 字段、能在 local 的 `StreamChannelRegistry` 里查到的 `streamId`；若硬用复合 sessionKey，local 端根本查不到。
+
+> 对称的真正边界是：**每一端都用"自己本地表的 key"查自己的表**（remote 用 sessionKey 查 SessionManager，local 用 streamId 查 StreamChannelRegistry），而**网线上传输的统一身份永远是 streamId**。sessionKey 多出的那一层前缀，是 remote "一对多承接多个 local" 导致的合理不对称，不是缺陷。一句话：**streamId 是护照（全链路通用），sessionKey 是 remote 发的本地门禁卡（只在这栋楼有效）；写回浏览器（回家）当然得用护照。**
+
+#### 3.5.4 与控制面回写表（§3.2.4 Map 路由表）的关系
+
+§3.2.4 介绍的 `requestId → Channel` 路由表方案，在 v2.0 中**仅对控制面（CONNECT / DISCONNECT）适用**。数据面已不存在"回写响应"这一步，自然无需该表——下行是主动 push，不是对某个 requestId 的应答。本期落地选用「内聚一层」，控制面的 ctx 由闭包捕获，数据面的 inboundCtx 则由 `OutboundSession` 持有用于 writeBack。
+
+---
+
 ## 4. 线程模型
 
 ```
@@ -945,8 +1091,14 @@ public class ProxyRemoteServer {
 │           └── future.complete(response)                           │
 │                                                                   │
 │  [Future Callback]  (在 bizExecutor 线程中执行)                   │
-│     └── whenComplete → buildReply → ctx.writeAndFlush(reply)     │
+│     └── whenComplete:                                             │
+│           · 控制面(resp!=null) → buildReply → ctx.writeAndFlush   │
+│           · 数据面(resp==null) → 跳过回写（发后即忘）             │
 │         （writeAndFlush 只是提交到 IO 线程的任务队列，非阻塞）    │
+│                                                                   │
+│  [Outbound IO 线程]  (数据面下行推送，独立于上行)                 │
+│     └── OutboundHandler 收目标回包 → session.writeBack()          │
+│           → inboundCtx.writeAndFlush(requestId=0 + streamId)      │
 │                                                                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -1012,8 +1164,9 @@ public class ProxyRemoteServer {
 | CipherDecodeHandler | ✅ | ✅ | 加密算法相同 |
 | CipherEncodeHandler | ✅ | ✅ | 加密算法相同 |
 | HeartbeatHandler | ✅ | ✅ | 心跳逻辑相同 |
-| ClientMessageHandler | ✅ | ❌ | 客户端专用（调用 DefaultFuture） |
-| ServerChannelHandler | ❌ | ✅ | **新增**，服务端专用 |
+| ClientMessageHandler | ✅ | ❌ | 客户端专用（按 requestId 唤醒 DefaultFuture；requestId==0 路由 PushHandler） |
+| ServerChannelHandler | ❌ | ✅ | **新增**，服务端专用；**（v2.0）`response==null` 时跳过回写（数据面发后即忘）** |
+| ServerPushDispatchHandler | ❌ | ❌ | **（v2.0）local 端 Stream Pipeline 专用**：拦截 requestId==0 的入站推送，按 streamId 查 `StreamChannelRegistry` 写回浏览器；位于 ClientMessageHandler 之前 |
 
 ---
 
@@ -1512,6 +1665,14 @@ public class SessionManager {
 
 Phase 1 的桩实现升级为完整的出站逻辑：
 
+> **【v2.0 对齐说明】** 本节为早期 Phase 2 设计稿，保留以记录演进过程。其中 `handleData` 返回 `Response.ok()`、
+> `handleConnect/handleDisconnect` 以 `String streamId` 作为 SessionManager 的 key，均为早期方案。
+> **实际实现以 §3.3.2、§3.5 为准**：
+> - `handleData` **转发后返回 `null`**（发后即忘），目标响应由 `OutboundSession.writeBack()` 经 inboundCtx
+>   以 `requestId=0 + streamId` 主动推送，不走请求-响应回写；
+> - SessionManager 的 key 为复合 `sessionKey`（`parentChannelId:streamId`），而 `writeBack` 回填 ProxyMessage 时
+>   使用的是数据面寻址用的 `rawStreamId`（`long`）。详见 §3.5 双标识设计。
+
 ```java
 public class DispatchInvoker implements Invoker {
 
@@ -1710,12 +1871,15 @@ Outbound Channel (到目标网站的裸 TCP 连接):
 `ServerChannelHandler` 在构建 Invocation 时，将 `ctx` 作为 attachment 传入：
 
 ```java
-// ServerChannelHandler.channelRead0() 中
+// ServerChannelHandler.toInvocation() 中（v2.0）
 invocation.setAttachment("inboundCtx", ctx);
-invocation.setAttachment("streamId", ctx.channel().id().asShortText());
+// 控制面 SessionManager 的 key（复合 sessionKey，规划为 parentChannelId:streamId）
+invocation.setAttachment("streamId", String.valueOf(message.getStreamId()));
+// 数据面寻址用的原始 streamId（long），writeBack 回填 ProxyMessage.streamId 时使用
+invocation.setAttachment("rawStreamId", message.getStreamId());
 ```
 
-`DispatchInvoker.handleConnect()` 从 attachment 中取出 ctx，传给 `OutboundSession`。后续 `OutboundHandler` 通过 session 持有的 inboundCtx 回写响应，形成完整的数据环路。
+`DispatchInvoker.handleConnect()` 从 attachment 中取出 ctx 与 `rawStreamId`，传给 `OutboundSession`。后续 `OutboundHandler` 通过 session 持有的 inboundCtx，以 `requestId=0 + rawStreamId` 主动推送目标响应，形成完整的数据环路。控制面（CONNECT/DISCONNECT）与数据面（DATA）的标识分工详见 §3.5。
 
 ### 8.1.8 模块结构（Phase 2 新增）
 

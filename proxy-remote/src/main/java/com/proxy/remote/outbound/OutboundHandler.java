@@ -39,16 +39,16 @@ public class OutboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        log.debug("Outbound channel to {}:{} inactive, closing session: streamId={}",
-                session.getTargetHost(), session.getTargetPort(), session.getStreamId());
+        log.debug("Outbound channel to {}:{} inactive, closing session: sessionKey={}",
+                session.getTargetHost(), session.getTargetPort(), session.getSessionKey());
         session.close();
         super.channelInactive(ctx);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("Exception on outbound channel to {}:{}, streamId={}",
-                session.getTargetHost(), session.getTargetPort(), session.getStreamId(), cause);
+        log.error("Exception on outbound channel to {}:{}, sessionKey={}",
+                session.getTargetHost(), session.getTargetPort(), session.getSessionKey(), cause);
         session.close();
         ctx.close();
     }

@@ -6,7 +6,7 @@ import io.netty.channel.ChannelPipeline;
 /**
  * Stream Pipeline 自定义扩展点（SPI）
  * <p>
- * 由 {@link com.proxy.transport.netty.pool.ConnectionPool} 在创建 HTTP/2 Stream
+ * 由 {@link com.proxy.transport.netty.conn.Http2Connection} 在创建 HTTP/2 Stream
  * 子 Channel 时调用。允许上层模块在 Stream Pipeline 中注入自定义的 ChannelHandler，
  * 实现消息拦截、路由等需求，而不侵入 Exchange 层的核心逻辑。
  * </p>

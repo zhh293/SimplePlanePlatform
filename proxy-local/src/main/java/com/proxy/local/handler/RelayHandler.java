@@ -10,14 +10,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 双向数据转发 Handler —— 隧道建立后的数据中继
+ * 出站数据转发 Handler —— 隧道建立后的上行中继
  * <p>
  * 隧道建立成功后（SOCKS5 CONNECT 或 HTTP CONNECT 完成），
- * 浏览器发来的所有数据都通过 ClusterInvoker 以 DATA 类型转发到远程，
- * 远程回来的数据通过 ExchangeClient 的回调写回浏览器 channel。
+ * 浏览器发来的所有数据都通过 ClusterInvoker 以 DATA 类型转发到远程。
  * </p>
  * <p>
- * 连接关闭时发送 DISCONNECT 通知远程释放资源。
+ * <strong>关键设计（数据面 = 推送模型）</strong>：远程目标站点返回的数据
+ * 不是以“请求-响应”的形式回到本 Handler，而是由远程服务器主动
+ * <em>推送</em>（requestId=0 + streamId），在本地由
+ * {@link ServerPushDispatchHandler} 按 streamId 路由写回浏览器。
+ * 因此本 Handler 只负责<strong>上行（浏览器 → 远程）</strong>，
+ * DATA 调用采用“发后即忘”，不再消费响应数据，避免与推送路径
+ * 产生双重写回。控制面（CONNECT 握手 / DISCONNECT 通知）仍使用
+ * 请求-响应语义以确保可靠性与错误传播。
  * </p>
  */
 public class RelayHandler extends ChannelInboundHandlerAdapter {
@@ -54,24 +60,18 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
             byte[] data = new byte[buf.readableBytes()];
             buf.readBytes(data);
 
-            // 构建 DATA 类型的 Invocation，通过 ClusterInvoker 转发到远程
+            // 构建 DATA 类型的 Invocation，通过 ClusterInvoker 转发到远程。
+            // 数据面采用推送模型：上行发后即忘，下行由 ServerPushDispatchHandler
+            // 按 streamId 路由写回浏览器，因此这里不消费 response.getData()。
             Invocation invocation = new Invocation(targetHost, targetPort, data, ProxyMessage.MessageType.DATA);
             invocation.setAttachment("streamId", streamId);
 
             invoker.invoke(invocation).whenComplete((response, throwable) -> {
                 if (throwable != null) {
-                    log.error("Relay DATA failed for {}:{}", targetHost, targetPort, throwable);
+                    log.error("Relay DATA failed for {}:{}, streamId={}", targetHost, targetPort, streamId, throwable);
                     ctx.close();
-                    return;
                 }
-
-                // 远程返回的数据写回浏览器
-                if (response != null && response.isSuccess() && response.getData() != null
-                        && response.getData().length > 0) {
-                    ByteBuf responseBuf = ctx.alloc().buffer(response.getData().length);
-                    responseBuf.writeBytes(response.getData());
-                    ctx.writeAndFlush(responseBuf);
-                }
+                // 成功时无需处理：目标站点的回包由远程推送 + ServerPushDispatchHandler 写回
             });
         } finally {
             buf.release();

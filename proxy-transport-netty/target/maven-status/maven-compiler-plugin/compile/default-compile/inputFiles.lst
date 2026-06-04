@@ -3,6 +3,8 @@
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/NettyTransporter.java
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/StreamPipelineCustomizer.java
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/codec/ProxyCodec.java
+/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/conn/Http2ClientConfig.java
+/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/conn/Http2Connection.java
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/handler/CipherDecodeHandler.java
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/handler/CipherEncodeHandler.java
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/handler/ClientMessageHandler.java
@@ -10,6 +12,3 @@
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/handler/ProxyMessageDecoder.java
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/handler/ProxyMessageEncoder.java
 /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/handler/ServerChannelHandler.java
-/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/pool/ConnectionPool.java
-/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/pool/Http2PooledConnection.java
-/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/src/main/java/com/proxy/transport/netty/pool/PoolConfig.java

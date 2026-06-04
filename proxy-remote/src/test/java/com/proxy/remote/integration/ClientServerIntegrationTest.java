@@ -104,11 +104,19 @@ class ClientServerIntegrationTest {
     }
 
     /**
-     * 测试用例 2：发送 DATA 消息（带 payload），验证服务端回显正确数据
+     * 测试用例 2：发送 DATA 流式数据（发后即忘），验证通过 push 回调收到回显数据
+     * <p>
+     * 数据面已统一为流式 push：上行数据不生成 requestId/Future，仅依赖 streamId 寻址；
+     * 服务端的回包由 push 回调（requestId=0 + streamId）异步送达。
+     * </p>
      */
     @Test
     void testDataEcho() throws Exception {
         byte[] payload = "Hello, Proxy Server!".getBytes();
+
+        // 注册 push 回调收集服务端推送
+        BlockingQueue<ProxyMessage> pushQueue = new LinkedBlockingQueue<>();
+        client.setPushHandler(pushQueue::offer);
 
         ProxyMessage message = ProxyMessage.builder()
                 .type(ProxyMessage.MessageType.DATA)
@@ -118,12 +126,15 @@ class ClientServerIntegrationTest {
                 .data(payload)
                 .build();
 
-        CompletableFuture<Response> future = client.request(message, TIMEOUT);
-        Response response = future.get(TIMEOUT, TimeUnit.MILLISECONDS);
+        // 发后即忘发送（不返回 Future）
+        client.stream(message);
 
-        assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertArrayEquals(payload, response.getData(), "Echo data should match");
+        // 从 push 回调验证回显数据
+        ProxyMessage pushed = pushQueue.poll(TIMEOUT, TimeUnit.MILLISECONDS);
+        assertNotNull(pushed, "Should receive a server push for the stream");
+        assertEquals(ProxyMessage.MessageType.DATA, pushed.getType());
+        assertEquals(2L, pushed.getStreamId(), "Push should carry the same streamId");
+        assertArrayEquals(payload, pushed.getData(), "Echo data should match");
     }
 
     /**
@@ -155,7 +166,11 @@ class ClientServerIntegrationTest {
      */
     @Test
     void testHeartbeatDoesNotInterfere() throws Exception {
-        // 发送正常 DATA 消息
+        // 注册 push 回调
+        BlockingQueue<ProxyMessage> pushQueue = new LinkedBlockingQueue<>();
+        client.setPushHandler(pushQueue::offer);
+
+        // 发送正常 DATA 流式数据
         byte[] payload = "test-after-heartbeat".getBytes();
         ProxyMessage message = ProxyMessage.builder()
                 .type(ProxyMessage.MessageType.DATA)
@@ -165,12 +180,11 @@ class ClientServerIntegrationTest {
                 .data(payload)
                 .build();
 
-        CompletableFuture<Response> future = client.request(message, TIMEOUT);
-        Response response = future.get(TIMEOUT, TimeUnit.MILLISECONDS);
+        client.stream(message);
 
-        assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertArrayEquals(payload, response.getData());
+        ProxyMessage pushed = pushQueue.poll(TIMEOUT, TimeUnit.MILLISECONDS);
+        assertNotNull(pushed, "Should receive a server push after heartbeat");
+        assertArrayEquals(payload, pushed.getData());
     }
 
     /**
@@ -179,6 +193,12 @@ class ClientServerIntegrationTest {
     @Test
     void testConcurrentRequests() throws Exception {
         int concurrency = 100;
+
+        // 按 streamId 收集 push 回显数据，每个 stream 一个队列
+        ConcurrentHashMap<Long, BlockingQueue<ProxyMessage>> pushByStream = new ConcurrentHashMap<>();
+        client.setPushHandler(msg ->
+                pushByStream.computeIfAbsent(msg.getStreamId(), k -> new LinkedBlockingQueue<>()).offer(msg));
+
         ExecutorService executor = Executors.newFixedThreadPool(20);
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch doneLatch = new CountDownLatch(concurrency);
@@ -191,20 +211,26 @@ class ClientServerIntegrationTest {
                 try {
                     startLatch.await(); // 所有线程同时开始
 
+                    long streamId = 100 + index;
                     byte[] payload = ("data-" + index).getBytes();
                     ProxyMessage message = ProxyMessage.builder()
                             .type(ProxyMessage.MessageType.DATA)
                             .host("concurrent-" + index + ".com")
                             .port(80)
-                            .streamId(100 + index)
+                            .streamId(streamId)
                             .data(payload)
                             .build();
 
-                    CompletableFuture<Response> future = client.request(message, TIMEOUT);
-                    Response response = future.get(TIMEOUT, TimeUnit.MILLISECONDS);
+                    // 发后即忘发送
+                    client.stream(message);
 
-                    if (response != null && response.isSuccess() &&
-                            java.util.Arrays.equals(payload, response.getData())) {
+                    // 等待该 stream 的 push 回显
+                    BlockingQueue<ProxyMessage> q =
+                            pushByStream.computeIfAbsent(streamId, k -> new LinkedBlockingQueue<>());
+                    ProxyMessage pushed = q.poll(TIMEOUT, TimeUnit.MILLISECONDS);
+
+                    if (pushed != null && pushed.getStreamId() == streamId &&
+                            java.util.Arrays.equals(payload, pushed.getData())) {
                         successCount.incrementAndGet();
                     } else {
                         failCount.incrementAndGet();
@@ -223,11 +249,15 @@ class ClientServerIntegrationTest {
         executor.shutdown();
 
         assertEquals(concurrency, successCount.get(),
-                "All concurrent requests should succeed. Failures: " + failCount.get());
+                "All concurrent streams should receive matching push. Failures: " + failCount.get());
     }
 
     /**
-     * 测试用例 6：异常验证 — 服务端线程池满时返回错误响应
+     * 测试用例 6：异常验证 — 服务端线程池满时控制面请求返回错误响应
+     * <p>
+     * 线程池满是服务端调度层问题，适用于仍为请求-响应的控制面（CONNECT）；
+     * 数据面已改为发后即忘，无响应可等，故用 CONNECT 验证错误路径。
+     * </p>
      */
     @Test
     void testThreadPoolExhaustion() throws Exception {
@@ -256,13 +286,12 @@ class ClientServerIntegrationTest {
             // 等待线程池完全关闭
             tinyExecutor.awaitTermination(2, TimeUnit.SECONDS);
 
-            // 发送请求
+            // 发送控制面请求（CONNECT，仍走请求-响应）
             ProxyMessage message = ProxyMessage.builder()
-                    .type(ProxyMessage.MessageType.DATA)
+                    .type(ProxyMessage.MessageType.CONNECT)
                     .host("test.com")
                     .port(80)
                     .streamId(999)
-                    .data("test".getBytes())
                     .build();
 
             CompletableFuture<Response> future = tinyClient.request(message, TIMEOUT);

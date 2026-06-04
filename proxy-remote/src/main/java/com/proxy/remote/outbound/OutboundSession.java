@@ -34,7 +34,8 @@ public class OutboundSession {
     private final ChannelHandlerContext inboundCtx;
     private final String targetHost;
     private final int targetPort;
-    private final String streamId;
+    private final String sessionKey;
+    private final long rawStreamId;
 
     private final AtomicReference<SessionState> state = new AtomicReference<>(SessionState.CONNECTING);
     private final CompletableFuture<Void> activeFuture = new CompletableFuture<>();
@@ -42,16 +43,18 @@ public class OutboundSession {
     private volatile Channel outboundChannel;
 
     /**
-     * @param inboundCtx 客户端 Stream 的 ChannelHandlerContext，用于回写数据
-     * @param targetHost 目标主机
-     * @param targetPort 目标端口
-     * @param streamId   客户端 Stream ID
+     * @param inboundCtx  客户端 Stream 的 ChannelHandlerContext，用于回写数据
+     * @param targetHost  目标主机
+     * @param targetPort  目标端口
+     * @param sessionKey  复合 session key（parentChannelId:streamId），用于 SessionManager 查找
+     * @param rawStreamId 原始数字 streamId，用于回写推送消息时设置到 ProxyMessage
      */
-    public OutboundSession(ChannelHandlerContext inboundCtx, String targetHost, int targetPort, String streamId) {
+    public OutboundSession(ChannelHandlerContext inboundCtx, String targetHost, int targetPort, String sessionKey, long rawStreamId) {
         this.inboundCtx = inboundCtx;
         this.targetHost = targetHost;
         this.targetPort = targetPort;
-        this.streamId = streamId;
+        this.sessionKey = sessionKey;
+        this.rawStreamId = rawStreamId;
     }
 
     /**
@@ -61,7 +64,7 @@ public class OutboundSession {
         this.outboundChannel = channel;
         if (state.compareAndSet(SessionState.CONNECTING, SessionState.ACTIVE)) {
             activeFuture.complete(null);
-            log.debug("OutboundSession active: streamId={}, target={}:{}", streamId, targetHost, targetPort);
+            log.debug("OutboundSession active: sessionKey={}, target={}:{}", sessionKey, targetHost, targetPort);
         }
     }
 
@@ -72,13 +75,13 @@ public class OutboundSession {
      */
     public void forward(byte[] data) {
         if (state.get() != SessionState.ACTIVE) {
-            log.warn("Cannot forward data, session not active: streamId={}, state={}", streamId, state.get());
+            log.warn("Cannot forward data, session not active: sessionKey={}, state={}", sessionKey, state.get());
             return;
         }
         if (outboundChannel != null && outboundChannel.isActive()) {
             outboundChannel.writeAndFlush(io.netty.buffer.Unpooled.wrappedBuffer(data));
         } else {
-            log.warn("Outbound channel inactive, cannot forward: streamId={}", streamId);
+            log.warn("Outbound channel inactive, cannot forward: sessionKey={}", sessionKey);
         }
     }
 
@@ -92,7 +95,7 @@ public class OutboundSession {
      */
     public void writeBack(byte[] data) {
         if (state.get() == SessionState.CLOSED) {
-            log.debug("Session closed, ignoring writeBack: streamId={}", streamId);
+            log.debug("Session closed, ignoring writeBack: sessionKey={}", sessionKey);
             return;
         }
         if (inboundCtx.channel().isActive()) {
@@ -100,12 +103,12 @@ public class OutboundSession {
                     .type(ProxyMessage.MessageType.DATA)
                     .host(targetHost)
                     .port(targetPort)
-                    .streamId(Long.parseLong(streamId))
+                    .streamId(rawStreamId)
                     .data(data)
                     .build();
             inboundCtx.writeAndFlush(message);
         } else {
-            log.warn("Inbound channel inactive, cannot writeBack: streamId={}", streamId);
+            log.warn("Inbound channel inactive, cannot writeBack: sessionKey={}", sessionKey);
         }
     }
 
@@ -126,7 +129,7 @@ public class OutboundSession {
             activeFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
             return true;
         } catch (Exception e) {
-            log.warn("awaitActive timeout: streamId={}, target={}:{}", streamId, targetHost, targetPort);
+            log.warn("awaitActive timeout: sessionKey={}, target={}:{}", sessionKey, targetHost, targetPort);
             return false;
         }
     }
@@ -143,7 +146,7 @@ public class OutboundSession {
 
         if (outboundChannel != null && outboundChannel.isActive()) {
             outboundChannel.close();
-            log.debug("Outbound channel closed: streamId={}, target={}:{}", streamId, targetHost, targetPort);
+            log.debug("Outbound channel closed: sessionKey={}, target={}:{}", sessionKey, targetHost, targetPort);
         }
     }
 
@@ -161,8 +164,12 @@ public class OutboundSession {
         return targetPort;
     }
 
-    public String getStreamId() {
-        return streamId;
+    public String getSessionKey() {
+        return sessionKey;
+    }
+
+    public long getRawStreamId() {
+        return rawStreamId;
     }
 
     public ChannelHandlerContext getInboundCtx() {
