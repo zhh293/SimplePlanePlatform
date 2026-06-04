@@ -1,0 +1,47 @@
+# ===================================
+# Proxy Remote Server 配置文件
+# ===================================
+
+# 监听地址（0.0.0.0 表示监听所有网卡）
+host: 0.0.0.0
+
+# 监听端口
+port: 9090
+
+# 业务线程池大小（处理 CONNECT/DATA/DISCONNECT 请求）
+bizThreads: 200
+
+# Netty Worker IO 线程数（0 表示 CPU 核心数 × 2）
+workerThreads: 0
+
+# Netty Boss Accept 线程数
+bossThreads: 1
+
+# 加密算法（aes-gcm / aes-ctr-hmac / chacha20 / none）
+cipher: none
+
+# 加密密钥（客户端和服务端必须一致）
+cipherKey: my-secret-key-123
+
+# 单连接最大并发 Stream 数
+maxStreams: 100
+
+# 读空闲超时（秒），超过该时间未收到数据则触发心跳检测
+readIdleTimeout: 60
+
+# TCP backlog 队列大小
+backlog: 1024
+
+# ===================================
+# Outbound 出站连接配置
+# ===================================
+
+outbound:
+  # 连接目标服务器超时（毫秒）
+  connectTimeoutMs: 5000
+  # 等待出站连接就绪超时（毫秒），DATA 到达时如果连接还在建立中，最多等这么久
+  activeWaitTimeoutMs: 5000
+  # 出站连接是否启用 TCP KeepAlive
+  keepAlive: true
+  # 出站连接是否启用 TCP NoDelay
+  tcpNoDelay: true

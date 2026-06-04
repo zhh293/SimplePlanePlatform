@@ -27,11 +27,14 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
     private final Invoker invoker;
     private final String targetHost;
     private final int targetPort;
+    private final long streamId;
+    private final StreamChannelRegistry streamRegistry = StreamChannelRegistry.getInstance();
 
-    public RelayHandler(Invoker invoker, String targetHost, int targetPort) {
+    public RelayHandler(Invoker invoker, String targetHost, int targetPort, long streamId) {
         this.invoker = invoker;
         this.targetHost = targetHost;
         this.targetPort = targetPort;
+        this.streamId = streamId;
     }
 
     @Override
@@ -53,6 +56,7 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
 
             // 构建 DATA 类型的 Invocation，通过 ClusterInvoker 转发到远程
             Invocation invocation = new Invocation(targetHost, targetPort, data, ProxyMessage.MessageType.DATA);
+            invocation.setAttachment("streamId", streamId);
 
             invoker.invoke(invocation).whenComplete((response, throwable) -> {
                 if (throwable != null) {
@@ -76,10 +80,12 @@ public class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        // 浏览器断开连接，通知远程释放资源
-        log.debug("Client disconnected, sending DISCONNECT for {}:{}", targetHost, targetPort);
+        // 浏览器断开连接，注销 streamId 并通知远程释放资源
+        log.debug("Client disconnected, sending DISCONNECT for {}:{}, streamId={}", targetHost, targetPort, streamId);
+        streamRegistry.unregister(streamId);
 
         Invocation invocation = new Invocation(targetHost, targetPort, null, ProxyMessage.MessageType.DISCONNECT);
+        invocation.setAttachment("streamId", streamId);
         invoker.invoke(invocation).whenComplete((response, throwable) -> {
             if (throwable != null) {
                 log.debug("DISCONNECT notification failed for {}:{}", targetHost, targetPort);

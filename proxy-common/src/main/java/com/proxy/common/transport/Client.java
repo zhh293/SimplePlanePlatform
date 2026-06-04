@@ -54,4 +54,17 @@ public interface Client {
      * @return 活跃 Stream 数
      */
     int getActiveStreamCount();
+
+    /**
+     * 关闭指定 streamId 的 Stream
+     * <p>
+     * 用于在收到 DISCONNECT 响应后清理对应的 Stream 资源。
+     * 默认实现为空操作，由具体传输层实现覆写。
+     * </p>
+     *
+     * @param streamId 要关闭的 Stream ID
+     */
+    default void closeStream(long streamId) {
+        // 默认空操作
+    }
 }

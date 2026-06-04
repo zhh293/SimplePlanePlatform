@@ -1,0 +1,4 @@
+2026-06-04 11:19:34.970 [main] INFO  c.p.l.s.NoopSystemProxyManager - System proxy auto-configuration is disabled or not supported on this platform
+2026-06-04 11:19:35.167 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 11:19:35.564 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 11:20:00.596 [main] INFO  c.p.l.s.NoopSystemProxyManager - System proxy auto-configuration is disabled or not supported on this platform

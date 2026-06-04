@@ -55,6 +55,7 @@ public class Socks5ConnectHandler extends ChannelInboundHandlerAdapter {
     private static final byte REP_ATYP_NOT_SUPPORTED = 0x08;
 
     private final Invoker invoker;
+    private final StreamChannelRegistry streamRegistry = StreamChannelRegistry.getInstance();
 
     public Socks5ConnectHandler(Invoker invoker) {
         this.invoker = invoker;
@@ -127,14 +128,20 @@ public class Socks5ConnectHandler extends ChannelInboundHandlerAdapter {
 
             log.info("SOCKS5 CONNECT request: {}:{} from {}", targetHost, targetPort, ctx.channel().remoteAddress());
 
+            // 分配唯一 streamId 并注册浏览器 ctx
+            final long streamId = streamRegistry.nextStreamId();
+            streamRegistry.register(streamId, ctx);
+
             // 通过 ClusterInvoker 向远程发送 CONNECT 请求
             Invocation invocation = new Invocation(targetHost, targetPort, null, ProxyMessage.MessageType.CONNECT);
+            invocation.setAttachment("streamId", streamId);
             final String host = targetHost;
             final int port = targetPort;
 
             invoker.invoke(invocation).whenComplete((response, throwable) -> {
                 if (throwable != null) {
                     log.error("CONNECT failed for {}:{}", host, port, throwable);
+                    streamRegistry.unregister(streamId);
                     sendReply(ctx, REP_HOST_UNREACHABLE);
                     ctx.close();
                     return;
@@ -145,13 +152,14 @@ public class Socks5ConnectHandler extends ChannelInboundHandlerAdapter {
                     sendReply(ctx, REP_SUCCESS);
 
                     // 切换到 Relay 模式
-                    ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port));
+                    ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
                     ctx.pipeline().remove(this);
 
-                    log.info("SOCKS5 tunnel established: {}:{}", host, port);
+                    log.info("SOCKS5 tunnel established: {}:{}, streamId={}", host, port, streamId);
                 } else {
                     String errMsg = response != null ? response.getErrorMessage() : "unknown error";
                     log.warn("CONNECT rejected for {}:{}: {}", host, port, errMsg);
+                    streamRegistry.unregister(streamId);
                     sendReply(ctx, REP_HOST_UNREACHABLE);
                     ctx.close();
                 }

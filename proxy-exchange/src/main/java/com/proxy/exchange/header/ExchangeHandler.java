@@ -13,10 +13,32 @@ import org.slf4j.LoggerFactory;
  * IO 线程收到远程返回的消息后，根据 requestId 找到对应的 DefaultFuture 并 complete，
  * 从而唤醒阻塞的业务线程。
  * </p>
+ * <p>
+ * 对于 requestId=0 的消息（服务端推送），委托给 {@link ServerPushHandler} 处理，
+ * 通过 streamId 路由数据回浏览器。
+ * </p>
  */
 public class ExchangeHandler implements MessageHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ExchangeHandler.class);
+
+    private final ServerPushHandler pushHandler;
+
+    /**
+     * 无推送处理器的构造（兼容旧用法，推送消息仅打日志）
+     */
+    public ExchangeHandler() {
+        this(null);
+    }
+
+    /**
+     * 带推送处理器的构造
+     *
+     * @param pushHandler 处理 requestId=0 的服务端推送消息，null 表示仅日志
+     */
+    public ExchangeHandler(ServerPushHandler pushHandler) {
+        this.pushHandler = pushHandler;
+    }
 
     @Override
     public void onMessage(ProxyMessage message) {
@@ -38,7 +60,13 @@ public class ExchangeHandler implements MessageHandler {
             }
             DefaultFuture.received(requestId, response);
         } else {
-            log.debug("Received message without requestId: type={}", message.getType());
+            // requestId=0：服务端推送（目标网站返回的数据）
+            if (pushHandler != null) {
+                pushHandler.onServerPush(message);
+            } else {
+                log.debug("Received server push without handler: type={}, streamId={}",
+                        message.getType(), message.getStreamId());
+            }
         }
     }
 

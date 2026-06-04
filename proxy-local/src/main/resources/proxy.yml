@@ -7,11 +7,11 @@ localPort: 1080
 
 # 远程代理服务器列表（支持多节点负载均衡）
 remoteServers:
-  - host: "your-server.com"
-    port: 8443
-    ssl: true
-    cipher: "aes-gcm"
-    cipherKey: "your-32-byte-secret-key-here!!!"
+  - host: "127.0.0.1"
+    port: 9090
+    ssl: false
+    cipher: "none"
+    cipherKey: "my-secret-key-123"
 
 # 集群容错策略
 # failover  - 失败自动切换（默认，推荐）
@@ -35,3 +35,15 @@ connectionsPerNode: 2
 
 # 是否同时支持 HTTP CONNECT 代理（与 SOCKS5 共用端口）
 httpProxyEnabled: true
+
+# ============================================
+# 系统代理配置
+# ============================================
+systemProxy:
+  # 是否在启动时自动设置操作系统的全局代理
+  # macOS: 通过 networksetup 设置 HTTP/HTTPS/SOCKS 代理
+  # Windows: 通过注册表设置 Internet 代理
+  # Linux: 通过 gsettings 设置 GNOME 代理
+  enabled: true
+  # 代理监听地址（写入系统代理设置的地址，通常为 127.0.0.1）
+  host: "127.0.0.1"

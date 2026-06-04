@@ -1,12 +1,15 @@
 com/proxy/common/transport/Client.class
 com/proxy/common/spi/Order.class
 com/proxy/common/filter/Filter.class
+com/proxy/common/transport/InvokerAware.class
 com/proxy/common/crypto/CryptoException.class
 com/proxy/common/transport/TransportException.class
 com/proxy/common/transport/Transporter.class
 com/proxy/common/filter/ProxyException.class
 com/proxy/common/crypto/CipherConfig.class
 com/proxy/common/filter/FilterChainBuilder.class
+com/proxy/common/exchange/ExchangeServer.class
+com/proxy/common/transport/Server.class
 com/proxy/common/filter/Response.class
 com/proxy/common/filter/Invoker.class
 com/proxy/common/model/ProxyMessage$Builder.class

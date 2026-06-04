@@ -51,6 +51,42 @@ public class ProxyConfig {
     private boolean httpProxyEnabled = true;
 
     /**
+     * 系统代理配置
+     */
+    private SystemProxy systemProxy = new SystemProxy();
+
+    /**
+     * 系统代理配置
+     */
+    public static class SystemProxy {
+        /**
+         * 是否在启动时自动设置系统代理
+         */
+        private boolean enabled = true;
+
+        /**
+         * 代理监听地址（设置到系统代理中的地址）
+         */
+        private String host = "127.0.0.1";
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public void setHost(String host) {
+            this.host = host;
+        }
+    }
+
+    /**
      * 远程服务器配置
      */
     public static class RemoteServer {
@@ -225,5 +261,13 @@ public class ProxyConfig {
 
     public void setHttpProxyEnabled(boolean httpProxyEnabled) {
         this.httpProxyEnabled = httpProxyEnabled;
+    }
+
+    public SystemProxy getSystemProxy() {
+        return systemProxy;
+    }
+
+    public void setSystemProxy(SystemProxy systemProxy) {
+        this.systemProxy = systemProxy;
     }
 }

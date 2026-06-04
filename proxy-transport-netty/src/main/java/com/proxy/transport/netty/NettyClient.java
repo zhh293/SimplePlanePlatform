@@ -74,11 +74,6 @@ public class NettyClient implements Client {
                 streamChannels.remove(streamId, channel);
             }
         });
-
-        // 如果是 DISCONNECT 消息，关闭对应的 Stream
-        if (message.getType() == ProxyMessage.MessageType.DISCONNECT) {
-            closeStream(streamId);
-        }
     }
 
     @Override
@@ -158,6 +153,7 @@ public class NettyClient implements Client {
     /**
      * 关闭指定 streamId 对应的 Stream
      */
+    @Override
     public void closeStream(long streamId) {
         Channel channel = streamChannels.remove(streamId);
         if (channel != null && channel.isActive()) {

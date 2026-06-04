@@ -55,6 +55,7 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
     private static final int MAX_HEADER_SIZE = 8192;
 
     private final Invoker invoker;
+    private final StreamChannelRegistry streamRegistry = StreamChannelRegistry.getInstance();
 
     public HttpConnectHandler(Invoker invoker) {
         this.invoker = invoker;
@@ -120,14 +121,20 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
 
         log.info("HTTP CONNECT request: {}:{} from {}", targetHost, targetPort, ctx.channel().remoteAddress());
 
+        // 分配唯一 streamId 并注册浏览器 ctx
+        final long streamId = streamRegistry.nextStreamId();
+        streamRegistry.register(streamId, ctx);
+
         // 通过 ClusterInvoker 向远程发送 CONNECT 请求
         Invocation invocation = new Invocation(targetHost, targetPort, null, ProxyMessage.MessageType.CONNECT);
+        invocation.setAttachment("streamId", streamId);
         final String host = targetHost;
         final int port = targetPort;
 
         invoker.invoke(invocation).whenComplete((response, throwable) -> {
             if (throwable != null) {
                 log.error("HTTP CONNECT failed for {}:{}", host, port, throwable);
+                streamRegistry.unregister(streamId);
                 ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
                 ctx.close();
                 return;
@@ -139,13 +146,14 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
 
                 // 切换到 Relay 模式：先添加 RelayHandler，再移除自身
                 // 注意：ByteToMessageDecoder 移除时会自动将未读数据 fire 给下一个 Handler
-                ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port));
+                ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
                 ctx.pipeline().remove(HttpConnectHandler.this);
 
-                log.info("HTTP tunnel established: {}:{}", host, port);
+                log.info("HTTP tunnel established: {}:{}, streamId={}", host, port, streamId);
             } else {
                 String errMsg = response != null ? response.getErrorMessage() : "unknown error";
                 log.warn("HTTP CONNECT rejected for {}:{}: {}", host, port, errMsg);
+                streamRegistry.unregister(streamId);
                 ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
                 ctx.close();
             }

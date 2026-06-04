@@ -62,7 +62,15 @@ public class HeaderExchangeClient implements ExchangeClient {
             DefaultFuture.received(requestId, Response.error(e.getMessage()));
         }
 
-        // 5. 返回 Future
+        // 5. DISCONNECT 类型：收到响应后关闭对应 stream
+        if (message.getType() == ProxyMessage.MessageType.DISCONNECT) {
+            long streamId = message.getStreamId();
+            future.whenComplete((response, ex) -> {
+                client.closeStream(streamId);
+            });
+        }
+
+        // 6. 返回 Future
         return future;
     }
 

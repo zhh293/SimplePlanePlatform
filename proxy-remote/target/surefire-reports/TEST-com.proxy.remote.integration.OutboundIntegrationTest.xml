@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.proxy.remote.integration.OutboundIntegrationTest" time="2.503" tests="6" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="gopherProxySet" value="false"/>
+    <property name="awt.toolkit" value="sun.lwawt.macosx.LWCToolkit"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="java.specification.version" value="1.8"/>
+    <property name="sun.cpu.isalist" value=""/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.class.path" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/test-classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-common/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-exchange/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-common/4.1.108.Final/netty-common-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport/4.1.108.Final/netty-transport-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-resolver/4.1.108.Final/netty-resolver-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-handler/4.1.108.Final/netty-handler-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport-native-unix-common/4.1.108.Final/netty-transport-native-unix-common-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec/4.1.108.Final/netty-codec-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http2/4.1.108.Final/netty-codec-http2-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http/4.1.108.Final/netty-codec-http-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-buffer/4.1.108.Final/netty-buffer-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-cluster/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-crypto/target/classes:/Users/zhanghonghao/.m2/repository/org/bouncycastle/bcprov-jdk15on/1.70/bcprov-jdk15on-1.70.jar:/Users/zhanghonghao/.m2/repository/org/yaml/snakeyaml/2.2/snakeyaml-2.2.jar:/Users/zhanghonghao/.m2/repository/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-classic/1.2.12/logback-classic-1.2.12.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-core/1.2.12/logback-core-1.2.12.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter/5.10.2/junit-jupiter-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.2/junit-jupiter-api-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-commons/1.10.2/junit-platform-commons-1.10.2.jar:/Users/zhanghonghao/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.10.2/junit-jupiter-params-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.2/junit-jupiter-engine-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-engine/1.10.2/junit-platform-engine-1.10.2.jar:"/>
+    <property name="java.vm.vendor" value="Amazon.com Inc."/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.vendor.url" value="https://aws.amazon.com/corretto/"/>
+    <property name="user.timezone" value="Asia/Shanghai"/>
+    <property name="java.vm.specification.version" value="1.8"/>
+    <property name="os.name" value="Mac OS X"/>
+    <property name="user.country" value="CN"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.boot.library.path" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib"/>
+    <property name="sun.java.command" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/surefire/surefirebooter-20260604103043426_3.jar /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/surefire 2026-06-04T10-30-42_266-jvmRun1 surefire-20260604103043426_1tmp surefire_0-20260604103043426_2tmp"/>
+    <property name="http.nonProxyHosts" value="127.0.0.1|192.168.0.0/16|*.192.168.0.0/16|10.0.0.0/8|*.10.0.0.0/8|172.16.0.0/12|*.172.16.0.0/12|localhost|*.localhost|local|*.local|crashlytics.com|*.crashlytics.com|&lt;local&gt;|*.&lt;local&gt;"/>
+    <property name="surefire.test.class.path" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/test-classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-common/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-exchange/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-common/4.1.108.Final/netty-common-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport/4.1.108.Final/netty-transport-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-resolver/4.1.108.Final/netty-resolver-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-handler/4.1.108.Final/netty-handler-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport-native-unix-common/4.1.108.Final/netty-transport-native-unix-common-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec/4.1.108.Final/netty-codec-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http2/4.1.108.Final/netty-codec-http2-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http/4.1.108.Final/netty-codec-http-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-buffer/4.1.108.Final/netty-buffer-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-cluster/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-crypto/target/classes:/Users/zhanghonghao/.m2/repository/org/bouncycastle/bcprov-jdk15on/1.70/bcprov-jdk15on-1.70.jar:/Users/zhanghonghao/.m2/repository/org/yaml/snakeyaml/2.2/snakeyaml-2.2.jar:/Users/zhanghonghao/.m2/repository/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-classic/1.2.12/logback-classic-1.2.12.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-core/1.2.12/logback-core-1.2.12.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter/5.10.2/junit-jupiter-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.2/junit-jupiter-api-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-commons/1.10.2/junit-platform-commons-1.10.2.jar:/Users/zhanghonghao/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.10.2/junit-jupiter-params-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.2/junit-jupiter-engine-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-engine/1.10.2/junit-platform-engine-1.10.2.jar:"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="/Users/zhanghonghao"/>
+    <property name="user.language" value="zh"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.home" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre"/>
+    <property name="basedir" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote"/>
+    <property name="file.separator" value="/"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.CGraphicsEnvironment"/>
+    <property name="surefire.real.class.path" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/surefire/surefirebooter-20260604103043426_3.jar"/>
+    <property name="sun.boot.class.path" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/resources.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/rt.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/sunrsasign.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/jsse.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/jce.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/charsets.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/jfr.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/classes"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="ftp.nonProxyHosts" value="127.0.0.1|192.168.0.0/16|*.192.168.0.0/16|10.0.0.0/8|*.10.0.0.0/8|172.16.0.0/12|*.172.16.0.0/12|localhost|*.localhost|local|*.local|crashlytics.com|*.crashlytics.com|&lt;local&gt;|*.&lt;local&gt;"/>
+    <property name="java.runtime.version" value="1.8.0_492-b09"/>
+    <property name="user.name" value="zhanghonghao"/>
+    <property name="path.separator" value=":"/>
+    <property name="os.version" value="26.2"/>
+    <property name="java.endorsed.dirs" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/endorsed"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="localRepository" value="/Users/zhanghonghao/.m2/repository"/>
+    <property name="java.vendor.url.bug" value="https://github.com/corretto/corretto-8/issues/"/>
+    <property name="java.io.tmpdir" value="/var/folders/n4/_yfsq2vn493f7wfnl59tygpr0000gn/T/"/>
+    <property name="java.version" value="1.8.0_492"/>
+    <property name="user.dir" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote"/>
+    <property name="os.arch" value="aarch64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="java.awt.printerjob" value="sun.lwawt.macosx.CPrinterJob"/>
+    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="java.library.path" value="/Users/zhanghonghao/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.vendor" value="Amazon.com Inc."/>
+    <property name="java.vm.version" value="25.492-b09"/>
+    <property name="java.specification.maintenance.version" value="6"/>
+    <property name="java.ext.dirs" value="/Users/zhanghonghao/Library/Java/Extensions:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/ext:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
+    <property name="java.class.version" value="52.0"/>
+    <property name="socksNonProxyHosts" value="127.0.0.1|192.168.0.0/16|*.192.168.0.0/16|10.0.0.0/8|*.10.0.0.0/8|172.16.0.0/12|*.172.16.0.0/12|localhost|*.localhost|local|*.local|crashlytics.com|*.crashlytics.com|&lt;local&gt;|*.&lt;local&gt;"/>
+  </properties>
+  <testcase name="testDisconnectCleansUpSession" classname="com.proxy.remote.integration.OutboundIntegrationTest" time="0.783">
+    <system-out><![CDATA[10:30:44.046 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.exchange.Exchanger: [header]
+10:30:44.050 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.transport.Transporter: [netty]
+10:30:44.054 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer started on 127.0.0.1:52001 (bossThreads=1, workerThreads=2, maxStreams=100, backlog=128)
+10:30:44.054 [main] INFO  c.p.transport.netty.NettyTransporter - NettyServer started on 127.0.0.1:52001
+10:30:44.054 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger bound ExchangeServer on 127.0.0.1:52001
+10:30:44.105 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:52001, pool size: 1
+10:30:44.105 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:52001 via HTTP/2
+10:30:44.105 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:52001
+10:30:44.106 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:52001
+10:30:44.111 [nioEventLoopGroup-6-1] DEBUG c.proxy.transport.netty.NettyServer - Client connected: /127.0.0.1:52002, active connections: 1
+10:30:44.273 [nioEventLoopGroup-7-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 4 extension classes for type: com.proxy.common.crypto.Cipher: [aes-gcm, chacha20, aes-ctr-hmac, none]
+10:30:44.274 [nioEventLoopGroup-7-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.277 [nioEventLoopGroup-7-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.codec.Codec: [proxy]
+10:30:44.280 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0xe93ab8e4, L:/127.0.0.1:52002 - R:/127.0.0.1:52001], active streams: 1
+10:30:44.287 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=3
+10:30:44.300 [nioEventLoopGroup-6-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.303 [pool-2-thread-1] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52000
+10:30:44.303 [pool-2-thread-1] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=3, target=127.0.0.1:52000
+10:30:44.305 [nioEventLoopGroup-4-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52000, streamId=3
+10:30:44.305 [pool-2-thread-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=3, target=127.0.0.1:52000
+10:30:44.306 [nioEventLoopGroup-7-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=1, status=200, elapsed=194ms
+10:30:44.509 [pool-2-thread-2] INFO  c.p.remote.dispatch.DispatchInvoker - Handle DISCONNECT: target=127.0.0.1:52000
+10:30:44.509 [pool-2-thread-2] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=3, target=127.0.0.1:52000
+10:30:44.509 [pool-2-thread-2] DEBUG c.p.remote.outbound.SessionManager - Session removed and closed: streamId=3, target=127.0.0.1:52000
+10:30:44.510 [nioEventLoopGroup-4-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52000 inactive, closing session: streamId=3
+10:30:44.510 [nioEventLoopGroup-7-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:30:44.510 [nioEventLoopGroup-7-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 3 closed and removed from mapping
+10:30:44.511 [nioEventLoopGroup-7-1] DEBUG c.proxy.transport.netty.NettyClient - Closed stream for streamId=3
+10:30:44.511 [nioEventLoopGroup-7-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=2, status=200, elapsed=3ms
+10:30:44.511 [nioEventLoopGroup-7-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0xe93ab8e4, L:/127.0.0.1:52002 - R:/127.0.0.1:52001](H2 - 3)
+10:30:44.511 [nioEventLoopGroup-7-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:44.512 [nioEventLoopGroup-6-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52002
+10:30:44.617 [nioEventLoopGroup-7-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.617 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0xe93ab8e4, L:/127.0.0.1:52002 - R:/127.0.0.1:52001], active streams: 1
+10:30:44.617 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=3
+10:30:44.619 [nioEventLoopGroup-6-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.619 [pool-2-thread-3] WARN  c.p.remote.dispatch.DispatchInvoker - No session found for streamId=3, cannot forward DATA
+10:30:44.620 [nioEventLoopGroup-7-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=3, status=500, elapsed=4ms
+10:30:44.622 [main] INFO  c.p.t.netty.pool.ConnectionPool - Closing HTTP/2 connection pool, active connections: 1
+10:30:44.622 [main] INFO  c.p.t.n.pool.Http2PooledConnection - Closed HTTP/2 connection: [id: 0xe93ab8e4, L:/127.0.0.1:52002 - R:/127.0.0.1:52001]
+10:30:44.622 [nioEventLoopGroup-7-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:30:44.623 [nioEventLoopGroup-7-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 3 closed and removed from mapping
+10:30:44.623 [nioEventLoopGroup-6-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52002
+10:30:44.623 [nioEventLoopGroup-7-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0xe93ab8e4, L:/127.0.0.1:52002 ! R:/127.0.0.1:52001](H2 - 5)
+10:30:44.624 [nioEventLoopGroup-7-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:44.624 [nioEventLoopGroup-6-1] DEBUG c.proxy.transport.netty.NettyServer - Client disconnected: /127.0.0.1:52002, active connections: 0
+10:30:44.624 [main] INFO  c.p.t.netty.pool.ConnectionPool - HTTP/2 connection pool closed
+10:30:44.624 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient closed, all streams released
+10:30:44.624 [main] INFO  c.p.e.header.HeaderExchangeClient - HeaderExchangeClient closed
+10:30:44.624 [main] INFO  c.proxy.transport.netty.NettyServer - Shutting down NettyServer on 127.0.0.1:52001
+10:30:44.625 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer shut down successfully
+10:30:44.625 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 0 sessions closed
+]]></system-out>
+  </testcase>
+  <testcase name="testConnectAndDataForward" classname="com.proxy.remote.integration.OutboundIntegrationTest" time="0.222">
+    <system-out><![CDATA[10:30:44.642 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.exchange.Exchanger: [header]
+10:30:44.642 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.transport.Transporter: [netty]
+10:30:44.643 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer started on 127.0.0.1:52005 (bossThreads=1, workerThreads=2, maxStreams=100, backlog=128)
+10:30:44.643 [main] INFO  c.p.transport.netty.NettyTransporter - NettyServer started on 127.0.0.1:52005
+10:30:44.643 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger bound ExchangeServer on 127.0.0.1:52005
+10:30:44.644 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:52005, pool size: 1
+10:30:44.644 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:52005 via HTTP/2
+10:30:44.644 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:52005
+10:30:44.644 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:52005
+10:30:44.645 [nioEventLoopGroup-12-1] DEBUG c.proxy.transport.netty.NettyServer - Client connected: /127.0.0.1:52006, active connections: 1
+10:30:44.645 [nioEventLoopGroup-13-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 4 extension classes for type: com.proxy.common.crypto.Cipher: [aes-gcm, chacha20, aes-ctr-hmac, none]
+10:30:44.645 [nioEventLoopGroup-13-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.645 [nioEventLoopGroup-13-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.codec.Codec: [proxy]
+10:30:44.646 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0xfc20cd54, L:/127.0.0.1:52006 - R:/127.0.0.1:52005], active streams: 1
+10:30:44.646 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=1
+10:30:44.647 [nioEventLoopGroup-12-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.647 [pool-3-thread-1] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52004
+10:30:44.647 [pool-3-thread-1] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=1, target=127.0.0.1:52004
+10:30:44.648 [nioEventLoopGroup-10-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52004, streamId=1
+10:30:44.648 [nioEventLoopGroup-10-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=1, target=127.0.0.1:52004
+10:30:44.648 [nioEventLoopGroup-13-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=4, status=200, elapsed=4ms
+10:30:44.855 [pool-3-thread-2] DEBUG c.p.remote.dispatch.DispatchInvoker - Handle DATA: streamId=1, target=127.0.0.1:52004, dataLength=18
+10:30:44.856 [nioEventLoopGroup-13-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=5, status=200, elapsed=2ms
+10:30:44.856 [main] INFO  c.p.t.netty.pool.ConnectionPool - Closing HTTP/2 connection pool, active connections: 1
+10:30:44.856 [main] INFO  c.p.t.n.pool.Http2PooledConnection - Closed HTTP/2 connection: [id: 0xfc20cd54, L:/127.0.0.1:52006 - R:/127.0.0.1:52005]
+10:30:44.856 [nioEventLoopGroup-13-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:30:44.856 [nioEventLoopGroup-13-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 1 closed and removed from mapping
+10:30:44.857 [nioEventLoopGroup-12-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52006
+10:30:44.857 [nioEventLoopGroup-13-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0xfc20cd54, L:/127.0.0.1:52006 ! R:/127.0.0.1:52005](H2 - 3)
+10:30:44.857 [nioEventLoopGroup-13-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:44.858 [main] INFO  c.p.t.netty.pool.ConnectionPool - HTTP/2 connection pool closed
+10:30:44.858 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient closed, all streams released
+10:30:44.858 [main] INFO  c.p.e.header.HeaderExchangeClient - HeaderExchangeClient closed
+10:30:44.858 [main] INFO  c.proxy.transport.netty.NettyServer - Shutting down NettyServer on 127.0.0.1:52005
+10:30:44.859 [nioEventLoopGroup-12-1] WARN  i.n.channel.DefaultChannelPipeline - An exceptionCaught() event was fired, and it reached at the tail of the pipeline. It usually means the last handler in the pipeline did not handle the exception.
+java.io.IOException: Connection reset by peer
+	at sun.nio.ch.FileDispatcherImpl.read0(Native Method)
+	at sun.nio.ch.SocketDispatcher.read(SocketDispatcher.java:39)
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(IOUtil.java:223)
+	at sun.nio.ch.IOUtil.read(IOUtil.java:192)
+	at sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:379)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+10:30:44.859 [nioEventLoopGroup-12-1] DEBUG c.proxy.transport.netty.NettyServer - Client disconnected: /127.0.0.1:52006, active connections: 0
+10:30:44.861 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer shut down successfully
+10:30:44.861 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=1, target=127.0.0.1:52004
+10:30:44.861 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 1 sessions closed
+10:30:44.861 [nioEventLoopGroup-10-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52004 inactive, closing session: streamId=1
+]]></system-out>
+  </testcase>
+  <testcase name="testConnectToUnreachableHost" classname="com.proxy.remote.integration.OutboundIntegrationTest" time="0.515">
+    <system-out><![CDATA[10:30:44.864 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.exchange.Exchanger: [header]
+10:30:44.864 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.transport.Transporter: [netty]
+10:30:44.866 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer started on 127.0.0.1:52010 (bossThreads=1, workerThreads=2, maxStreams=100, backlog=128)
+10:30:44.866 [main] INFO  c.p.transport.netty.NettyTransporter - NettyServer started on 127.0.0.1:52010
+10:30:44.866 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger bound ExchangeServer on 127.0.0.1:52010
+10:30:44.867 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:52010, pool size: 1
+10:30:44.867 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:52010 via HTTP/2
+10:30:44.867 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:52010
+10:30:44.867 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:52010
+10:30:44.868 [nioEventLoopGroup-18-1] DEBUG c.proxy.transport.netty.NettyServer - Client connected: /127.0.0.1:52011, active connections: 1
+10:30:44.868 [nioEventLoopGroup-19-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 4 extension classes for type: com.proxy.common.crypto.Cipher: [aes-gcm, chacha20, aes-ctr-hmac, none]
+10:30:44.868 [nioEventLoopGroup-19-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.869 [nioEventLoopGroup-19-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.codec.Codec: [proxy]
+10:30:44.869 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x62656d7c, L:/127.0.0.1:52011 - R:/127.0.0.1:52010], active streams: 1
+10:30:44.869 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=2
+10:30:44.870 [nioEventLoopGroup-18-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:44.871 [pool-4-thread-1] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:19999
+10:30:44.871 [pool-4-thread-1] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=2, target=127.0.0.1:19999
+10:30:44.872 [nioEventLoopGroup-16-1] WARN  c.p.r.outbound.OutboundConnector - Outbound connect failed: target=127.0.0.1:19999, streamId=2
+io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: /127.0.0.1:19999
+Caused by: java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:716)
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:337)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:339)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+10:30:44.872 [nioEventLoopGroup-16-1] ERROR c.p.remote.dispatch.DispatchInvoker - Outbound connect failed: target=127.0.0.1:19999, streamId=2
+io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: /127.0.0.1:19999
+Caused by: java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:716)
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:337)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:339)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+10:30:44.872 [nioEventLoopGroup-16-1] DEBUG c.p.remote.outbound.SessionManager - Session removed and closed: streamId=2, target=127.0.0.1:19999
+10:30:44.872 [nioEventLoopGroup-19-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=6, status=200, elapsed=4ms
+10:30:45.375 [pool-4-thread-2] WARN  c.p.remote.dispatch.DispatchInvoker - No session found for streamId=2, cannot forward DATA
+10:30:45.376 [nioEventLoopGroup-19-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=7, status=500, elapsed=2ms
+10:30:45.376 [main] INFO  c.p.t.netty.pool.ConnectionPool - Closing HTTP/2 connection pool, active connections: 1
+10:30:45.376 [main] INFO  c.p.t.n.pool.Http2PooledConnection - Closed HTTP/2 connection: [id: 0x62656d7c, L:/127.0.0.1:52011 - R:/127.0.0.1:52010]
+10:30:45.376 [nioEventLoopGroup-19-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:30:45.376 [nioEventLoopGroup-19-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 2 closed and removed from mapping
+10:30:45.376 [nioEventLoopGroup-18-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52011
+10:30:45.376 [nioEventLoopGroup-19-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x62656d7c, L:/127.0.0.1:52011 ! R:/127.0.0.1:52010](H2 - 3)
+10:30:45.376 [nioEventLoopGroup-19-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.376 [nioEventLoopGroup-18-1] DEBUG c.proxy.transport.netty.NettyServer - Client disconnected: /127.0.0.1:52011, active connections: 0
+10:30:45.377 [main] INFO  c.p.t.netty.pool.ConnectionPool - HTTP/2 connection pool closed
+10:30:45.377 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient closed, all streams released
+10:30:45.377 [main] INFO  c.p.e.header.HeaderExchangeClient - HeaderExchangeClient closed
+10:30:45.377 [main] INFO  c.proxy.transport.netty.NettyServer - Shutting down NettyServer on 127.0.0.1:52010
+10:30:45.377 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer shut down successfully
+10:30:45.378 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 0 sessions closed
+]]></system-out>
+  </testcase>
+  <testcase name="testShutdownCleansAllSessions" classname="com.proxy.remote.integration.OutboundIntegrationTest" time="0.224">
+    <system-out><![CDATA[10:30:45.380 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.exchange.Exchanger: [header]
+10:30:45.381 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.transport.Transporter: [netty]
+10:30:45.381 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer started on 127.0.0.1:52014 (bossThreads=1, workerThreads=2, maxStreams=100, backlog=128)
+10:30:45.381 [main] INFO  c.p.transport.netty.NettyTransporter - NettyServer started on 127.0.0.1:52014
+10:30:45.381 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger bound ExchangeServer on 127.0.0.1:52014
+10:30:45.382 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:52014, pool size: 1
+10:30:45.382 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:52014 via HTTP/2
+10:30:45.382 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:52014
+10:30:45.382 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:52014
+10:30:45.383 [nioEventLoopGroup-24-1] DEBUG c.proxy.transport.netty.NettyServer - Client connected: /127.0.0.1:52015, active connections: 1
+10:30:45.383 [nioEventLoopGroup-25-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 4 extension classes for type: com.proxy.common.crypto.Cipher: [aes-gcm, chacha20, aes-ctr-hmac, none]
+10:30:45.383 [nioEventLoopGroup-25-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.383 [nioEventLoopGroup-25-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.codec.Codec: [proxy]
+10:30:45.383 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x6137dcce, L:/127.0.0.1:52015 - R:/127.0.0.1:52014], active streams: 1
+10:30:45.383 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=200
+10:30:45.385 [nioEventLoopGroup-24-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.385 [pool-5-thread-1] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52013
+10:30:45.385 [pool-5-thread-1] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=200, target=127.0.0.1:52013
+10:30:45.386 [nioEventLoopGroup-22-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52013, streamId=200
+10:30:45.386 [nioEventLoopGroup-22-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=200, target=127.0.0.1:52013
+10:30:45.387 [nioEventLoopGroup-25-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=8, status=200, elapsed=5ms
+10:30:45.387 [nioEventLoopGroup-25-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.387 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x6137dcce, L:/127.0.0.1:52015 - R:/127.0.0.1:52014], active streams: 2
+10:30:45.387 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=201
+10:30:45.388 [nioEventLoopGroup-24-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.388 [pool-5-thread-2] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52013
+10:30:45.388 [pool-5-thread-2] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=201, target=127.0.0.1:52013
+10:30:45.389 [nioEventLoopGroup-22-2] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52013, streamId=201
+10:30:45.389 [nioEventLoopGroup-22-2] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=201, target=127.0.0.1:52013
+10:30:45.389 [nioEventLoopGroup-25-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=9, status=200, elapsed=2ms
+10:30:45.389 [nioEventLoopGroup-25-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.390 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x6137dcce, L:/127.0.0.1:52015 - R:/127.0.0.1:52014], active streams: 3
+10:30:45.390 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=202
+10:30:45.390 [nioEventLoopGroup-24-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.390 [pool-5-thread-3] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52013
+10:30:45.391 [pool-5-thread-3] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=202, target=127.0.0.1:52013
+10:30:45.391 [nioEventLoopGroup-22-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52013, streamId=202
+10:30:45.391 [nioEventLoopGroup-22-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=202, target=127.0.0.1:52013
+10:30:45.392 [nioEventLoopGroup-25-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=10, status=200, elapsed=3ms
+10:30:45.392 [nioEventLoopGroup-25-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.392 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x6137dcce, L:/127.0.0.1:52015 - R:/127.0.0.1:52014], active streams: 4
+10:30:45.392 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=203
+10:30:45.393 [nioEventLoopGroup-24-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.393 [pool-5-thread-4] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52013
+10:30:45.393 [pool-5-thread-4] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=203, target=127.0.0.1:52013
+10:30:45.394 [nioEventLoopGroup-22-2] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52013, streamId=203
+10:30:45.394 [nioEventLoopGroup-22-2] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=203, target=127.0.0.1:52013
+10:30:45.394 [nioEventLoopGroup-25-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=11, status=200, elapsed=2ms
+10:30:45.394 [nioEventLoopGroup-25-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.394 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x6137dcce, L:/127.0.0.1:52015 - R:/127.0.0.1:52014], active streams: 5
+10:30:45.394 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=204
+10:30:45.395 [nioEventLoopGroup-24-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.395 [pool-5-thread-5] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52013
+10:30:45.396 [pool-5-thread-5] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=204, target=127.0.0.1:52013
+10:30:45.396 [nioEventLoopGroup-22-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52013, streamId=204
+10:30:45.396 [nioEventLoopGroup-22-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=204, target=127.0.0.1:52013
+10:30:45.396 [nioEventLoopGroup-25-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=12, status=200, elapsed=2ms
+10:30:45.599 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=200, target=127.0.0.1:52013
+10:30:45.599 [nioEventLoopGroup-22-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52013 inactive, closing session: streamId=200
+10:30:45.599 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=201, target=127.0.0.1:52013
+10:30:45.599 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=202, target=127.0.0.1:52013
+10:30:45.599 [nioEventLoopGroup-22-2] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52013 inactive, closing session: streamId=201
+10:30:45.599 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=203, target=127.0.0.1:52013
+10:30:45.599 [nioEventLoopGroup-22-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52013 inactive, closing session: streamId=202
+10:30:45.599 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=204, target=127.0.0.1:52013
+10:30:45.599 [nioEventLoopGroup-22-2] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52013 inactive, closing session: streamId=203
+10:30:45.599 [nioEventLoopGroup-22-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52013 inactive, closing session: streamId=204
+10:30:45.599 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 5 sessions closed
+10:30:45.600 [main] INFO  c.p.t.netty.pool.ConnectionPool - Closing HTTP/2 connection pool, active connections: 1
+10:30:45.600 [main] INFO  c.p.t.n.pool.Http2PooledConnection - Closed HTTP/2 connection: [id: 0x6137dcce, L:/127.0.0.1:52015 - R:/127.0.0.1:52014]
+10:30:45.600 [nioEventLoopGroup-25-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 4, notified waiting threads
+10:30:45.600 [nioEventLoopGroup-25-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 200 closed and removed from mapping
+10:30:45.600 [nioEventLoopGroup-24-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52015
+10:30:45.600 [nioEventLoopGroup-25-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 3, notified waiting threads
+10:30:45.600 [nioEventLoopGroup-25-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 201 closed and removed from mapping
+10:30:45.600 [nioEventLoopGroup-24-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52015
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 2, notified waiting threads
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 202 closed and removed from mapping
+10:30:45.601 [nioEventLoopGroup-24-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52015
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 1, notified waiting threads
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 203 closed and removed from mapping
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:30:45.601 [nioEventLoopGroup-24-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52015
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 204 closed and removed from mapping
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x6137dcce, L:/127.0.0.1:52015 ! R:/127.0.0.1:52014](H2 - 3)
+10:30:45.601 [nioEventLoopGroup-24-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52015
+10:30:45.601 [nioEventLoopGroup-25-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.601 [nioEventLoopGroup-25-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x6137dcce, L:/127.0.0.1:52015 ! R:/127.0.0.1:52014](H2 - 5)
+10:30:45.601 [nioEventLoopGroup-25-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.602 [nioEventLoopGroup-25-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x6137dcce, L:/127.0.0.1:52015 ! R:/127.0.0.1:52014](H2 - 7)
+10:30:45.602 [nioEventLoopGroup-25-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.602 [nioEventLoopGroup-25-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x6137dcce, L:/127.0.0.1:52015 ! R:/127.0.0.1:52014](H2 - 9)
+10:30:45.602 [nioEventLoopGroup-25-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.602 [nioEventLoopGroup-24-1] DEBUG c.proxy.transport.netty.NettyServer - Client disconnected: /127.0.0.1:52015, active connections: 0
+10:30:45.602 [nioEventLoopGroup-25-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x6137dcce, L:/127.0.0.1:52015 ! R:/127.0.0.1:52014](H2 - 11)
+10:30:45.602 [nioEventLoopGroup-25-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.602 [main] INFO  c.p.t.netty.pool.ConnectionPool - HTTP/2 connection pool closed
+10:30:45.602 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient closed, all streams released
+10:30:45.602 [main] INFO  c.p.e.header.HeaderExchangeClient - HeaderExchangeClient closed
+10:30:45.602 [main] INFO  c.proxy.transport.netty.NettyServer - Shutting down NettyServer on 127.0.0.1:52014
+10:30:45.603 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer shut down successfully
+10:30:45.603 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 0 sessions closed
+]]></system-out>
+  </testcase>
+  <testcase name="testConcurrentConnections" classname="com.proxy.remote.integration.OutboundIntegrationTest" time="0.022">
+    <system-out><![CDATA[10:30:45.606 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.exchange.Exchanger: [header]
+10:30:45.606 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.transport.Transporter: [netty]
+10:30:45.607 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer started on 127.0.0.1:52022 (bossThreads=1, workerThreads=2, maxStreams=100, backlog=128)
+10:30:45.607 [main] INFO  c.p.transport.netty.NettyTransporter - NettyServer started on 127.0.0.1:52022
+10:30:45.607 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger bound ExchangeServer on 127.0.0.1:52022
+10:30:45.608 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:52022, pool size: 1
+10:30:45.608 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:52022 via HTTP/2
+10:30:45.608 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:52022
+10:30:45.608 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:52022
+10:30:45.609 [nioEventLoopGroup-30-1] DEBUG c.proxy.transport.netty.NettyServer - Client connected: /127.0.0.1:52023, active connections: 1
+10:30:45.609 [nioEventLoopGroup-31-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 4 extension classes for type: com.proxy.common.crypto.Cipher: [aes-gcm, chacha20, aes-ctr-hmac, none]
+10:30:45.609 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.609 [nioEventLoopGroup-31-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.codec.Codec: [proxy]
+10:30:45.610 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 1
+10:30:45.610 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=100
+10:30:45.610 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.611 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.611 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 2
+10:30:45.611 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=101
+10:30:45.611 [pool-6-thread-1] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.611 [pool-6-thread-1] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=100, target=127.0.0.1:52021
+10:30:45.611 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.611 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.611 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 3
+10:30:45.611 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=102
+10:30:45.612 [pool-6-thread-2] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.612 [pool-6-thread-2] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=101, target=127.0.0.1:52021
+10:30:45.612 [nioEventLoopGroup-28-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=100
+10:30:45.612 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.612 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=100, target=127.0.0.1:52021
+10:30:45.612 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 4
+10:30:45.612 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=103
+10:30:45.612 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=13, status=200, elapsed=4ms
+10:30:45.612 [nioEventLoopGroup-28-2] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=101
+10:30:45.612 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=101, target=127.0.0.1:52021
+10:30:45.613 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.613 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.613 [pool-6-thread-3] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.613 [pool-6-thread-3] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=102, target=127.0.0.1:52021
+10:30:45.613 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 5
+10:30:45.613 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=104
+10:30:45.613 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.613 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=14, status=200, elapsed=3ms
+10:30:45.613 [pool-6-thread-4] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.614 [pool-6-thread-4] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=103, target=127.0.0.1:52021
+10:30:45.614 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.614 [nioEventLoopGroup-28-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=102
+10:30:45.614 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=102, target=127.0.0.1:52021
+10:30:45.614 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 6
+10:30:45.614 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=105
+10:30:45.614 [nioEventLoopGroup-28-2] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=103
+10:30:45.614 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=103, target=127.0.0.1:52021
+10:30:45.614 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=15, status=200, elapsed=3ms
+10:30:45.614 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.615 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.615 [pool-6-thread-5] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.615 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 7
+10:30:45.615 [pool-6-thread-5] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=104, target=127.0.0.1:52021
+10:30:45.615 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=106
+10:30:45.615 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.615 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=16, status=200, elapsed=3ms
+10:30:45.615 [pool-6-thread-6] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.615 [pool-6-thread-6] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=105, target=127.0.0.1:52021
+10:30:45.615 [nioEventLoopGroup-28-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=104
+10:30:45.615 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=104, target=127.0.0.1:52021
+10:30:45.616 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.616 [nioEventLoopGroup-28-2] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=105
+10:30:45.616 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=105, target=127.0.0.1:52021
+10:30:45.616 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 8
+10:30:45.616 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=107
+10:30:45.616 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=17, status=200, elapsed=4ms
+10:30:45.616 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.616 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=18, status=200, elapsed=3ms
+10:30:45.616 [pool-6-thread-7] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.616 [pool-6-thread-7] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=106, target=127.0.0.1:52021
+10:30:45.617 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.617 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 9
+10:30:45.617 [nioEventLoopGroup-28-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=106
+10:30:45.617 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.617 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=108
+10:30:45.617 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=106, target=127.0.0.1:52021
+10:30:45.617 [pool-6-thread-8] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.617 [pool-6-thread-8] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=107, target=127.0.0.1:52021
+10:30:45.618 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.618 [nioEventLoopGroup-31-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.618 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022], active streams: 10
+10:30:45.618 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=109
+10:30:45.618 [nioEventLoopGroup-28-2] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=107
+10:30:45.618 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=107, target=127.0.0.1:52021
+10:30:45.618 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=19, status=200, elapsed=4ms
+10:30:45.618 [pool-6-thread-9] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.618 [pool-6-thread-9] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=108, target=127.0.0.1:52021
+10:30:45.619 [nioEventLoopGroup-28-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=108
+10:30:45.619 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=108, target=127.0.0.1:52021
+10:30:45.619 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=20, status=200, elapsed=4ms
+10:30:45.619 [nioEventLoopGroup-30-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.620 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=21, status=200, elapsed=4ms
+10:30:45.620 [pool-6-thread-10] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52021
+10:30:45.620 [pool-6-thread-10] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=109, target=127.0.0.1:52021
+10:30:45.620 [nioEventLoopGroup-28-2] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52021, streamId=109
+10:30:45.620 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=109, target=127.0.0.1:52021
+10:30:45.620 [nioEventLoopGroup-31-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=22, status=200, elapsed=3ms
+10:30:45.621 [main] INFO  c.p.t.netty.pool.ConnectionPool - Closing HTTP/2 connection pool, active connections: 1
+10:30:45.621 [main] INFO  c.p.t.n.pool.Http2PooledConnection - Closed HTTP/2 connection: [id: 0x546dac33, L:/127.0.0.1:52023 - R:/127.0.0.1:52022]
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 9, notified waiting threads
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 100 closed and removed from mapping
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 8, notified waiting threads
+10:30:45.621 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 101 closed and removed from mapping
+10:30:45.621 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 7, notified waiting threads
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 102 closed and removed from mapping
+10:30:45.621 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 6, notified waiting threads
+10:30:45.621 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 103 closed and removed from mapping
+10:30:45.622 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 5, notified waiting threads
+10:30:45.622 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 104 closed and removed from mapping
+10:30:45.622 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.622 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 4, notified waiting threads
+10:30:45.622 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.622 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 105 closed and removed from mapping
+10:30:45.622 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 3, notified waiting threads
+10:30:45.622 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.622 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 106 closed and removed from mapping
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 2, notified waiting threads
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 107 closed and removed from mapping
+10:30:45.623 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 1, notified waiting threads
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 108 closed and removed from mapping
+10:30:45.623 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 109 closed and removed from mapping
+10:30:45.623 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.623 [nioEventLoopGroup-30-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52023
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 3)
+10:30:45.623 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 5)
+10:30:45.623 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 7)
+10:30:45.623 [nioEventLoopGroup-30-1] DEBUG c.proxy.transport.netty.NettyServer - Client disconnected: /127.0.0.1:52023, active connections: 0
+10:30:45.623 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.623 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 9)
+10:30:45.623 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.624 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 11)
+10:30:45.624 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.624 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 13)
+10:30:45.624 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.624 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 15)
+10:30:45.624 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.624 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 17)
+10:30:45.624 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.624 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 19)
+10:30:45.624 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.624 [nioEventLoopGroup-31-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x546dac33, L:/127.0.0.1:52023 ! R:/127.0.0.1:52022](H2 - 21)
+10:30:45.624 [nioEventLoopGroup-31-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:45.624 [main] INFO  c.p.t.netty.pool.ConnectionPool - HTTP/2 connection pool closed
+10:30:45.624 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient closed, all streams released
+10:30:45.624 [main] INFO  c.p.e.header.HeaderExchangeClient - HeaderExchangeClient closed
+10:30:45.624 [main] INFO  c.proxy.transport.netty.NettyServer - Shutting down NettyServer on 127.0.0.1:52022
+10:30:45.625 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer shut down successfully
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=100, target=127.0.0.1:52021
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=101, target=127.0.0.1:52021
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=102, target=127.0.0.1:52021
+10:30:45.625 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=100
+10:30:45.625 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=101
+10:30:45.625 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=102
+10:30:45.625 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=103
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=103, target=127.0.0.1:52021
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=104, target=127.0.0.1:52021
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=105, target=127.0.0.1:52021
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=106, target=127.0.0.1:52021
+10:30:45.625 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=105
+10:30:45.625 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=104
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=107, target=127.0.0.1:52021
+10:30:45.625 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=106
+10:30:45.625 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=107
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=108, target=127.0.0.1:52021
+10:30:45.625 [nioEventLoopGroup-28-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=108
+10:30:45.625 [main] DEBUG c.p.remote.outbound.OutboundSession - Outbound channel closed: streamId=109, target=127.0.0.1:52021
+10:30:45.626 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 10 sessions closed
+10:30:45.626 [nioEventLoopGroup-28-2] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52021 inactive, closing session: streamId=109
+]]></system-out>
+  </testcase>
+  <testcase name="testTargetServerClose" classname="com.proxy.remote.integration.OutboundIntegrationTest" time="0.718">
+    <system-out><![CDATA[10:30:45.629 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.exchange.Exchanger: [header]
+10:30:45.629 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.transport.Transporter: [netty]
+10:30:45.630 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer started on 127.0.0.1:52035 (bossThreads=1, workerThreads=2, maxStreams=100, backlog=128)
+10:30:45.630 [main] INFO  c.p.transport.netty.NettyTransporter - NettyServer started on 127.0.0.1:52035
+10:30:45.630 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger bound ExchangeServer on 127.0.0.1:52035
+10:30:45.631 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:52035, pool size: 1
+10:30:45.631 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:52035 via HTTP/2
+10:30:45.631 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:52035
+10:30:45.631 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:52035
+10:30:45.632 [nioEventLoopGroup-36-1] DEBUG c.proxy.transport.netty.NettyServer - Client connected: /127.0.0.1:52036, active connections: 1
+10:30:45.633 [nioEventLoopGroup-37-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 4 extension classes for type: com.proxy.common.crypto.Cipher: [aes-gcm, chacha20, aes-ctr-hmac, none]
+10:30:45.633 [nioEventLoopGroup-37-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.634 [nioEventLoopGroup-37-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.codec.Codec: [proxy]
+10:30:45.634 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x8c8dfa94, L:/127.0.0.1:52036 - R:/127.0.0.1:52035], active streams: 1
+10:30:45.634 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=4
+10:30:45.635 [nioEventLoopGroup-36-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:30:45.635 [pool-7-thread-1] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=127.0.0.1:52034
+10:30:45.636 [pool-7-thread-1] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=4, target=127.0.0.1:52034
+10:30:45.636 [nioEventLoopGroup-34-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=127.0.0.1:52034, streamId=4
+10:30:45.636 [nioEventLoopGroup-34-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=4, target=127.0.0.1:52034
+10:30:45.637 [nioEventLoopGroup-37-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=23, status=200, elapsed=6ms
+10:30:45.837 [nioEventLoopGroup-34-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to 127.0.0.1:52034 inactive, closing session: streamId=4
+10:30:46.343 [pool-7-thread-2] WARN  c.p.remote.dispatch.DispatchInvoker - Session already closed: streamId=4
+10:30:46.344 [nioEventLoopGroup-37-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=24, status=500, elapsed=2ms
+10:30:46.344 [main] INFO  c.p.t.netty.pool.ConnectionPool - Closing HTTP/2 connection pool, active connections: 1
+10:30:46.344 [main] INFO  c.p.t.n.pool.Http2PooledConnection - Closed HTTP/2 connection: [id: 0x8c8dfa94, L:/127.0.0.1:52036 - R:/127.0.0.1:52035]
+10:30:46.344 [nioEventLoopGroup-37-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:30:46.344 [nioEventLoopGroup-37-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 4 closed and removed from mapping
+10:30:46.344 [nioEventLoopGroup-36-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:52036
+10:30:46.344 [nioEventLoopGroup-37-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x8c8dfa94, L:/127.0.0.1:52036 ! R:/127.0.0.1:52035](H2 - 3)
+10:30:46.344 [nioEventLoopGroup-37-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:30:46.345 [nioEventLoopGroup-36-1] DEBUG c.proxy.transport.netty.NettyServer - Client disconnected: /127.0.0.1:52036, active connections: 0
+10:30:46.345 [main] INFO  c.p.t.netty.pool.ConnectionPool - HTTP/2 connection pool closed
+10:30:46.345 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient closed, all streams released
+10:30:46.345 [main] INFO  c.p.e.header.HeaderExchangeClient - HeaderExchangeClient closed
+10:30:46.345 [main] INFO  c.proxy.transport.netty.NettyServer - Shutting down NettyServer on 127.0.0.1:52035
+10:30:46.345 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer shut down successfully
+10:30:46.345 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 1 sessions closed
+]]></system-out>
+  </testcase>
+</testsuite>

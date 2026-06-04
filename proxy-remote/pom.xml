@@ -21,15 +21,19 @@
         </dependency>
         <dependency>
             <groupId>com.proxy</groupId>
+            <artifactId>proxy-exchange</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.proxy</groupId>
             <artifactId>proxy-transport-netty</artifactId>
         </dependency>
         <dependency>
             <groupId>com.proxy</groupId>
-            <artifactId>proxy-crypto</artifactId>
+            <artifactId>proxy-cluster</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
+            <groupId>com.proxy</groupId>
+            <artifactId>proxy-crypto</artifactId>
         </dependency>
         <dependency>
             <groupId>org.yaml</groupId>

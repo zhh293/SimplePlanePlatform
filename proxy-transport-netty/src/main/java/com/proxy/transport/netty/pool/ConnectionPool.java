@@ -1,6 +1,9 @@
 package com.proxy.transport.netty.pool;
 
+import com.proxy.common.crypto.Cipher;
+import com.proxy.common.crypto.CipherConfig;
 import com.proxy.common.model.URL;
+import com.proxy.common.spi.ExtensionLoader;
 import com.proxy.common.transport.MessageHandler;
 import com.proxy.transport.netty.handler.CipherDecodeHandler;
 import com.proxy.transport.netty.handler.CipherEncodeHandler;
@@ -156,8 +159,9 @@ public class ConnectionPool {
                                     @Override
                                     protected void initChannel(Channel ch) throws Exception {
                                         // 服务端推送的 Stream（入站 Stream）
-                                        ch.pipeline().addLast("cipher-decode", new CipherDecodeHandler());
-                                        ch.pipeline().addLast("cipher-encode", new CipherEncodeHandler());
+                                        Cipher cipher = createCipher();
+                                        ch.pipeline().addLast("cipher-decode", new CipherDecodeHandler(cipher));
+                                        ch.pipeline().addLast("cipher-encode", new CipherEncodeHandler(cipher));
                                         ch.pipeline().addLast("decoder", new ProxyMessageDecoder());
                                         ch.pipeline().addLast("encoder", new ProxyMessageEncoder());
                                         ch.pipeline().addLast("idle",
@@ -317,8 +321,9 @@ public class ConnectionPool {
         streamBootstrap.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast("cipher-decode", new CipherDecodeHandler());
-                ch.pipeline().addLast("cipher-encode", new CipherEncodeHandler());
+                Cipher cipher = createCipher();
+                ch.pipeline().addLast("cipher-decode", new CipherDecodeHandler(cipher));
+                ch.pipeline().addLast("cipher-encode", new CipherEncodeHandler(cipher));
                 ch.pipeline().addLast("decoder", new ProxyMessageDecoder());
                 ch.pipeline().addLast("encoder", new ProxyMessageEncoder());
                 ch.pipeline().addLast("idle",
@@ -441,5 +446,21 @@ public class ConnectionPool {
             }
         }
         return connections.size() < config.getMaxConnections();
+    }
+
+    /**
+     * 根据 URL 配置创建并初始化 Cipher 实例
+     */
+    private Cipher createCipher() {
+        String cipherName = url.getParameter("cipher", "aes-gcm");
+        Cipher cipher = ExtensionLoader.getLoader(Cipher.class).getExtension(cipherName);
+        String key = url.getParameter("cipherKey", "");
+        if (!key.isEmpty()) {
+            CipherConfig config = new CipherConfig(key.getBytes());
+            cipher.init(config);
+        } else {
+            cipher.init(new CipherConfig());
+        }
+        return cipher;
     }
 }

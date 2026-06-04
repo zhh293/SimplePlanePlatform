@@ -11,12 +11,16 @@ import com.proxy.common.filter.Invoker;
 import com.proxy.common.model.URL;
 import com.proxy.common.spi.ExtensionLoader;
 import com.proxy.exchange.header.DefaultFuture;
+import com.proxy.exchange.header.ServerPushHandler;
 import com.proxy.local.config.ProxyConfig;
 import com.proxy.local.handler.HttpConnectHandler;
+import com.proxy.local.handler.LocalServerPushHandler;
 import com.proxy.local.handler.ProtocolDetector;
 import com.proxy.local.handler.RelayHandler;
 import com.proxy.local.handler.Socks5ConnectHandler;
 import com.proxy.local.handler.Socks5InitHandler;
+import com.proxy.local.sysproxy.NoopSystemProxyManager;
+import com.proxy.local.sysproxy.SystemProxyManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -51,12 +55,20 @@ public class ProxyLocalServer {
     private final Invoker clusterInvoker;
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
+    private final SystemProxyManager systemProxyManager;
     private Channel serverChannel;
 
     public ProxyLocalServer(ProxyConfig config) {
         this.config = config;
         this.bossGroup = new NioEventLoopGroup(1);
         this.workerGroup = new NioEventLoopGroup();
+
+        // 初始化系统代理管理器
+        if (config.getSystemProxy().isEnabled()) {
+            this.systemProxyManager = SystemProxyManager.create();
+        } else {
+            this.systemProxyManager = new NoopSystemProxyManager();
+        }
 
         // 组装调用链
         this.clusterInvoker = buildInvokerChain();
@@ -95,7 +107,9 @@ public class ProxyLocalServer {
                 url.addParameter("cipherKey", server.getCipherKey());
 
                 // Exchanger.connect() → 内部创建 Transporter 连接 → 包装为 ExchangeClient
-                ExchangeClient exchangeClient = exchanger.connect(url);
+                // 传入 ServerPushHandler 处理远程推送的数据（requestId=0）
+                ServerPushHandler pushHandler = new LocalServerPushHandler();
+                ExchangeClient exchangeClient = exchanger.connect(url, pushHandler);
 
                 // ClientInvoker 适配 ExchangeClient → Invoker 接口
                 ClientInvoker clientInvoker = new ClientInvoker(exchangeClient, config.getTimeoutMs());
@@ -143,6 +157,9 @@ public class ProxyLocalServer {
         if (config.isHttpProxyEnabled()) {
             log.info("  HTTP  proxy:  localhost:{}", config.getLocalPort());
         }
+
+        // 启动后设置系统代理
+        enableSystemProxy();
     }
 
     /**
@@ -158,6 +175,7 @@ public class ProxyLocalServer {
      * 优雅关闭
      * <p>
      * 关闭顺序（从外到内，先停止接收请求，再清理内部资源）：
+     * 0. 还原系统代理（最先执行，避免关闭后用户断网）
      * 1. 关闭 Server Channel（停止接收新连接）
      * 2. 关闭 Server 的 EventLoopGroup（清理已有连接）
      * 3. 关闭 DefaultFuture 时间轮（停止超时调度，唤醒所有 pending Future）
@@ -166,6 +184,9 @@ public class ProxyLocalServer {
      */
     public void shutdown() {
         log.info("Shutting down Proxy Local Server...");
+
+        // 0. 最先还原系统代理，避免关闭后用户断网
+        disableSystemProxy();
 
         // 1. 关闭 Server Channel，停止接收新连接
         if (serverChannel != null) {
@@ -199,6 +220,30 @@ public class ProxyLocalServer {
         }
 
         log.info("Proxy Local Server stopped.");
+    }
+
+    /**
+     * 启用系统代理
+     */
+    private void enableSystemProxy() {
+        try {
+            String host = config.getSystemProxy().getHost();
+            int port = config.getLocalPort();
+            systemProxyManager.enable(host, port);
+        } catch (Exception e) {
+            log.warn("Failed to set system proxy (non-fatal): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 还原系统代理
+     */
+    private void disableSystemProxy() {
+        try {
+            systemProxyManager.disable();
+        } catch (Exception e) {
+            log.warn("Failed to restore system proxy (non-fatal): {}", e.getMessage());
+        }
     }
 
     // ==================== Main ====================

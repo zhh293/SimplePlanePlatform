@@ -43,6 +43,14 @@ public class ClientInvoker implements Invoker {
         message.setPort(invocation.getTargetPort());
         message.setData(invocation.getData());
 
+        // 设置 streamId（由 HttpConnectHandler/RelayHandler 通过 attachment 传入）
+        Object streamIdObj = invocation.getAttachment("streamId");
+        if (streamIdObj instanceof Long) {
+            message.setStreamId((Long) streamIdObj);
+        } else if (streamIdObj instanceof String) {
+            message.setStreamId(Long.parseLong((String) streamIdObj));
+        }
+
         // 活跃计数 +1
         activeCount.incrementAndGet();
 

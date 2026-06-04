@@ -1,10 +1,13 @@
 package com.proxy.exchange.header;
 
 import com.proxy.common.exchange.ExchangeClient;
+import com.proxy.common.exchange.ExchangeServer;
 import com.proxy.common.exchange.Exchanger;
+import com.proxy.common.filter.Invoker;
 import com.proxy.common.model.URL;
 import com.proxy.common.spi.ExtensionLoader;
 import com.proxy.common.transport.Client;
+import com.proxy.common.transport.Server;
 import com.proxy.common.transport.Transporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +27,16 @@ import org.slf4j.LoggerFactory;
  *    - 内部做 requestId 生成 + Future 映射 + 调用 client.send()
  * </pre>
  * </p>
+ * <p>
+ * bind() 内部流程：
+ * <pre>
+ * 1. 创建 ServerExchangeHandler（持有 Invoker 引用，实现 InvokerAware）
+ * 2. 通过 SPI 加载 Transporter，调用 transporter.bind(url, handler)
+ *    - Transporter 从 handler 中提取 Invoker，注入 ServerChannelHandler
+ *    - 返回底层 Server
+ * 3. 包装成 HeaderExchangeServer 返回
+ * </pre>
+ * </p>
  */
 public class HeaderExchanger implements Exchanger {
 
@@ -31,8 +44,17 @@ public class HeaderExchanger implements Exchanger {
 
     @Override
     public ExchangeClient connect(URL url) {
-        // 1. 创建 ExchangeHandler（响应处理器）
-        ExchangeHandler handler = new ExchangeHandler();
+        return connect(url, null);
+    }
+
+    @Override
+    public ExchangeClient connect(URL url, Object pushCallback) {
+        // 1. 创建 ExchangeHandler（响应处理器 + 可选的推送处理器）
+        ServerPushHandler pushHandler = null;
+        if (pushCallback instanceof ServerPushHandler) {
+            pushHandler = (ServerPushHandler) pushCallback;
+        }
+        ExchangeHandler handler = new ExchangeHandler(pushHandler);
 
         // 2. 通过 SPI 加载 Transporter，建连时把 handler 塞进去
         Transporter transporter = ExtensionLoader.getLoader(Transporter.class).getDefaultExtension();
@@ -42,5 +64,20 @@ public class HeaderExchanger implements Exchanger {
         HeaderExchangeClient exchangeClient = new HeaderExchangeClient(client, url);
         log.info("HeaderExchanger created ExchangeClient to {}:{}", url.getHost(), url.getPort());
         return exchangeClient;
+    }
+
+    @Override
+    public ExchangeServer bind(URL url, Invoker invoker) {
+        // 1. 创建 ServerExchangeHandler（持有 Invoker，实现 InvokerAware）
+        ServerExchangeHandler handler = new ServerExchangeHandler(invoker);
+
+        // 2. 通过 SPI 加载 Transporter，绑定端口
+        Transporter transporter = ExtensionLoader.getLoader(Transporter.class).getDefaultExtension();
+        Server server = transporter.bind(url, handler);
+
+        // 3. 包装成 HeaderExchangeServer 返回
+        HeaderExchangeServer exchangeServer = new HeaderExchangeServer(server);
+        log.info("HeaderExchanger bound ExchangeServer on {}:{}", url.getHost(), url.getPort());
+        return exchangeServer;
     }
 }

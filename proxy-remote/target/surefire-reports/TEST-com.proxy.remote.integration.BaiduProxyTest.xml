@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.proxy.remote.integration.BaiduProxyTest" time="2.999" tests="1" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="gopherProxySet" value="false"/>
+    <property name="awt.toolkit" value="sun.lwawt.macosx.LWCToolkit"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="java.specification.version" value="1.8"/>
+    <property name="sun.cpu.isalist" value=""/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.class.path" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/test-classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-common/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-exchange/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-common/4.1.108.Final/netty-common-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport/4.1.108.Final/netty-transport-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-resolver/4.1.108.Final/netty-resolver-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-handler/4.1.108.Final/netty-handler-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport-native-unix-common/4.1.108.Final/netty-transport-native-unix-common-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec/4.1.108.Final/netty-codec-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http2/4.1.108.Final/netty-codec-http2-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http/4.1.108.Final/netty-codec-http-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-buffer/4.1.108.Final/netty-buffer-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-cluster/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-crypto/target/classes:/Users/zhanghonghao/.m2/repository/org/bouncycastle/bcprov-jdk15on/1.70/bcprov-jdk15on-1.70.jar:/Users/zhanghonghao/.m2/repository/org/yaml/snakeyaml/2.2/snakeyaml-2.2.jar:/Users/zhanghonghao/.m2/repository/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-classic/1.2.12/logback-classic-1.2.12.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-core/1.2.12/logback-core-1.2.12.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter/5.10.2/junit-jupiter-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.2/junit-jupiter-api-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-commons/1.10.2/junit-platform-commons-1.10.2.jar:/Users/zhanghonghao/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.10.2/junit-jupiter-params-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.2/junit-jupiter-engine-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-engine/1.10.2/junit-platform-engine-1.10.2.jar:"/>
+    <property name="java.vm.vendor" value="Amazon.com Inc."/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.vendor.url" value="https://aws.amazon.com/corretto/"/>
+    <property name="user.timezone" value="Asia/Shanghai"/>
+    <property name="java.vm.specification.version" value="1.8"/>
+    <property name="os.name" value="Mac OS X"/>
+    <property name="user.country" value="CN"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.boot.library.path" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib"/>
+    <property name="sun.java.command" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/surefire/surefirebooter-20260604103606171_3.jar /Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/surefire 2026-06-04T10-36-05_454-jvmRun1 surefire-20260604103606171_1tmp surefire_0-20260604103606171_2tmp"/>
+    <property name="http.nonProxyHosts" value="127.0.0.1|192.168.0.0/16|*.192.168.0.0/16|10.0.0.0/8|*.10.0.0.0/8|172.16.0.0/12|*.172.16.0.0/12|localhost|*.localhost|local|*.local|crashlytics.com|*.crashlytics.com|&lt;local&gt;|*.&lt;local&gt;"/>
+    <property name="test" value="BaiduProxyTest"/>
+    <property name="surefire.test.class.path" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/test-classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-common/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-exchange/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-common/4.1.108.Final/netty-common-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-transport-netty/target/classes:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport/4.1.108.Final/netty-transport-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-resolver/4.1.108.Final/netty-resolver-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-handler/4.1.108.Final/netty-handler-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-transport-native-unix-common/4.1.108.Final/netty-transport-native-unix-common-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec/4.1.108.Final/netty-codec-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http2/4.1.108.Final/netty-codec-http2-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-codec-http/4.1.108.Final/netty-codec-http-4.1.108.Final.jar:/Users/zhanghonghao/.m2/repository/io/netty/netty-buffer/4.1.108.Final/netty-buffer-4.1.108.Final.jar:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-cluster/target/classes:/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-crypto/target/classes:/Users/zhanghonghao/.m2/repository/org/bouncycastle/bcprov-jdk15on/1.70/bcprov-jdk15on-1.70.jar:/Users/zhanghonghao/.m2/repository/org/yaml/snakeyaml/2.2/snakeyaml-2.2.jar:/Users/zhanghonghao/.m2/repository/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-classic/1.2.12/logback-classic-1.2.12.jar:/Users/zhanghonghao/.m2/repository/ch/qos/logback/logback-core/1.2.12/logback-core-1.2.12.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter/5.10.2/junit-jupiter-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.2/junit-jupiter-api-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-commons/1.10.2/junit-platform-commons-1.10.2.jar:/Users/zhanghonghao/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.10.2/junit-jupiter-params-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.2/junit-jupiter-engine-5.10.2.jar:/Users/zhanghonghao/.m2/repository/org/junit/platform/junit-platform-engine/1.10.2/junit-platform-engine-1.10.2.jar:"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="/Users/zhanghonghao"/>
+    <property name="user.language" value="zh"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.home" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre"/>
+    <property name="basedir" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote"/>
+    <property name="file.separator" value="/"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.CGraphicsEnvironment"/>
+    <property name="surefire.real.class.path" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote/target/surefire/surefirebooter-20260604103606171_3.jar"/>
+    <property name="sun.boot.class.path" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/resources.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/rt.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/sunrsasign.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/jsse.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/jce.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/charsets.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/jfr.jar:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/classes"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="ftp.nonProxyHosts" value="127.0.0.1|192.168.0.0/16|*.192.168.0.0/16|10.0.0.0/8|*.10.0.0.0/8|172.16.0.0/12|*.172.16.0.0/12|localhost|*.localhost|local|*.local|crashlytics.com|*.crashlytics.com|&lt;local&gt;|*.&lt;local&gt;"/>
+    <property name="java.runtime.version" value="1.8.0_492-b09"/>
+    <property name="user.name" value="zhanghonghao"/>
+    <property name="path.separator" value=":"/>
+    <property name="os.version" value="26.2"/>
+    <property name="java.endorsed.dirs" value="/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/endorsed"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="surefire.failIfNoSpecifiedTests" value="false"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="localRepository" value="/Users/zhanghonghao/.m2/repository"/>
+    <property name="java.vendor.url.bug" value="https://github.com/corretto/corretto-8/issues/"/>
+    <property name="java.io.tmpdir" value="/var/folders/n4/_yfsq2vn493f7wfnl59tygpr0000gn/T/"/>
+    <property name="java.version" value="1.8.0_492"/>
+    <property name="user.dir" value="/Users/zhanghonghao/Desktop/SimplePlanePlatform/proxy-remote"/>
+    <property name="os.arch" value="aarch64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="java.awt.printerjob" value="sun.lwawt.macosx.CPrinterJob"/>
+    <property name="sun.os.patch.level" value="unknown"/>
+    <property name="java.library.path" value="/Users/zhanghonghao/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
+    <property name="java.vm.info" value="mixed mode"/>
+    <property name="java.vendor" value="Amazon.com Inc."/>
+    <property name="java.vm.version" value="25.492-b09"/>
+    <property name="java.specification.maintenance.version" value="6"/>
+    <property name="java.ext.dirs" value="/Users/zhanghonghao/Library/Java/Extensions:/Users/zhanghonghao/Library/Java/JavaVirtualMachines/corretto-1.8.0_492/Contents/Home/jre/lib/ext:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
+    <property name="java.class.version" value="52.0"/>
+    <property name="socksNonProxyHosts" value="127.0.0.1|192.168.0.0/16|*.192.168.0.0/16|10.0.0.0/8|*.10.0.0.0/8|172.16.0.0/12|*.172.16.0.0/12|localhost|*.localhost|local|*.local|crashlytics.com|*.crashlytics.com|&lt;local&gt;|*.&lt;local&gt;"/>
+  </properties>
+  <testcase name="testProxyToBaidu" classname="com.proxy.remote.integration.BaiduProxyTest" time="2.986">
+    <system-out><![CDATA[10:36:06.703 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.exchange.Exchanger: [header]
+10:36:06.707 [main] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.transport.Transporter: [netty]
+10:36:06.762 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer started on 127.0.0.1:53191 (bossThreads=1, workerThreads=2, maxStreams=100, backlog=128)
+10:36:06.763 [main] INFO  c.p.transport.netty.NettyTransporter - NettyServer started on 127.0.0.1:53191
+10:36:06.763 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger bound ExchangeServer on 127.0.0.1:53191
+10:36:06.821 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:53191, pool size: 1
+10:36:06.821 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:53191 via HTTP/2
+10:36:06.821 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:53191
+10:36:06.822 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:53191
+10:36:06.827 [nioEventLoopGroup-4-1] DEBUG c.proxy.transport.netty.NettyServer - Client connected: /127.0.0.1:53193, active connections: 1
+10:36:06.991 [nioEventLoopGroup-5-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 4 extension classes for type: com.proxy.common.crypto.Cipher: [aes-gcm, chacha20, aes-ctr-hmac, none]
+10:36:06.992 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:36:06.997 [nioEventLoopGroup-5-1] DEBUG com.proxy.common.spi.ExtensionLoader - Loaded 1 extension classes for type: com.proxy.common.codec.Codec: [proxy]
+10:36:07.001 [main] DEBUG c.p.t.netty.pool.ConnectionPool - Opened HTTP/2 stream on connection [id: 0x2c569d25, L:/127.0.0.1:53193 - R:/127.0.0.1:53191], active streams: 1
+10:36:07.007 [main] DEBUG c.proxy.transport.netty.NettyClient - Created HTTP/2 stream for streamId=1
+10:36:07.021 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+10:36:07.024 [pool-2-thread-1] INFO  c.p.remote.dispatch.DispatchInvoker - Handle CONNECT: target=www.baidu.com:80
+10:36:07.025 [pool-2-thread-1] DEBUG c.p.remote.outbound.SessionManager - Session registered: streamId=1, target=www.baidu.com:80
+10:36:07.028 [nioEventLoopGroup-5-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=1, status=200, elapsed=199ms
+10:36:07.047 [nioEventLoopGroup-2-1] DEBUG c.p.r.outbound.OutboundConnector - Outbound connected: target=www.baidu.com:80, streamId=1
+10:36:07.047 [nioEventLoopGroup-2-1] DEBUG c.p.remote.outbound.OutboundSession - OutboundSession active: streamId=1, target=www.baidu.com:80
+10:36:07.537 [pool-2-thread-2] DEBUG c.p.remote.dispatch.DispatchInvoker - Handle DATA: streamId=1, target=www.baidu.com:80, dataLength=58
+10:36:07.539 [nioEventLoopGroup-5-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=2, status=200, elapsed=3ms
+10:36:07.559 [nioEventLoopGroup-5-1] DEBUG c.p.exchange.header.ExchangeHandler - Received message without requestId: type=DATA
+10:36:07.559 [nioEventLoopGroup-5-1] DEBUG c.p.exchange.header.ExchangeHandler - Received message without requestId: type=DATA
+10:36:07.560 [nioEventLoopGroup-5-1] DEBUG c.p.exchange.header.ExchangeHandler - Received message without requestId: type=DATA
+10:36:07.562 [nioEventLoopGroup-2-1] DEBUG c.p.remote.outbound.OutboundHandler - Outbound channel to www.baidu.com:80 inactive, closing session: streamId=1
+10:36:07.562 [nioEventLoopGroup-5-1] DEBUG c.p.exchange.header.ExchangeHandler - Received message without requestId: type=DATA
+=== Baidu proxy test passed! ===
+Successfully connected to www.baidu.com:80 through proxy
+HTTP request forwarded, session active.
+10:36:09.546 [pool-2-thread-3] INFO  c.p.remote.dispatch.DispatchInvoker - Handle DISCONNECT: target=www.baidu.com:80
+10:36:09.546 [pool-2-thread-3] DEBUG c.p.remote.outbound.SessionManager - Session removed and closed: streamId=1, target=www.baidu.com:80
+10:36:09.547 [nioEventLoopGroup-5-1] DEBUG c.p.t.netty.pool.ConnectionPool - HTTP/2 stream closed, active streams: 0, notified waiting threads
+10:36:09.547 [nioEventLoopGroup-5-1] DEBUG c.proxy.transport.netty.NettyClient - Stream 1 closed and removed from mapping
+10:36:09.547 [nioEventLoopGroup-5-1] DEBUG c.proxy.transport.netty.NettyClient - Closed stream for streamId=1
+10:36:09.547 [nioEventLoopGroup-5-1] DEBUG c.p.exchange.header.DefaultFuture - Request completed: requestId=3, status=200, elapsed=3ms
+10:36:09.548 [nioEventLoopGroup-5-1] DEBUG c.p.t.n.handler.ClientMessageHandler - HTTP/2 stream channel inactive: [id: 0x2c569d25, L:/127.0.0.1:53193 - R:/127.0.0.1:53191](H2 - 3)
+10:36:09.548 [main] INFO  c.p.t.netty.pool.ConnectionPool - Closing HTTP/2 connection pool, active connections: 1
+10:36:09.548 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+10:36:09.548 [main] INFO  c.p.t.n.pool.Http2PooledConnection - Closed HTTP/2 connection: [id: 0x2c569d25, L:/127.0.0.1:53193 - R:/127.0.0.1:53191]
+10:36:09.549 [nioEventLoopGroup-4-1] DEBUG c.p.t.n.handler.ServerChannelHandler - Server channel inactive: /127.0.0.1:53193
+10:36:09.551 [main] INFO  c.p.t.netty.pool.ConnectionPool - HTTP/2 connection pool closed
+10:36:09.551 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient closed, all streams released
+10:36:09.551 [nioEventLoopGroup-4-1] DEBUG c.proxy.transport.netty.NettyServer - Client disconnected: /127.0.0.1:53193, active connections: 0
+10:36:09.551 [main] INFO  c.p.e.header.HeaderExchangeClient - HeaderExchangeClient closed
+10:36:09.551 [main] INFO  c.proxy.transport.netty.NettyServer - Shutting down NettyServer on 127.0.0.1:53191
+10:36:09.551 [main] INFO  c.proxy.transport.netty.NettyServer - NettyServer shut down successfully
+10:36:09.552 [main] INFO  c.p.remote.outbound.SessionManager - SessionManager closeAll: 0 sessions closed
+]]></system-out>
+  </testcase>
+</testsuite>

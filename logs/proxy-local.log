@@ -1,0 +1,566 @@
+2026-06-04 11:43:42.242 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 11:43:42.324 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 11:43:42.430 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 11:43:42.430 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 11:43:42.430 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 11:43:42.432 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 11:43:42.432 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=aes-gcm) (connection 1)
+2026-06-04 11:43:42.435 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 11:43:42.435 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 11:43:42.435 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 11:43:42.435 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 11:43:42.435 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=aes-gcm) (connection 2)
+2026-06-04 11:43:42.435 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 11:43:42.444 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 11:43:42.444 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 11:43:42.444 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 11:43:42.586 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 11:43:42.776 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 11:44:00.552 [nioEventLoopGroup-3-1] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: GET http://www.baidu.com/ HTTP/1.1
+2026-06-04 11:44:14.671 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:52977
+2026-06-04 11:44:14.828 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.AesGcmCipher - AES-GCM cipher initialized, key length: 256 bits
+2026-06-04 11:44:15.089 [nioEventLoopGroup-4-1] ERROR c.p.t.n.handler.CipherDecodeHandler - Decryption failed, closing channel
+com.proxy.common.crypto.CryptoException: AES-GCM decryption failed (data may be tampered)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:113)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:66)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:30)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:88)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel$Http2ChannelUnsafe.doRead0(AbstractHttp2StreamChannel.java:971)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel.fireChildRead(AbstractHttp2StreamChannel.java:600)
+	at io.netty.handler.codec.http2.Http2MultiplexHandler.channelRead(Http2MultiplexHandler.java:195)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.http2.Http2FrameCodec.onHttp2Frame(Http2FrameCodec.java:712)
+	at io.netty.handler.codec.http2.Http2FrameCodec$FrameListener.onDataRead(Http2FrameCodec.java:651)
+	at io.netty.handler.codec.http2.Http2FrameListenerDecorator.onDataRead(Http2FrameListenerDecorator.java:36)
+	at io.netty.handler.codec.http2.Http2EmptyDataFrameListener.onDataRead(Http2EmptyDataFrameListener.java:49)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder$FrameReadListener.onDataRead(DefaultHttp2ConnectionDecoder.java:322)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readDataFrame(DefaultHttp2FrameReader.java:411)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.processPayloadState(DefaultHttp2FrameReader.java:246)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readFrame(DefaultHttp2FrameReader.java:166)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder.decodeFrame(DefaultHttp2ConnectionDecoder.java:188)
+	at io.netty.handler.codec.http2.DecoratingHttp2ConnectionDecoder.decodeFrame(DecoratingHttp2ConnectionDecoder.java:63)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler$FrameDecoder.decode(Http2ConnectionHandler.java:393)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler.decode(Http2ConnectionHandler.java:453)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+Caused by: javax.crypto.AEADBadTagException: Tag mismatch!
+	at com.sun.crypto.provider.GaloisCounterMode.decryptFinal(GaloisCounterMode.java:620)
+	at com.sun.crypto.provider.CipherCore.finalNoPadding(CipherCore.java:1116)
+	at com.sun.crypto.provider.CipherCore.fillOutputBuffer(CipherCore.java:1053)
+	at com.sun.crypto.provider.CipherCore.doFinal(CipherCore.java:853)
+	at com.sun.crypto.provider.AESCipher.engineDoFinal(AESCipher.java:446)
+	at javax.crypto.Cipher.doFinal(Cipher.java:2168)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:111)
+	... 47 common frames omitted
+2026-06-04 11:44:15.091 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:44:15.091 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.baidu.com:443 elapsed=414ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:44:15.092 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:44:15.093 [nioEventLoopGroup-5-1] INFO  com.proxy.crypto.AesGcmCipher - AES-GCM cipher initialized, key length: 256 bits
+2026-06-04 11:44:15.094 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.DefaultFuture - All pending futures failed due to: Connection disconnected
+2026-06-04 11:44:15.100 [nioEventLoopGroup-5-1] ERROR c.p.t.n.handler.CipherDecodeHandler - Decryption failed, closing channel
+com.proxy.common.crypto.CryptoException: AES-GCM decryption failed (data may be tampered)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:113)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:66)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:30)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:88)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel$Http2ChannelUnsafe.doRead0(AbstractHttp2StreamChannel.java:971)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel.fireChildRead(AbstractHttp2StreamChannel.java:600)
+	at io.netty.handler.codec.http2.Http2MultiplexHandler.channelRead(Http2MultiplexHandler.java:195)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.http2.Http2FrameCodec.onHttp2Frame(Http2FrameCodec.java:712)
+	at io.netty.handler.codec.http2.Http2FrameCodec$FrameListener.onDataRead(Http2FrameCodec.java:651)
+	at io.netty.handler.codec.http2.Http2FrameListenerDecorator.onDataRead(Http2FrameListenerDecorator.java:36)
+	at io.netty.handler.codec.http2.Http2EmptyDataFrameListener.onDataRead(Http2EmptyDataFrameListener.java:49)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder$FrameReadListener.onDataRead(DefaultHttp2ConnectionDecoder.java:322)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readDataFrame(DefaultHttp2FrameReader.java:411)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.processPayloadState(DefaultHttp2FrameReader.java:246)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readFrame(DefaultHttp2FrameReader.java:166)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder.decodeFrame(DefaultHttp2ConnectionDecoder.java:188)
+	at io.netty.handler.codec.http2.DecoratingHttp2ConnectionDecoder.decodeFrame(DecoratingHttp2ConnectionDecoder.java:63)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler$FrameDecoder.decode(Http2ConnectionHandler.java:393)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler.decode(Http2ConnectionHandler.java:453)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+Caused by: javax.crypto.AEADBadTagException: Tag mismatch!
+	at com.sun.crypto.provider.GaloisCounterMode.decryptFinal(GaloisCounterMode.java:620)
+	at com.sun.crypto.provider.CipherCore.finalNoPadding(CipherCore.java:1116)
+	at com.sun.crypto.provider.CipherCore.fillOutputBuffer(CipherCore.java:1053)
+	at com.sun.crypto.provider.CipherCore.doFinal(CipherCore.java:853)
+	at com.sun.crypto.provider.AESCipher.engineDoFinal(AESCipher.java:446)
+	at javax.crypto.Cipher.doFinal(Cipher.java:2168)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:111)
+	... 47 common frames omitted
+2026-06-04 11:44:15.101 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:44:15.101 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [FAIL] www.baidu.com:443 elapsed=9ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:44:15.101 [nioEventLoopGroup-5-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:44:15.102 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.AesGcmCipher - AES-GCM cipher initialized, key length: 256 bits
+2026-06-04 11:44:15.102 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.DefaultFuture - All pending futures failed due to: Connection disconnected
+2026-06-04 11:44:15.106 [nioEventLoopGroup-4-1] ERROR c.p.t.n.handler.CipherDecodeHandler - Decryption failed, closing channel
+com.proxy.common.crypto.CryptoException: AES-GCM decryption failed (data may be tampered)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:113)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:66)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:30)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:88)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel$Http2ChannelUnsafe.doRead0(AbstractHttp2StreamChannel.java:971)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel.fireChildRead(AbstractHttp2StreamChannel.java:600)
+	at io.netty.handler.codec.http2.Http2MultiplexHandler.channelRead(Http2MultiplexHandler.java:195)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.http2.Http2FrameCodec.onHttp2Frame(Http2FrameCodec.java:712)
+	at io.netty.handler.codec.http2.Http2FrameCodec$FrameListener.onDataRead(Http2FrameCodec.java:651)
+	at io.netty.handler.codec.http2.Http2FrameListenerDecorator.onDataRead(Http2FrameListenerDecorator.java:36)
+	at io.netty.handler.codec.http2.Http2EmptyDataFrameListener.onDataRead(Http2EmptyDataFrameListener.java:49)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder$FrameReadListener.onDataRead(DefaultHttp2ConnectionDecoder.java:322)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readDataFrame(DefaultHttp2FrameReader.java:411)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.processPayloadState(DefaultHttp2FrameReader.java:246)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readFrame(DefaultHttp2FrameReader.java:166)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder.decodeFrame(DefaultHttp2ConnectionDecoder.java:188)
+	at io.netty.handler.codec.http2.DecoratingHttp2ConnectionDecoder.decodeFrame(DecoratingHttp2ConnectionDecoder.java:63)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler$FrameDecoder.decode(Http2ConnectionHandler.java:393)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler.decode(Http2ConnectionHandler.java:453)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+Caused by: javax.crypto.AEADBadTagException: Tag mismatch!
+	at com.sun.crypto.provider.GaloisCounterMode.decryptFinal(GaloisCounterMode.java:620)
+	at com.sun.crypto.provider.CipherCore.finalNoPadding(CipherCore.java:1116)
+	at com.sun.crypto.provider.CipherCore.fillOutputBuffer(CipherCore.java:1053)
+	at com.sun.crypto.provider.CipherCore.doFinal(CipherCore.java:853)
+	at com.sun.crypto.provider.AESCipher.engineDoFinal(AESCipher.java:446)
+	at javax.crypto.Cipher.doFinal(Cipher.java:2168)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:111)
+	... 47 common frames omitted
+2026-06-04 11:44:15.107 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:44:15.107 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.baidu.com:443 elapsed=6ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:44:15.107 [nioEventLoopGroup-4-1] ERROR c.p.cluster.FailoverClusterInvoker - All invokers failed after 3 attempts: java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:44:15.107 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for www.baidu.com:443: All invokers failed after 3 attempts: java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:46:26.021 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+2026-06-04 11:46:26.030 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
+2026-06-04 11:46:26.031 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+2026-06-04 11:46:26.031 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
+2026-06-04 11:46:57.721 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 11:46:57.809 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 11:46:57.926 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 11:46:57.926 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 11:46:57.926 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 11:46:57.927 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 11:46:57.927 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=aes-gcm) (connection 1)
+2026-06-04 11:46:57.929 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 11:46:57.929 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 11:46:57.929 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 11:46:57.929 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 11:46:57.929 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=aes-gcm) (connection 2)
+2026-06-04 11:46:57.929 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 11:46:57.938 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 11:46:57.938 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 11:46:57.938 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 11:46:58.097 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 11:46:58.291 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 11:47:13.211 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:53932
+2026-06-04 11:47:13.383 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.AesGcmCipher - AES-GCM cipher initialized, key length: 256 bits
+2026-06-04 11:47:13.657 [nioEventLoopGroup-4-1] ERROR c.p.t.n.handler.CipherDecodeHandler - Decryption failed, closing channel
+com.proxy.common.crypto.CryptoException: AES-GCM decryption failed (data may be tampered)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:113)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:66)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:30)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:88)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel$Http2ChannelUnsafe.doRead0(AbstractHttp2StreamChannel.java:971)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel.fireChildRead(AbstractHttp2StreamChannel.java:600)
+	at io.netty.handler.codec.http2.Http2MultiplexHandler.channelRead(Http2MultiplexHandler.java:195)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.http2.Http2FrameCodec.onHttp2Frame(Http2FrameCodec.java:712)
+	at io.netty.handler.codec.http2.Http2FrameCodec$FrameListener.onDataRead(Http2FrameCodec.java:651)
+	at io.netty.handler.codec.http2.Http2FrameListenerDecorator.onDataRead(Http2FrameListenerDecorator.java:36)
+	at io.netty.handler.codec.http2.Http2EmptyDataFrameListener.onDataRead(Http2EmptyDataFrameListener.java:49)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder$FrameReadListener.onDataRead(DefaultHttp2ConnectionDecoder.java:322)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readDataFrame(DefaultHttp2FrameReader.java:411)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.processPayloadState(DefaultHttp2FrameReader.java:246)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readFrame(DefaultHttp2FrameReader.java:166)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder.decodeFrame(DefaultHttp2ConnectionDecoder.java:188)
+	at io.netty.handler.codec.http2.DecoratingHttp2ConnectionDecoder.decodeFrame(DecoratingHttp2ConnectionDecoder.java:63)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler$FrameDecoder.decode(Http2ConnectionHandler.java:393)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler.decode(Http2ConnectionHandler.java:453)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+Caused by: javax.crypto.AEADBadTagException: Tag mismatch!
+	at com.sun.crypto.provider.GaloisCounterMode.decryptFinal(GaloisCounterMode.java:620)
+	at com.sun.crypto.provider.CipherCore.finalNoPadding(CipherCore.java:1116)
+	at com.sun.crypto.provider.CipherCore.fillOutputBuffer(CipherCore.java:1053)
+	at com.sun.crypto.provider.CipherCore.doFinal(CipherCore.java:853)
+	at com.sun.crypto.provider.AESCipher.engineDoFinal(AESCipher.java:446)
+	at javax.crypto.Cipher.doFinal(Cipher.java:2168)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:111)
+	... 47 common frames omitted
+2026-06-04 11:47:13.659 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:47:13.659 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.baidu.com:443 elapsed=440ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:47:13.659 [nioEventLoopGroup-4-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:47:13.660 [nioEventLoopGroup-5-1] INFO  com.proxy.crypto.AesGcmCipher - AES-GCM cipher initialized, key length: 256 bits
+2026-06-04 11:47:13.661 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.DefaultFuture - All pending futures failed due to: Connection disconnected
+2026-06-04 11:47:13.668 [nioEventLoopGroup-5-1] ERROR c.p.t.n.handler.CipherDecodeHandler - Decryption failed, closing channel
+com.proxy.common.crypto.CryptoException: AES-GCM decryption failed (data may be tampered)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:113)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:66)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:30)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:88)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel$Http2ChannelUnsafe.doRead0(AbstractHttp2StreamChannel.java:971)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel.fireChildRead(AbstractHttp2StreamChannel.java:600)
+	at io.netty.handler.codec.http2.Http2MultiplexHandler.channelRead(Http2MultiplexHandler.java:195)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.http2.Http2FrameCodec.onHttp2Frame(Http2FrameCodec.java:712)
+	at io.netty.handler.codec.http2.Http2FrameCodec$FrameListener.onDataRead(Http2FrameCodec.java:651)
+	at io.netty.handler.codec.http2.Http2FrameListenerDecorator.onDataRead(Http2FrameListenerDecorator.java:36)
+	at io.netty.handler.codec.http2.Http2EmptyDataFrameListener.onDataRead(Http2EmptyDataFrameListener.java:49)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder$FrameReadListener.onDataRead(DefaultHttp2ConnectionDecoder.java:322)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readDataFrame(DefaultHttp2FrameReader.java:411)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.processPayloadState(DefaultHttp2FrameReader.java:246)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readFrame(DefaultHttp2FrameReader.java:166)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder.decodeFrame(DefaultHttp2ConnectionDecoder.java:188)
+	at io.netty.handler.codec.http2.DecoratingHttp2ConnectionDecoder.decodeFrame(DecoratingHttp2ConnectionDecoder.java:63)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler$FrameDecoder.decode(Http2ConnectionHandler.java:393)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler.decode(Http2ConnectionHandler.java:453)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+Caused by: javax.crypto.AEADBadTagException: Tag mismatch!
+	at com.sun.crypto.provider.GaloisCounterMode.decryptFinal(GaloisCounterMode.java:620)
+	at com.sun.crypto.provider.CipherCore.finalNoPadding(CipherCore.java:1116)
+	at com.sun.crypto.provider.CipherCore.fillOutputBuffer(CipherCore.java:1053)
+	at com.sun.crypto.provider.CipherCore.doFinal(CipherCore.java:853)
+	at com.sun.crypto.provider.AESCipher.engineDoFinal(AESCipher.java:446)
+	at javax.crypto.Cipher.doFinal(Cipher.java:2168)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:111)
+	... 47 common frames omitted
+2026-06-04 11:47:13.669 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:47:13.669 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [FAIL] www.baidu.com:443 elapsed=9ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:47:13.669 [nioEventLoopGroup-5-1] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=2/3, error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:47:13.670 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.AesGcmCipher - AES-GCM cipher initialized, key length: 256 bits
+2026-06-04 11:47:13.671 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.DefaultFuture - All pending futures failed due to: Connection disconnected
+2026-06-04 11:47:13.675 [nioEventLoopGroup-4-1] ERROR c.p.t.n.handler.CipherDecodeHandler - Decryption failed, closing channel
+com.proxy.common.crypto.CryptoException: AES-GCM decryption failed (data may be tampered)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:113)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:66)
+	at com.proxy.transport.netty.handler.CipherDecodeHandler.decode(CipherDecodeHandler.java:30)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:88)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel$Http2ChannelUnsafe.doRead0(AbstractHttp2StreamChannel.java:971)
+	at io.netty.handler.codec.http2.AbstractHttp2StreamChannel.fireChildRead(AbstractHttp2StreamChannel.java:600)
+	at io.netty.handler.codec.http2.Http2MultiplexHandler.channelRead(Http2MultiplexHandler.java:195)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.http2.Http2FrameCodec.onHttp2Frame(Http2FrameCodec.java:712)
+	at io.netty.handler.codec.http2.Http2FrameCodec$FrameListener.onDataRead(Http2FrameCodec.java:651)
+	at io.netty.handler.codec.http2.Http2FrameListenerDecorator.onDataRead(Http2FrameListenerDecorator.java:36)
+	at io.netty.handler.codec.http2.Http2EmptyDataFrameListener.onDataRead(Http2EmptyDataFrameListener.java:49)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder$FrameReadListener.onDataRead(DefaultHttp2ConnectionDecoder.java:322)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readDataFrame(DefaultHttp2FrameReader.java:411)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.processPayloadState(DefaultHttp2FrameReader.java:246)
+	at io.netty.handler.codec.http2.DefaultHttp2FrameReader.readFrame(DefaultHttp2FrameReader.java:166)
+	at io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder.decodeFrame(DefaultHttp2ConnectionDecoder.java:188)
+	at io.netty.handler.codec.http2.DecoratingHttp2ConnectionDecoder.decodeFrame(DecoratingHttp2ConnectionDecoder.java:63)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler$FrameDecoder.decode(Http2ConnectionHandler.java:393)
+	at io.netty.handler.codec.http2.Http2ConnectionHandler.decode(Http2ConnectionHandler.java:453)
+	at io.netty.handler.codec.ByteToMessageDecoder.decodeRemovalReentryProtection(ByteToMessageDecoder.java:530)
+	at io.netty.handler.codec.ByteToMessageDecoder.callDecode(ByteToMessageDecoder.java:469)
+	at io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:290)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+Caused by: javax.crypto.AEADBadTagException: Tag mismatch!
+	at com.sun.crypto.provider.GaloisCounterMode.decryptFinal(GaloisCounterMode.java:620)
+	at com.sun.crypto.provider.CipherCore.finalNoPadding(CipherCore.java:1116)
+	at com.sun.crypto.provider.CipherCore.fillOutputBuffer(CipherCore.java:1053)
+	at com.sun.crypto.provider.CipherCore.doFinal(CipherCore.java:853)
+	at com.sun.crypto.provider.AESCipher.engineDoFinal(AESCipher.java:446)
+	at javax.crypto.Cipher.doFinal(Cipher.java:2168)
+	at com.proxy.crypto.AesGcmCipher.decrypt(AesGcmCipher.java:111)
+	... 47 common frames omitted
+2026-06-04 11:47:13.676 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:47:13.676 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [FAIL] www.baidu.com:443 elapsed=6ms error=java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:47:13.676 [nioEventLoopGroup-4-1] ERROR c.p.cluster.FailoverClusterInvoker - All invokers failed after 3 attempts: java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:47:13.676 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for www.baidu.com:443: All invokers failed after 3 attempts: java.lang.RuntimeException: Connection disconnected
+2026-06-04 11:48:40.267 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+2026-06-04 11:48:40.278 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
+2026-06-04 11:48:40.279 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+2026-06-04 11:48:40.279 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
+2026-06-04 11:49:21.409 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 11:49:21.495 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 11:49:21.609 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 11:49:21.609 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 11:49:21.609 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 11:49:21.610 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 11:49:21.611 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 1)
+2026-06-04 11:49:21.613 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 11:49:21.613 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 11:49:21.614 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 11:49:21.614 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 11:49:21.614 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 2)
+2026-06-04 11:49:21.614 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 11:49:21.621 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 11:49:21.621 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 11:49:21.621 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 11:49:21.765 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 11:49:22.038 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 11:49:30.654 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:54611
+2026-06-04 11:49:30.796 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 11:49:30.988 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=332ms status=200
+2026-06-04 11:49:30.991 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.baidu.com:443
+2026-06-04 11:49:30.991 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 11:49:31.005 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=14ms status=200
+2026-06-04 11:49:40.698 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=13ms status=200
+2026-06-04 11:49:40.701 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:51:21.717 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+2026-06-04 11:51:21.730 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 11:51:21.730 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
+2026-06-04 11:51:21.731 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+2026-06-04 11:51:21.731 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
+2026-06-04 12:01:45.614 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+2026-06-04 12:01:45.703 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+2026-06-04 12:01:45.816 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 12:01:45.817 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 12:01:45.817 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 12:01:45.818 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 12:01:45.819 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 1)
+2026-06-04 12:01:45.826 [main] INFO  c.p.t.netty.pool.ConnectionPool - Created new HTTP/2 connection to 127.0.0.1:9090, pool size: 1
+2026-06-04 12:01:45.826 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 127.0.0.1:9090 via HTTP/2
+2026-06-04 12:01:45.826 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 127.0.0.1:9090
+2026-06-04 12:01:45.826 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 127.0.0.1:9090
+2026-06-04 12:01:45.826 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 127.0.0.1:9090 (ssl=false, cipher=none) (connection 2)
+2026-06-04 12:01:45.826 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 2 invokers, cluster=failover, loadBalance=roundrobin
+2026-06-04 12:01:45.833 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+2026-06-04 12:01:45.833 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+2026-06-04 12:01:45.833 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+2026-06-04 12:01:46.012 [main] INFO  c.p.l.sysproxy.MacSystemProxyManager - Detected active network services: [Wi-Fi]
+2026-06-04 12:01:46.222 [main] WARN  com.proxy.local.ProxyLocalServer - Failed to set system proxy (non-fatal): Command failed (exit=7): networksetup -setwebproxy Wi-Fi 127.0.0.1 1080
+Unable to commit systemconfig database.
+** Error: Unable to commit changes to network database.
+
+2026-06-04 12:02:04.066 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:59047
+2026-06-04 12:02:04.217 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:04.445 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=372ms status=200
+2026-06-04 12:02:04.447 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.baidu.com:443, streamId=1
+2026-06-04 12:02:04.448 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:04.461 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=13ms status=200
+2026-06-04 12:02:04.487 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=1ms status=200
+2026-06-04 12:02:04.504 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 12:02:04.522 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 12:02:04.524 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=3ms status=200
+2026-06-04 12:02:04.526 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:02:13.206 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.baidu.com:443 from /127.0.0.1:59103
+2026-06-04 12:02:13.208 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:13.211 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=4ms status=200
+2026-06-04 12:02:13.212 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.baidu.com:443, streamId=2
+2026-06-04 12:02:13.213 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:13.227 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=15ms status=200
+2026-06-04 12:02:13.255 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 12:02:13.273 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 12:02:13.290 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=1ms status=200
+2026-06-04 12:02:13.290 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=1ms status=200
+2026-06-04 12:02:13.291 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:02:20.055 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: www.baidu.com:443 from /127.0.0.1:59132
+2026-06-04 12:02:20.056 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:20.063 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=7ms status=200
+2026-06-04 12:02:20.064 [nioEventLoopGroup-4-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 tunnel established: www.baidu.com:443, streamId=3
+2026-06-04 12:02:20.064 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:20.078 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=14ms status=200
+2026-06-04 12:02:20.107 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=2ms status=200
+2026-06-04 12:02:20.123 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=1ms status=200
+2026-06-04 12:02:20.149 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=6ms status=200
+2026-06-04 12:02:20.151 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.baidu.com:443 elapsed=6ms status=200
+2026-06-04 12:02:20.152 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:02:27.095 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: httpbin.org:443 from /127.0.0.1:59193
+2026-06-04 12:02:27.096 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:27.099 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] httpbin.org:443 elapsed=3ms status=200
+2026-06-04 12:02:27.100 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: httpbin.org:443, streamId=4
+2026-06-04 12:02:27.100 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:27.117 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] httpbin.org:443 elapsed=17ms status=200
+2026-06-04 12:02:37.100 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] httpbin.org:443 elapsed=3ms status=200
+2026-06-04 12:02:37.101 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:02:44.352 [nioEventLoopGroup-3-5] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.qq.com:443 from /127.0.0.1:59310
+2026-06-04 12:02:44.352 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:44.357 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.qq.com:443 elapsed=5ms status=200
+2026-06-04 12:02:44.357 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.qq.com:443, streamId=5
+2026-06-04 12:02:44.358 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:44.378 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.qq.com:443 elapsed=20ms status=200
+2026-06-04 12:02:44.405 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.qq.com:443 elapsed=1ms status=200
+2026-06-04 12:02:44.437 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.qq.com:443 elapsed=1ms status=200
+2026-06-04 12:02:44.452 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.qq.com:443 elapsed=2ms status=200
+2026-06-04 12:02:44.452 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.qq.com:443 elapsed=1ms status=200
+2026-06-04 12:02:44.453 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:02:52.408 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.taobao.com:443 from /127.0.0.1:59349
+2026-06-04 12:02:52.409 [nioEventLoopGroup-5-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:52.412 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.taobao.com:443 elapsed=4ms status=200
+2026-06-04 12:02:52.412 [nioEventLoopGroup-5-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.taobao.com:443, streamId=6
+2026-06-04 12:02:52.414 [nioEventLoopGroup-4-1] WARN  com.proxy.crypto.NoneCipher - NoneCipher initialized — data will NOT be encrypted! Do NOT use in production.
+2026-06-04 12:02:52.457 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.taobao.com:443 elapsed=43ms status=200
+2026-06-04 12:02:52.476 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.taobao.com:443 elapsed=1ms status=200
+2026-06-04 12:02:52.476 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.taobao.com:443 elapsed=1ms status=200
+2026-06-04 12:02:52.490 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.taobao.com:443 elapsed=1ms status=200
+2026-06-04 12:02:52.534 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.taobao.com:443 elapsed=3ms status=200
+2026-06-04 12:02:52.535 [nioEventLoopGroup-5-1] INFO  ACCESS_LOG - [OK] www.taobao.com:443 elapsed=3ms status=200
+2026-06-04 12:02:52.535 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:03:08.343 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+2026-06-04 12:03:08.353 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:03:08.353 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:03:08.353 [nioEventLoopGroup-5-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:03:08.353 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:03:08.353 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 0
+2026-06-04 12:03:08.353 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:03:08.353 [nioEventLoopGroup-4-1] WARN  c.p.exchange.header.ExchangeHandler - Connection disconnected, failing all pending futures
+2026-06-04 12:03:08.353 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+2026-06-04 12:03:08.354 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.
