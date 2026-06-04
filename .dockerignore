@@ -1,0 +1,15 @@
+# 构建产物
+**/target/
+# 日志
+logs/
+**/*.log
+# IDE / 系统文件
+.idea/
+*.iml
+.vscode/
+**/.DS_Store
+# git
+.git/
+.gitignore
+# 文档（不参与构建，减小上下文）
+docs/

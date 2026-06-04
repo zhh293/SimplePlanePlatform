@@ -1,0 +1,44 @@
+# =========================================================
+# proxy-remote 远程服务端镜像（多阶段构建）
+# 在项目根目录执行构建：
+#   docker build -f docker/Dockerfile.remote -t netty-proxy-remote:1.0.0 .
+# =========================================================
+
+# ---------- Stage 1: 构建 ----------
+FROM maven:3.9-eclipse-temurin-8 AS build
+WORKDIR /build
+
+# 先拷 pom 预热依赖缓存（命中缓存可大幅加速重复构建）
+COPY pom.xml ./
+COPY proxy-common/pom.xml        proxy-common/
+COPY proxy-exchange/pom.xml      proxy-exchange/
+COPY proxy-transport-netty/pom.xml proxy-transport-netty/
+COPY proxy-crypto/pom.xml        proxy-crypto/
+COPY proxy-cluster/pom.xml       proxy-cluster/
+COPY proxy-local/pom.xml         proxy-local/
+COPY proxy-remote/pom.xml        proxy-remote/
+
+# 再拷源码
+COPY . .
+
+# 打包 + 把运行期依赖拷到 proxy-remote/target/dependency
+# （当前项目未配置 fat-jar 插件，故采用 瘦 jar + 依赖目录 的方式运行）
+RUN mvn -q -DskipTests clean package \
+ && mvn -q -pl proxy-remote -DskipTests dependency:copy-dependencies
+
+# ---------- Stage 2: 运行 ----------
+FROM eclipse-temurin:8-jre
+WORKDIR /app
+
+# 拷贝本模块编译产物（含 classpath 资源：remote.yml / logback.xml / META-INF）
+COPY --from=build /build/proxy-remote/target/classes        ./classes
+# 拷贝运行期依赖
+COPY --from=build /build/proxy-remote/target/dependency      ./lib
+
+# /app/config 用于挂载外部配置（置于 classpath 最前，可覆盖内置 remote.yml）
+RUN mkdir -p /app/config
+
+EXPOSE 9090
+
+ENTRYPOINT ["java", "-cp", "/app/config:/app/classes:/app/lib/*", \
+            "com.proxy.remote.ProxyRemoteServer"]

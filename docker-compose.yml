@@ -1,0 +1,64 @@
+# =========================================================
+# Netty-Proxy 一键编排：proxy-remote（服务端） + proxy-local（客户端）
+#
+# 用法（项目根目录）：
+#   docker compose up -d --build          # 构建并后台启动两端
+#   docker compose logs -f                # 跟踪日志
+#   docker compose down                   # 停止并移除
+#
+# 说明：
+#   - proxy-local 通过 compose 内置 DNS 以服务名 "proxy-remote" 连接服务端
+#   - 仅 proxy-local 的 1080 端口对外暴露给宿主机；9090 仅在内网用于两端通信
+#   - 两端的 cipher / cipherKey 必须一致（见 docker/remote.yml 与 docker/proxy.yml）
+# =========================================================
+
+services:
+  proxy-remote:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.remote
+    image: netty-proxy-remote:1.0.0
+    container_name: netty-proxy-remote
+    restart: unless-stopped
+    # 9090 默认不映射到宿主机，仅供 compose 内网通信；
+    # 如需从外部直连服务端（两端分开部署），取消下面注释。
+    # ports:
+    #   - "9090:9090"
+    expose:
+      - "9090"
+    volumes:
+      # 挂载外部配置覆盖镜像内置 remote.yml（/app/config 在 classpath 最前）
+      - ./docker/remote.yml:/app/config/remote.yml:ro
+    networks:
+      - proxy-net
+    healthcheck:
+      # 9090 端口可建立 TCP 连接即视为就绪
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9090' 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  proxy-local:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.local
+    image: netty-proxy-local:1.0.0
+    container_name: netty-proxy-local
+    restart: unless-stopped
+    depends_on:
+      proxy-remote:
+        condition: service_healthy
+    ports:
+      # 宿主机 1080 → 容器 1080（SOCKS5 / HTTP CONNECT 共用）
+      - "1080:1080"
+    volumes:
+      - ./docker/proxy.yml:/app/config/proxy.yml:ro
+      # 持久化本地端日志
+      - ./logs:/app/logs
+    networks:
+      - proxy-net
+
+networks:
+  proxy-net:
+    driver: bridge

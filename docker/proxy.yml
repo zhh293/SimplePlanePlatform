@@ -1,0 +1,31 @@
+# ============================================
+# proxy-local 容器外部配置（挂载到 /app/config/proxy.yml）
+# ============================================
+
+# 容器内监听端口（compose 中映射到宿主机）
+localPort: 1080
+
+remoteServers:
+  # docker-compose 网络内通过服务名 proxy-remote 访问远程端
+  # 若两端不在同一 compose 网络，请改成远程服务器的真实 IP/域名
+  - host: "proxy-remote"
+    port: 9090
+    ssl: false
+    # 加密算法与密钥：必须与 proxy-remote 端完全一致
+    cipher: "aes-gcm"
+    cipherKey: "change-me-to-a-strong-shared-key"
+
+cluster: "failover"
+loadBalance: "roundrobin"
+timeoutMs: 30000
+connectionsPerNode: 2
+httpProxyEnabled: true
+
+# ============================================
+# 系统代理配置
+# 容器内必须关闭：自动设置的是“容器内部”系统代理，对宿主机无效，
+# 反而可能在不支持的镜像里报错。客户端应用应显式把代理指向本机映射端口。
+# ============================================
+systemProxy:
+  enabled: false
+  host: "127.0.0.1"

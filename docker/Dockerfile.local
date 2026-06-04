@@ -1,0 +1,42 @@
+# =========================================================
+# proxy-local 本地客户端镜像（多阶段构建）
+# 在项目根目录执行构建：
+#   docker build -f docker/Dockerfile.local -t netty-proxy-local:1.0.0 .
+#
+# 注意：容器内的 proxy-local 不应自动设置“系统代理”
+#       （那只会改容器内部的代理，对宿主机无意义），
+#       请在挂载的 proxy.yml 中将 systemProxy.enabled 设为 false。
+# =========================================================
+
+# ---------- Stage 1: 构建 ----------
+FROM maven:3.9-eclipse-temurin-8 AS build
+WORKDIR /build
+
+COPY pom.xml ./
+COPY proxy-common/pom.xml        proxy-common/
+COPY proxy-exchange/pom.xml      proxy-exchange/
+COPY proxy-transport-netty/pom.xml proxy-transport-netty/
+COPY proxy-crypto/pom.xml        proxy-crypto/
+COPY proxy-cluster/pom.xml       proxy-cluster/
+COPY proxy-local/pom.xml         proxy-local/
+COPY proxy-remote/pom.xml        proxy-remote/
+
+COPY . .
+
+RUN mvn -q -DskipTests clean package \
+ && mvn -q -pl proxy-local -DskipTests dependency:copy-dependencies
+
+# ---------- Stage 2: 运行 ----------
+FROM eclipse-temurin:8-jre
+WORKDIR /app
+
+COPY --from=build /build/proxy-local/target/classes       ./classes
+COPY --from=build /build/proxy-local/target/dependency     ./lib
+
+# /app/config 挂外部 proxy.yml；/app/logs 持久化 proxy-local.log
+RUN mkdir -p /app/config /app/logs
+
+EXPOSE 1080
+
+ENTRYPOINT ["java", "-cp", "/app/config:/app/classes:/app/lib/*", \
+            "com.proxy.local.ProxyLocalServer"]

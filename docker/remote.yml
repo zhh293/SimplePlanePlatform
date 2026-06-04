@@ -1,0 +1,25 @@
+# ===================================
+# proxy-remote 容器外部配置（挂载到 /app/config/remote.yml）
+# ===================================
+
+# 容器内监听所有网卡
+host: 0.0.0.0
+port: 9090
+
+bizThreads: 200
+workerThreads: 0
+bossThreads: 1
+
+# 加密算法与密钥：必须与 proxy-local 端完全一致
+cipher: aes-gcm
+cipherKey: change-me-to-a-strong-shared-key
+
+maxStreams: 100
+readIdleTimeout: 60
+backlog: 1024
+
+outbound:
+  connectTimeoutMs: 5000
+  activeWaitTimeoutMs: 5000
+  keepAlive: true
+  tcpNoDelay: true
