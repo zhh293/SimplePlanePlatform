@@ -720,6 +720,7 @@ input[type="number"]::-webkit-inner-spin-button {
   max-width: 560px;
   width: 90vw;
   box-shadow: 0 8px 32px oklch(0 0 0 / 0.5);
+  margin: auto;
 }
 .modal::backdrop {
   background: oklch(0 0 0 / 0.6);

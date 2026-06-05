@@ -7,7 +7,7 @@ localPort: 1080
 
 # 远程代理服务器列表（支持多节点负载均衡）
 remoteServers:
-  - host: "54.234.196.30"
+  - host: "YOUR_SERVER_IP"
     port: 9090
     ssl: false
     cipher: "none"
