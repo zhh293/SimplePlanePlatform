@@ -40,38 +40,37 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 单条 HTTP/2 连接。
+ * 单条 HTTP/2 连接（支持自动重连）。
  * <p>
  * 设计动机：在 HTTP/2 多路复用下，一条 TCP 连接即可承载成百上千个并发 Stream，
- * 因此“连接池 + maxConnections + 等待队列”是多余的，反而其阻塞式 acquire 会卡住
- * Netty IO 线程。本类用“单连接 + 非阻塞建流”取代之前的 ConnectionPool。
+ * 因此"连接池 + maxConnections + 等待队列"是多余的，反而其阻塞式 acquire 会卡住
+ * Netty IO 线程。本类用"单连接 + 非阻塞建流"取代之前的 ConnectionPool。
  * </p>
  * <p>
- * 职责：
+ * 重连机制：
  * <ul>
- *   <li>建立并预热一条到目标服务器的 HTTP/2 TCP 连接（父 Channel）；</li>
- *   <li>在该连接上以<strong>非阻塞</strong>方式开启 Stream 子 Channel；</li>
- *   <li>为每个 Stream 安装统一的 pipeline（加解密 / 编解码 / 心跳 / 业务 handler）。</li>
+ *   <li>当 TCP 连接断开且非主动关闭时，自动调度重连任务；</li>
+ *   <li>重连采用指数退避策略（1s → 2s → 4s → ... → 60s），避免频繁重连；</li>
+ *   <li>重连成功后重置退避计数，连接恢复可用。</li>
  * </ul>
  * </p>
- * <pre>
- * TCP Connection (Parent Channel)
- *   ├── SslHandler (可选)
- *   ├── Http2FrameCodec
- *   └── Http2MultiplexHandler
- *         ├── Stream 子 Channel 1
- *         ├── Stream 子 Channel 2
- *         └── ...
- * </pre>
  */
 public class Http2Connection {
 
     private static final Logger log = LoggerFactory.getLogger(Http2Connection.class);
+
+    // 重连相关常量
+    private static final long RECONNECT_INITIAL_DELAY_MS = 1000;
+    private static final long RECONNECT_MAX_DELAY_MS = 60000;
+    private static final double RECONNECT_BACKOFF_MULTIPLIER = 2.0;
 
     private final URL url;
     private final Http2ClientConfig config;
@@ -79,11 +78,26 @@ public class Http2Connection {
     private final Bootstrap bootstrap;
     private final MessageHandler messageHandler;
     private final List<StreamPipelineCustomizer> pipelineCustomizers;
-    private final AtomicBoolean closed = new AtomicBoolean(false);
+
+    /** 标记是否用户主动销毁（destroy），主动销毁后不再重连 */
+    private final AtomicBoolean destroyed = new AtomicBoolean(false);
+    /** 标记当前是否正在重连中，防止并发重连 */
+    private final AtomicBoolean reconnecting = new AtomicBoolean(false);
+
     private final AtomicInteger activeStreams = new AtomicInteger(0);
+    private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
+
+    /** 用于调度重连和健康检查任务（独立于 IO 线程） */
+    private final ScheduledExecutorService scheduler =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "http2-reconnect-scheduler");
+                t.setDaemon(true);
+                return t;
+            });
 
     private volatile SslContext sslContext;
     private volatile Channel parentChannel;
+    private volatile ScheduledFuture<?> healthCheckFuture;
 
     public Http2Connection(URL url, MessageHandler handler) {
         this.url = url;
@@ -116,7 +130,120 @@ public class Http2Connection {
                     future.cause());
         }
         this.parentChannel = future.channel();
+        this.reconnectAttempts.set(0);
         log.info("HTTP/2 connection established to {}:{}", url.getHost(), url.getPort());
+
+        // 注册连接关闭监听器 —— 触发自动重连
+        parentChannel.closeFuture().addListener(cf -> onConnectionLost());
+
+        // 启动连接级健康检查
+        startHealthCheck();
+    }
+
+    /**
+     * 连接断开时的回调。
+     * 如果非主动销毁，则触发自动重连。
+     */
+    private void onConnectionLost() {
+        if (destroyed.get()) {
+            log.info("Connection lost but already destroyed, skip reconnect");
+            return;
+        }
+        log.warn("HTTP/2 connection to {}:{} lost, scheduling reconnect...", url.getHost(), url.getPort());
+        scheduleReconnect();
+    }
+
+    /**
+     * 调度重连任务（指数退避）。
+     */
+    private void scheduleReconnect() {
+        if (destroyed.get()) {
+            return;
+        }
+        if (!reconnecting.compareAndSet(false, true)) {
+            log.debug("Reconnect already in progress, skip");
+            return;
+        }
+
+        int attempt = reconnectAttempts.incrementAndGet();
+        long delay = calculateBackoffDelay(attempt);
+        log.info("Scheduling reconnect attempt #{} in {}ms", attempt, delay);
+
+        scheduler.schedule(this::doReconnect, delay, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * 执行重连。
+     */
+    private void doReconnect() {
+        if (destroyed.get()) {
+            reconnecting.set(false);
+            return;
+        }
+
+        try {
+            log.info("Attempting reconnect #{} to {}:{}...", reconnectAttempts.get(), url.getHost(), url.getPort());
+            ChannelFuture future = bootstrap.connect(url.getHost(), url.getPort()).sync();
+            if (future.isSuccess()) {
+                this.parentChannel = future.channel();
+                this.reconnectAttempts.set(0);
+                this.reconnecting.set(false);
+                log.info("Reconnect SUCCESS to {}:{}", url.getHost(), url.getPort());
+
+                // 重新注册关闭监听器
+                parentChannel.closeFuture().addListener(cf -> onConnectionLost());
+
+                // 重启健康检查
+                startHealthCheck();
+            } else {
+                reconnecting.set(false);
+                log.warn("Reconnect failed: {}", future.cause() != null ? future.cause().getMessage() : "unknown");
+                scheduleReconnect();
+            }
+        } catch (Exception e) {
+            reconnecting.set(false);
+            log.warn("Reconnect attempt #{} failed: {}", reconnectAttempts.get(), e.getMessage());
+            scheduleReconnect();
+        }
+    }
+
+    /**
+     * 计算指数退避延迟。
+     */
+    private long calculateBackoffDelay(int attempt) {
+        long delay = (long) (RECONNECT_INITIAL_DELAY_MS * Math.pow(RECONNECT_BACKOFF_MULTIPLIER, attempt - 1));
+        return Math.min(delay, RECONNECT_MAX_DELAY_MS);
+    }
+
+    /**
+     * 启动连接级健康检查。
+     * 每隔 30 秒检测 parentChannel 是否还活着，如果发现断开则主动触发重连。
+     * 这用于检测"半关闭"状态（如休眠唤醒后 TCP 连接已死但 Netty 还未感知）。
+     */
+    private void startHealthCheck() {
+        stopHealthCheck();
+        healthCheckFuture = scheduler.scheduleAtFixedRate(() -> {
+            if (destroyed.get()) {
+                stopHealthCheck();
+                return;
+            }
+            Channel ch = parentChannel;
+            if (ch == null || !ch.isActive()) {
+                log.warn("Health check: connection inactive, triggering reconnect");
+                scheduleReconnect();
+            }
+        }, 15, 15, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 停止健康检查。
+     */
+    private void stopHealthCheck() {
+        ScheduledFuture<?> f = healthCheckFuture;
+        if (f != null && !f.isCancelled()) {
+            f.cancel(false);
+            healthCheckFuture = null;
+        }
     }
 
     /**
@@ -132,7 +259,7 @@ public class Http2Connection {
         Channel parent = this.parentChannel;
         Promise<Channel> promise = workerGroup.next().newPromise();
 
-        if (closed.get() || parent == null || !parent.isActive()) {
+        if (destroyed.get() || parent == null || !parent.isActive()) {
             promise.setFailure(new IllegalStateException("HTTP/2 connection is not available"));
             return promise;
         }
@@ -241,12 +368,10 @@ public class Http2Connection {
                                     }
                                 }));
                         // 连接建立后增大 connection-level flow control window
-                        // HTTP/2 spec: connection window 初始为 65535，需要通过 WINDOW_UPDATE 增大
                         ch.pipeline().addLast("window-update", new io.netty.channel.ChannelInboundHandlerAdapter() {
                             @Override
                             public void userEventTriggered(io.netty.channel.ChannelHandlerContext ctx, Object evt) throws Exception {
                                 if (evt instanceof io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent) {
-                                    // HTTP/2 preface 和 SETTINGS 帧已发送，现在可以安全增大 connection window
                                     Http2FrameCodec codec = ctx.pipeline().get(Http2FrameCodec.class);
                                     if (codec != null) {
                                         io.netty.handler.codec.http2.Http2Connection conn = codec.connection();
@@ -284,7 +409,15 @@ public class Http2Connection {
 
     public boolean isActive() {
         Channel ch = this.parentChannel;
-        return !closed.get() && ch != null && ch.isActive();
+        return !destroyed.get() && ch != null && ch.isActive();
+    }
+
+    /**
+     * 是否正在重连中。
+     * 上层可根据此判断暂时不可用（但会自动恢复），区别于已销毁（永久不可用）。
+     */
+    public boolean isReconnecting() {
+        return reconnecting.get();
     }
 
     public int getActiveStreamCount() {
@@ -292,12 +425,19 @@ public class Http2Connection {
     }
 
     public String getStats() {
-        return String.format("Http2Connection[active=%s, streams=%d]", isActive(), activeStreams.get());
+        return String.format("Http2Connection[active=%s, reconnecting=%s, attempts=%d, streams=%d]",
+                isActive(), isReconnecting(), reconnectAttempts.get(), activeStreams.get());
     }
 
+    /**
+     * 主动销毁连接（用户关闭客户端时调用）。
+     * 销毁后不再自动重连。
+     */
     public void close() {
-        if (closed.compareAndSet(false, true)) {
-            log.info("Closing HTTP/2 connection to {}:{}", url.getHost(), url.getPort());
+        if (destroyed.compareAndSet(false, true)) {
+            log.info("Destroying HTTP/2 connection to {}:{}", url.getHost(), url.getPort());
+            stopHealthCheck();
+            scheduler.shutdownNow();
             Channel ch = this.parentChannel;
             if (ch != null && ch.isActive()) {
                 try {
@@ -312,11 +452,11 @@ public class Http2Connection {
                 Thread.currentThread().interrupt();
                 log.warn("Interrupted while waiting for EventLoopGroup shutdown");
             }
-            log.info("HTTP/2 connection closed");
+            log.info("HTTP/2 connection destroyed");
         }
     }
 
     public boolean isClosed() {
-        return closed.get();
+        return destroyed.get();
     }
 }
