@@ -85,6 +85,30 @@ tail -f proxy-remote.log
 
 **注意：** 确保服务器的安全组/防火墙已开放 9090 端口（TCP 入站）。
 
+#### 推荐：Nginx 反向代理部署
+
+生产环境建议使用 nginx 做 TCP 四层代理，Netty 只监听本地回环地址，避免直接暴露：
+
+```bash
+# 1. 修改 remote.yml（Netty 只监听本地）
+host: 127.0.0.1
+port: 19090
+
+# 2. 安装 nginx 及 stream 模块
+sudo apt-get install -y nginx libnginx-mod-stream
+
+# 3. 一键部署（本地执行）
+ssh -i <your-key.pem> <user>@<your-server-ip> 'bash -s' < proxy-remote/deploy-nginx.sh
+```
+
+部署后的架构：
+
+```
+客户端 → nginx(0.0.0.0:9090) → Netty(127.0.0.1:19090) → 目标网站
+```
+
+nginx 配置文件参见 `proxy-remote/nginx-stream.conf`，可在 nginx 层额外添加 IP 白名单、限流等安全策略。
+
 ### 第四步：配置本地客户端
 
 编辑 `proxy-local/src/main/resources/proxy.yml`：
