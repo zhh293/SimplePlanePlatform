@@ -288,6 +288,50 @@ cluster: "failover"         # 失败自动切换到下一个节点
 
 ---
 
+## Web 管理面板
+
+项目提供了一个基于 Node.js 的 Web 管理面板，支持通过浏览器可视化编辑所有配置参数，无需手动修改 YAML 文件。
+
+### 启动面板
+
+```bash
+cd dashboard
+node server.js
+```
+
+启动后访问 `http://localhost:3000`。
+
+### 功能概览
+
+| 功能 | 说明 |
+|------|------|
+| Local Server 配置 | 编辑 localPort、cluster、loadBalance、timeoutMs、connectionsPerNode 等全部 proxy.yml 参数 |
+| Remote Servers 管理 | 可视化增删改多节点，支持批量导入 YAML |
+| Route Rules 编辑 | 双栏编辑 proxyList / directList，实时显示规则数量 |
+| Remote Server 配置 | 编辑 remote.yml 全部参数（含 outbound 出站配置） |
+| 配置预设管理 | 保存/加载/删除 remote server 配置预设，便于多环境切换 |
+| YAML 导入 | 支持拖拽 .yml 文件或粘贴 YAML 文本导入配置 |
+| 实时变更检测 | 外部修改 YAML 文件后自动推送更新（SSE） |
+| 表单验证 | 保存前自动校验端口范围、必填项等 |
+
+### 目录结构
+
+```
+dashboard/
+├── server.js           # Node.js 服务端（REST API + 静态文件 + SSE）
+├── yaml.js             # 零依赖 YAML 解析/序列化
+├── package.json
+├── presets/            # 配置预设存储目录
+└── public/
+    ├── index.html      # 单页应用
+    ├── style.css       # OKLCH 暗色主题
+    └── app.js          # 前端逻辑
+```
+
+> 面板零外部依赖，直接读写 `proxy-local/src/main/resources/proxy.yml` 和 `proxy-remote/src/main/resources/remote.yml`。
+
+---
+
 ## 架构总览
 
 ```

@@ -1,0 +1,3 @@
+# Ignore user-specific presets (keep directory)
+*
+!.gitignore

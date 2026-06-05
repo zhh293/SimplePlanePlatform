@@ -1,0 +1,10 @@
+{
+  "name": "netty-proxy-dashboard",
+  "version": "1.0.0",
+  "description": "Web dashboard for Netty-Proxy configuration management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "private": true
+}
