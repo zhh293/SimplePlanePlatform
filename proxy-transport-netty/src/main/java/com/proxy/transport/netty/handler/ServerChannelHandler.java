@@ -102,10 +102,8 @@ public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessa
                 message.getType()
         );
         invocation.setAttachment("requestId", message.getRequestId());
-        // sessionKey = parentChannelId:streamId，确保多 local 实例连同一 remote 时不碰撞
-        // 注意：parentChannelId 取的是 TCP 连接级别的 parent channel，
-        // 同一个 local 的所有 stream（即使跨不同 TCP 连接）其 streamId 本身全局唯一，
-        // 因此暂时直接用 streamId 作为 sessionKey，后续通过 clientId 机制解决多 local 冲突
+        // streamId 已由客户端 StreamIdFactory 保证全局唯一（高16位=clientId，低48位=序列号），
+        // 直接作为 sessionKey 使用，多 local 实例连同一 remote 也不会碰撞。
         String sessionKey = String.valueOf(message.getStreamId());
         invocation.setAttachment("streamId", sessionKey);
         invocation.setAttachment("rawStreamId", message.getStreamId());

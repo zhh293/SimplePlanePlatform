@@ -1,11 +1,11 @@
 package com.proxy.local.handler;
 
+import com.proxy.common.id.StreamIdFactory;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Stream 通道注册表 —— 维护 streamId → 浏览器 ChannelHandlerContext 的映射
@@ -28,9 +28,10 @@ public class StreamChannelRegistry {
     private static final StreamChannelRegistry INSTANCE = new StreamChannelRegistry();
 
     /**
-     * streamId 生成器，从 1 开始递增
+     * streamId 工厂：高 16 位编码 clientId（标识本 local 实例），低 48 位递增序列号。
+     * 保证多个 local 实例连同一个 remote 时 streamId 绝不碰撞。
      */
-    private final AtomicLong streamIdGenerator = new AtomicLong(1);
+    private final StreamIdFactory streamIdFactory = new StreamIdFactory();
 
     /**
      * streamId → 浏览器 ChannelHandlerContext
@@ -45,10 +46,21 @@ public class StreamChannelRegistry {
     }
 
     /**
-     * 分配下一个唯一 streamId
+     * 分配下一个全局唯一 streamId
+     * <p>
+     * streamId 结构：高 16 位为本 local 实例的 clientId，低 48 位为递增序列号。
+     * 不同 local 实例的 clientId 不同，因此即使多 local 连同一 remote，streamId 也不碰撞。
+     * </p>
      */
     public long nextStreamId() {
-        return streamIdGenerator.getAndIncrement();
+        return streamIdFactory.nextStreamId();
+    }
+
+    /**
+     * 获取当前 local 实例的 clientId（监控/日志用）
+     */
+    public int getClientId() {
+        return streamIdFactory.getClientId();
     }
 
     /**

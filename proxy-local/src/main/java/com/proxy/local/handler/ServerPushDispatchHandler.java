@@ -42,8 +42,8 @@ public class ServerPushDispatchHandler extends SimpleChannelInboundHandler<Proxy
         }
 
         long streamId = msg.getStreamId();
-        if (streamId <= 0) {
-            log.warn("Received push message with requestId=0 but invalid streamId={}, discarding", streamId);
+        if (streamId == 0) {
+            log.warn("Received push message with requestId=0 but streamId=0 (invalid), discarding");
             return;
         }
 
