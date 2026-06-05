@@ -64,7 +64,7 @@ ssh -i your-key.pem ubuntu@YOUR_SERVER_IP
 | host | 0.0.0.0 | 监听地址 |
 | port | 9090 | 监听端口 |
 | cipher | none | 加密算法（none/aes-gcm/chacha20/aes-ctr-hmac） |
-| cipherKey | my-secret-key-123 | 加密密钥，客户端服务端必须一致 |
+| cipherKey | your-cipher-key | 加密密钥，客户端服务端必须一致 |
 | maxStreams | 1000 | 单连接最大并发 Stream 数 |
 | bizThreads | 200 | 业务线程池大小 |
 
@@ -99,7 +99,7 @@ remoteServers:
     port: 9090
     ssl: false
     cipher: "none"              # 需和服务端一致
-    cipherKey: "my-secret-key-123"  # 需和服务端一致
+    cipherKey: "your-cipher-key"  # 需和服务端一致
 
 # 每个节点的 HTTP/2 连接数（保持 1 即可）
 connectionsPerNode: 1

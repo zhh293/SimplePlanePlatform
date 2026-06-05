@@ -1,59 +1,24 @@
-# ============================================
-# 本地代理服务配置
-# ============================================
-
-# 本地监听端口（浏览器/系统代理指向此端口）
 localPort: 1080
-
-# 远程代理服务器列表（支持多节点负载均衡）
 remoteServers:
-  - host: "54.234.196.30"
+  - host: your-server-ip
     port: 9090
     ssl: false
-    cipher: "none"
-    cipherKey: "my-secret-key-123"
-
-# 集群容错策略
-# failover  - 失败自动切换（默认，推荐）
-# failfast  - 快速失败
-# forking   - 并行调用多个节点
-# failback  - 失败后台重试
-cluster: "failover"
-
-# 负载均衡策略
-# roundrobin     - 加权轮询（默认）
-# random         - 随机
-# leastactive    - 最少活跃调用
-# consistenthash - 一致性哈希
-loadBalance: "roundrobin"
-
-# 请求超时时间（毫秒）
+    cipher: none
+    cipherKey: your-cipher-key
+cluster: failover
+loadBalance: roundrobin
 timeoutMs: 30000
-
-# 每个远程节点的连接数（HTTP/2 多路复用，通常 1-2 条即可）
 connectionsPerNode: 1
-
-# 是否同时支持 HTTP CONNECT 代理（与 SOCKS5 共用端口）
 httpProxyEnabled: true
-
-# ============================================
-# 路由规则配置（按规则分流）
-# ============================================
-# mode:
-#   proxy  - 匹配的域名走远程代理
-#   direct - 匹配的域名直连
-#   默认行为由 defaultRoute 决定
 route:
-  # 默认路由：proxy（全部走代理）或 direct（全部直连）
   defaultRoute: direct
-  # 走代理的域名规则（支持通配符 *）
   proxyList:
     - "*.google.com"
     - "*.google.com.hk"
     - "*.googleapis.com"
     - "*.gstatic.com"
     - "*.github.com"
-    - "github.com"
+    - github.com
     - "*.githubusercontent.com"
     - "*.ghcr.io"
     - "*.stackoverflow.com"
@@ -64,9 +29,9 @@ route:
     - "*.ytimg.com"
     - "*.googlevideo.com"
     - "*.twitter.com"
-    - "twitter.com"
+    - twitter.com
     - "*.x.com"
-    - "x.com"
+    - x.com
     - "*.twimg.com"
     - "*.openai.com"
     - "*.chatgpt.com"
@@ -80,7 +45,6 @@ route:
     - "*.npmjs.com"
     - "*.cloudflare.com"
     - "*.amazonaws.com"
-  # 强制直连的域名规则（优先级高于 proxyList）
   directList:
     - "*.meituan.com"
     - "*.sankuai.com"
@@ -99,17 +63,8 @@ route:
     - "*.126.com"
     - "*.chaoxing.com"
     - "*.vocabgo.com"
-    - "127.0.0.1"
-    - "localhost"
-
-# ============================================
-# 系统代理配置
-# ============================================
+    - 127.0.0.1
+    - localhost
 systemProxy:
-  # 是否在启动时自动设置操作系统的全局代理
-  # macOS: 通过 networksetup 设置 HTTP/HTTPS/SOCKS 代理
-  # Windows: 通过注册表设置 Internet 代理
-  # Linux: 通过 gsettings 设置 GNOME 代理
   enabled: false
-  # 代理监听地址（写入系统代理设置的地址，通常为 127.0.0.1）
-  host: "127.0.0.1"
+  host: 127.0.0.1
