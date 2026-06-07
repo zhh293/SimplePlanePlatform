@@ -1,6 +1,6 @@
 localPort: 1080
 remoteServers:
-  - host: 54.234.196.30
+  - host: "YOUR_SERVER_IP"
     port: 9090
     ssl: false
     cipher: none
