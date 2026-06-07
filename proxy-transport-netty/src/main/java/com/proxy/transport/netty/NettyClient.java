@@ -16,24 +16,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 基于 Netty HTTP/2 的 Client 实现。
+ * 基于 Netty HTTP/2 的 Client 实现（支持自动重连）。
  * <p>
  * 每个 NettyClient 实例对应<strong>一条</strong> HTTP/2 TCP 连接（{@link Http2Connection}）。
  * 一条连接上通过 Http2MultiplexHandler 支持成百上千个并发 Stream，
  * 每个客户端会话（由 streamId 标识）独占一个 Stream。
  * </p>
  * <p>
- * 相比旧版的关键改动：
+ * 重连行为：
  * <ul>
- *   <li>去掉了“连接池 + maxConnections + 等待队列”，单连接即可（多路复用本质）；</li>
- *   <li>建流改为<strong>非阻塞</strong>：不再在 IO 线程上 acquireConnection().sync()，
- *       避免卡死 Netty IO 线程；Stream 未就绪时消息先入队，就绪后自动 flush。</li>
+ *   <li>连接断开后 Http2Connection 自动重连；</li>
+ *   <li>重连期间 isAvailable() 返回 false，上层请求会立即失败或等待；</li>
+ *   <li>重连成功后 isAvailable() 自动恢复为 true，无需重启进程。</li>
  * </ul>
- * </p>
- * <p>
- * MessageHandler 在构造时传入，由 Exchanger 层创建（ExchangeHandler），
- * IO 线程收到消息后直接回调 handler，handler 内部通过 requestId 唤醒对应的 Future，
- * 或通过 streamId 路由服务端推送（requestId=0）的数据。
  * </p>
  */
 public class NettyClient implements Client {
@@ -65,7 +60,9 @@ public class NettyClient implements Client {
     @Override
     public void send(ProxyMessage message) {
         if (!isAvailable()) {
-            throw new IllegalStateException("Client is not available");
+            throw new IllegalStateException(
+                    "Client is not available (connection " +
+                    (connection.isReconnecting() ? "reconnecting" : "closed") + ")");
         }
 
         long streamId = message.getStreamId();
@@ -171,6 +168,13 @@ public class NettyClient implements Client {
         }
     }
 
+    /**
+     * 判断客户端是否可用。
+     * <p>
+     * 注意：如果连接断开但正在重连中，此方法返回 false；
+     * 当重连成功后会自动恢复为 true，无需重建 Client 实例。
+     * </p>
+     */
     @Override
     public boolean isAvailable() {
         return !closed.get() && connection.isActive();
