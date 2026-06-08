@@ -121,7 +121,7 @@
                 </div>
                 <div>
                   <h3>TUN Adapter</h3>
-                  <p class="service-desc">全局透明代理 (utun9 虚拟网卡)</p>
+                  <p class="service-desc">全局透明代理 (虚拟网卡)</p>
                 </div>
               </div>
               <div class="service-status" id="status-tun-adapter">
@@ -130,7 +130,7 @@
               </div>
             </div>
             <div class="service-meta" id="meta-tun-adapter">
-              <span class="meta-item">设备: utun9</span>
+              <span class="meta-item" id="tun-device-name">设备: -</span>
               <span class="meta-item" id="uptime-tun-adapter"></span>
             </div>
             <div class="service-actions">
@@ -147,6 +147,9 @@
                 停止
               </button>
               <button class="btn btn-ghost btn-sm" onclick="App.buildService('tun-adapter')">编译</button>
+            </div>
+            <div class="service-hint" id="tunPermissionHint">
+              <strong>macOS:</strong> 首次使用 TUN 需运行 <code>./setup-tun-permissions.sh</code> 配置免密权限，且 Dashboard 需从真实终端启动
             </div>
           </div>
         </div>

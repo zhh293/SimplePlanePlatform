@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { spawn, execSync } = require('child_process');
 const { parseYaml, toYaml } = require('./yaml');
 
@@ -13,6 +14,12 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const PRESETS_DIR = path.join(__dirname, 'presets');
 
 if (!fs.existsSync(PRESETS_DIR)) fs.mkdirSync(PRESETS_DIR, { recursive: true });
+
+// ============================================================
+// Platform Detection
+// ============================================================
+const IS_WIN = process.platform === 'win32';
+const IS_MAC = process.platform === 'darwin';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -47,8 +54,49 @@ function getJarPath() {
 }
 
 function getTunBinaryPath() {
+  if (IS_WIN) {
+    const bin = path.join(PROJECT_ROOT, 'tun-adapter', 'target', 'release', 'tun-adapter.exe');
+    return fs.existsSync(bin) ? bin : null;
+  }
   const bin = path.join(PROJECT_ROOT, 'tun-adapter', 'target', 'release', 'tun-adapter');
   return fs.existsSync(bin) ? bin : null;
+}
+
+// ============================================================
+// Cross-platform helper: kill process on specific port
+// ============================================================
+function killProcessOnPort(port) {
+  try {
+    if (IS_WIN) {
+      // Find PID listening on port and kill it
+      const out = execSync(`netstat -ano | findstr ":${port}" | findstr "LISTENING"`, { encoding: 'utf-8', stdio: 'pipe' });
+      const lines = out.trim().split('\n');
+      const pids = new Set();
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        const pid = parts[parts.length - 1];
+        if (pid && !isNaN(parseInt(pid))) pids.add(pid);
+      }
+      for (const pid of pids) {
+        try { execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' }); } catch {}
+      }
+    } else {
+      execSync(`lsof -ti :${port} | xargs kill -9`, { stdio: 'ignore' });
+    }
+  } catch {}
+}
+
+// Cross-platform helper: check if port is listening
+function isPortListening(port) {
+  try {
+    if (IS_WIN) {
+      execSync(`netstat -ano | findstr ":${port}" | findstr "LISTENING"`, { stdio: 'pipe' });
+      return true;
+    } else {
+      execSync(`lsof -i :${port} -sTCP:LISTEN`, { stdio: 'ignore' });
+      return true;
+    }
+  } catch { return false; }
 }
 
 function startProxyLocal() {
@@ -69,7 +117,7 @@ function startProxyLocal() {
   if (!jar) return { ok: false, error: 'JAR not found. Click Build first.' };
 
   // Also kill any leftover java process on port 1080
-  try { execSync('lsof -ti :1080 | xargs kill -9', { stdio: 'ignore' }); } catch {}
+  killProcessOnPort(1080);
 
   const args = ['-Dproxy.dns.nameservers=114.114.114.114,223.5.5.5', '-jar', jar];
   const proc = spawn('java', args, { cwd: PROJECT_ROOT, stdio: ['ignore', 'pipe', 'pipe'], detached: false });
@@ -92,7 +140,6 @@ function startProxyLocal() {
   proc.stderr.on('data', (data) => {
     data.toString().split('\n').filter(l => l.trim()).forEach(l => {
       addLog('proxy-local', l, 'stderr');
-      // Spring Boot prints startup info on stderr too sometimes
       if (l.includes('started on port') || l.includes('Started') || l.includes('JVM running')) {
         processes['proxy-local'].status = 'running';
         broadcastSSE('status', getStatusAll());
@@ -115,7 +162,7 @@ function startProxyLocal() {
 
   setTimeout(() => {
     if (processes['proxy-local'].status === 'starting') {
-      try { execSync('lsof -i :1080 -sTCP:LISTEN', { stdio: 'ignore' }); processes['proxy-local'].status = 'running'; } catch {}
+      if (isPortListening(1080)) { processes['proxy-local'].status = 'running'; }
       broadcastSSE('status', getStatusAll());
     }
   }, 5000);
@@ -128,23 +175,33 @@ function stopProxyLocal() {
   const proc = processes['proxy-local'].proc;
   if (!proc) {
     // Maybe there's a leftover process on port 1080 not managed by us
-    try {
-      execSync('lsof -ti :1080 | xargs kill -9', { stdio: 'ignore' });
+    if (isPortListening(1080)) {
+      killProcessOnPort(1080);
       addLog('proxy-local', '[dashboard] Killed orphan process on :1080');
       broadcastSSE('status', getStatusAll());
       return { ok: true };
-    } catch {}
+    }
     return { ok: false, error: 'Not running' };
   }
   addLog('proxy-local', '[dashboard] Stopping...');
-  proc.kill('SIGTERM');
+
+  if (IS_WIN) {
+    // On Windows, SIGTERM is not well supported; use taskkill
+    try { execSync(`taskkill /F /PID ${proc.pid} /T`, { stdio: 'ignore' }); } catch {}
+  } else {
+    proc.kill('SIGTERM');
+  }
+
   // Force kill after 3 seconds if it doesn't exit
   const killTimer = setTimeout(() => {
     if (processes['proxy-local'].proc) {
-      addLog('proxy-local', '[dashboard] Force killing (SIGKILL)...');
-      try { process.kill(proc.pid, 'SIGKILL'); } catch {}
-      // Also kill by port in case tree processes survived
-      try { execSync('lsof -ti :1080 | xargs kill -9', { stdio: 'ignore' }); } catch {}
+      addLog('proxy-local', '[dashboard] Force killing...');
+      if (IS_WIN) {
+        try { execSync(`taskkill /F /PID ${proc.pid} /T`, { stdio: 'ignore' }); } catch {}
+      } else {
+        try { process.kill(proc.pid, 'SIGKILL'); } catch {}
+        killProcessOnPort(1080);
+      }
       processes['proxy-local'].proc = null;
       processes['proxy-local'].status = 'stopped';
       processes['proxy-local'].startedAt = null;
@@ -155,13 +212,13 @@ function stopProxyLocal() {
   return { ok: true };
 }
 
-// Check if tun-adapter binary has setuid root permission
+// Check if tun-adapter binary has setuid root permission (macOS only)
 function tunHasSetuid() {
+  if (IS_WIN) return false; // Not applicable on Windows
   const bin = getTunBinaryPath();
   if (!bin) return false;
   try {
     const stat = fs.statSync(bin);
-    // Check owner is root (uid 0) and setuid bit is set (mode & 0o4000)
     return stat.uid === 0 && (stat.mode & 0o4000) !== 0;
   } catch { return false; }
 }
@@ -192,12 +249,17 @@ function startTunAdapter() {
   // Clear log file
   try { fs.writeFileSync(TUN_LOG_FILE, '', 'utf-8'); } catch {}
 
-  // On macOS, setuid binaries cannot be spawned directly from Node.js due to
-  // SIP restrictions (EPERM). We use osascript to request admin privileges
-  // via the system authorization dialog, then run the binary as a background
-  // process with output redirected to our log file.
-  const launchScript = `"${bin}" -c "${TUN_CONFIG}" > "${TUN_LOG_FILE}" 2>&1 & echo $!`;
+  if (IS_WIN) {
+    return startTunWindows(bin);
+  } else {
+    return startTunMacOS(bin);
+  }
+}
 
+// ============================================================
+// TUN Start — macOS (sudo -n with NOPASSWD)
+// ============================================================
+function startTunMacOS(bin) {
   let proc;
   try {
     // First try direct spawn (works if SIP is off or binary is in trusted path)
@@ -207,20 +269,18 @@ function startTunAdapter() {
       detached: true,
     });
   } catch (spawnErr) {
-    // Direct spawn failed (EPERM) — fall back to osascript with admin privileges
-    addLog('tun-adapter', `[dashboard] Direct spawn failed (${spawnErr.code || spawnErr.message}), requesting admin privileges...`);
+    // Direct spawn failed (EPERM) — fall back to sudo
+    addLog('tun-adapter', `[dashboard] Direct spawn failed (${spawnErr.code || spawnErr.message}), trying sudo...`);
     return startTunViaSudo(bin);
   }
 
   // Handle the case where spawn succeeds initially but the process errors out
-  // (e.g., EPERM is delivered asynchronously via the 'error' event)
   let spawnFailed = false;
 
   proc.on('error', (err) => {
     spawnFailed = true;
-    addLog('tun-adapter', `[dashboard] Spawn failed: ${err.message}, trying osascript fallback...`, 'stderr');
+    addLog('tun-adapter', `[dashboard] Spawn failed: ${err.message}, trying sudo fallback...`, 'stderr');
     processes['tun-adapter'].proc = null;
-    // Try osascript fallback
     startTunViaSudo(bin);
   });
 
@@ -231,60 +291,7 @@ function startTunAdapter() {
   addLog('tun-adapter', `[dashboard] Spawned tun-adapter (PID: ${proc.pid})`);
   broadcastSSE('status', getStatusAll());
 
-  // Pipe stdout/stderr to logs and detect running state from output
-  proc.stdout.on('data', (data) => {
-    const text = data.toString();
-    try { fs.appendFileSync(TUN_LOG_FILE, text); } catch {}
-    text.split('\n').filter(l => l.trim()).forEach(l => {
-      addLog('tun-adapter', l, 'stdout');
-      if (processes['tun-adapter'].status === 'starting') {
-        processes['tun-adapter'].status = 'running';
-        broadcastSSE('status', getStatusAll());
-      }
-    });
-  });
-  proc.stderr.on('data', (data) => {
-    const text = data.toString();
-    try { fs.appendFileSync(TUN_LOG_FILE, text); } catch {}
-    text.split('\n').filter(l => l.trim()).forEach(l => {
-      addLog('tun-adapter', l, 'stderr');
-      // stderr output also means the process is alive and producing output
-      if (processes['tun-adapter'].status === 'starting') {
-        processes['tun-adapter'].status = 'running';
-        broadcastSSE('status', getStatusAll());
-      }
-    });
-  });
-
-  proc.on('close', (code) => {
-    addLog('tun-adapter', `[dashboard] tun-adapter exited (code ${code})`);
-    processes['tun-adapter'].proc = null;
-    processes['tun-adapter'].status = 'stopped';
-    processes['tun-adapter'].startedAt = null;
-    try { fs.unlinkSync(TUN_PID_FILE); } catch {}
-    broadcastSSE('status', getStatusAll());
-  });
-
-  // Unref so it doesn't block Node exit, but we keep the reference for management
-  proc.unref();
-
-  // Check status after a few seconds
-  setTimeout(() => {
-    if (spawnFailed) return; // already handled
-    if (processes['tun-adapter'].status === 'starting') {
-      // If we get here, no output was produced but let's check PID
-      if (isTunRunning()) {
-        processes['tun-adapter'].status = 'running';
-        addLog('tun-adapter', '[dashboard] Process confirmed alive.');
-      } else {
-        processes['tun-adapter'].status = 'stopped';
-        processes['tun-adapter'].proc = null;
-        processes['tun-adapter'].startedAt = null;
-        addLog('tun-adapter', '[dashboard] Process exited unexpectedly. Check logs.');
-      }
-      broadcastSSE('status', getStatusAll());
-    }
-  }, 4000);
+  bindTunProcEvents(proc, spawnFailed);
 
   return { ok: true, pid: proc.pid };
 }
@@ -294,7 +301,6 @@ function startTunAdapter() {
 function startTunViaSudo(bin) {
   addLog('tun-adapter', '[dashboard] Launching via sudo...');
 
-  // Use sudo to run tun-adapter. This requires NOPASSWD sudoers entry.
   let proc;
   try {
     proc = spawn('sudo', ['-n', bin, '-c', TUN_CONFIG], {
@@ -392,20 +398,107 @@ function startTunViaSudo(bin) {
   return { ok: true, message: 'Starting via sudo (NOPASSWD)...' };
 }
 
-// Write a convenience launch script
-function writeTunLaunchScript(bin) {
-  const script = `#!/bin/bash
-# Run tun-adapter with root privileges
-# This script is auto-generated by the dashboard
-cd "${PROJECT_ROOT}"
-echo "Starting tun-adapter..."
-sudo "${bin}" -c "${TUN_CONFIG}"
-`;
-  const scriptPath = path.join(__dirname, 'start-tun.sh');
+// ============================================================
+// TUN Start — Windows (requires "Run as Administrator")
+// ============================================================
+function startTunWindows(bin) {
+  // On Windows, TUN requires administrator privileges.
+  // The Dashboard itself must be launched from an elevated terminal (Run as Administrator).
+  // We try to spawn the binary directly — if it fails, we inform the user.
+
+  let proc;
   try {
-    fs.writeFileSync(scriptPath, script, { mode: 0o755 });
-    addLog('tun-adapter', `[dashboard] Launch script written: ${scriptPath}`);
-  } catch {}
+    proc = spawn(bin, ['-c', TUN_CONFIG], {
+      cwd: PROJECT_ROOT,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
+    });
+  } catch (e) {
+    const msg = `无法启动 tun-adapter (${e.code || e.message})。请以管理员身份运行 Dashboard（右键 → 以管理员身份运行）。`;
+    addLog('tun-adapter', `[dashboard] ${msg}`, 'stderr');
+    processes['tun-adapter'].status = 'stopped';
+    processes['tun-adapter'].startedAt = null;
+    broadcastSSE('status', getStatusAll());
+    return { ok: false, error: msg };
+  }
+
+  // Save PID
+  try { fs.writeFileSync(TUN_PID_FILE, String(proc.pid), 'utf-8'); } catch {}
+  processes['tun-adapter'].proc = proc;
+  addLog('tun-adapter', `[dashboard] Spawned tun-adapter (PID: ${proc.pid})`);
+  broadcastSSE('status', getStatusAll());
+
+  let spawnFailed = false;
+  proc.on('error', (err) => {
+    spawnFailed = true;
+    addLog('tun-adapter', `[dashboard] Spawn error: ${err.message}`, 'stderr');
+    if (err.message.includes('EPERM') || err.message.includes('elevation') || err.code === 'EPERM') {
+      addLog('tun-adapter', '[dashboard] 需要管理员权限。请以管理员身份运行 Dashboard。', 'stderr');
+    }
+    processes['tun-adapter'].status = 'stopped';
+    processes['tun-adapter'].startedAt = null;
+    processes['tun-adapter'].proc = null;
+    broadcastSSE('status', getStatusAll());
+  });
+
+  bindTunProcEvents(proc, spawnFailed);
+
+  return { ok: true, pid: proc.pid };
+}
+
+// Common event binding for tun-adapter process (stdout/stderr/close)
+function bindTunProcEvents(proc, spawnFailedRef) {
+  proc.stdout.on('data', (data) => {
+    const text = data.toString();
+    try { fs.appendFileSync(TUN_LOG_FILE, text); } catch {}
+    text.split('\n').filter(l => l.trim()).forEach(l => {
+      addLog('tun-adapter', l, 'stdout');
+      if (processes['tun-adapter'].status === 'starting') {
+        processes['tun-adapter'].status = 'running';
+        broadcastSSE('status', getStatusAll());
+      }
+    });
+  });
+
+  proc.stderr.on('data', (data) => {
+    const text = data.toString();
+    try { fs.appendFileSync(TUN_LOG_FILE, text); } catch {}
+    text.split('\n').filter(l => l.trim()).forEach(l => {
+      addLog('tun-adapter', l, 'stderr');
+      if (processes['tun-adapter'].status === 'starting') {
+        processes['tun-adapter'].status = 'running';
+        broadcastSSE('status', getStatusAll());
+      }
+    });
+  });
+
+  proc.on('close', (code) => {
+    addLog('tun-adapter', `[dashboard] tun-adapter exited (code ${code})`);
+    processes['tun-adapter'].proc = null;
+    processes['tun-adapter'].status = 'stopped';
+    processes['tun-adapter'].startedAt = null;
+    try { fs.unlinkSync(TUN_PID_FILE); } catch {}
+    broadcastSSE('status', getStatusAll());
+  });
+
+  proc.unref();
+
+  // Check status after a few seconds
+  setTimeout(() => {
+    if (spawnFailedRef) return;
+    if (processes['tun-adapter'].status === 'starting') {
+      if (isTunRunning()) {
+        processes['tun-adapter'].status = 'running';
+        addLog('tun-adapter', '[dashboard] Process confirmed alive.');
+      } else {
+        processes['tun-adapter'].status = 'stopped';
+        processes['tun-adapter'].proc = null;
+        processes['tun-adapter'].startedAt = null;
+        addLog('tun-adapter', '[dashboard] Process exited unexpectedly. Check logs.');
+      }
+      broadcastSSE('status', getStatusAll());
+    }
+  }, 4000);
 }
 
 function stopTunAdapter() {
@@ -413,37 +506,47 @@ function stopTunAdapter() {
 
   // Try to kill by managed proc reference first
   if (processes['tun-adapter'].proc) {
-    try {
-      process.kill(processes['tun-adapter'].proc.pid, 'SIGTERM');
-    } catch {}
+    const pid = processes['tun-adapter'].proc.pid;
+    if (IS_WIN) {
+      try { execSync(`taskkill /F /PID ${pid} /T`, { stdio: 'ignore' }); } catch {}
+    } else {
+      try { process.kill(pid, 'SIGTERM'); } catch {}
+    }
   }
 
-  // Also try to kill by PID file (the process runs as root, so use sudo -n kill)
+  // Also try to kill by PID file
   try {
     const pidStr = fs.readFileSync(TUN_PID_FILE, 'utf-8').trim();
     const pid = parseInt(pidStr, 10);
     if (!isNaN(pid)) {
-      // First try normal kill (works if we own the process)
-      try { process.kill(pid, 'SIGTERM'); } catch (e) {
-        if (e.code === 'EPERM') {
-          // Process is owned by root — use sudo kill (NOPASSWD configured)
-          try { execSync(`sudo -n kill ${pid}`, { stdio: 'ignore', timeout: 5000 }); } catch {}
-        }
-      }
-      // Give it a moment then force kill
-      setTimeout(() => {
-        try { process.kill(pid, 'SIGKILL'); } catch (e) {
+      if (IS_WIN) {
+        try { execSync(`taskkill /F /PID ${pid} /T`, { stdio: 'ignore' }); } catch {}
+      } else {
+        // Process is owned by root — use sudo kill (NOPASSWD configured)
+        try { process.kill(pid, 'SIGTERM'); } catch (e) {
           if (e.code === 'EPERM') {
-            try { execSync(`sudo -n kill -9 ${pid}`, { stdio: 'ignore', timeout: 5000 }); } catch {}
+            try { execSync(`sudo -n kill ${pid}`, { stdio: 'ignore', timeout: 5000 }); } catch {}
           }
         }
-      }, 1000);
+        // Give it a moment then force kill
+        setTimeout(() => {
+          try { process.kill(pid, 'SIGKILL'); } catch (e) {
+            if (e.code === 'EPERM') {
+              try { execSync(`sudo -n kill -9 ${pid}`, { stdio: 'ignore', timeout: 5000 }); } catch {}
+            }
+          }
+        }, 1000);
+      }
     }
   } catch {}
 
-  // Also pkill as fallback (sudo -n for root-owned processes)
-  try { execSync("pkill -f 'tun-adapter' 2>/dev/null || true", { stdio: 'ignore' }); } catch {}
-  try { execSync("sudo -n pkill -f tun-adapter 2>/dev/null || true", { stdio: 'ignore', timeout: 5000 }); } catch {}
+  // Also pkill/taskkill by name as fallback
+  if (IS_WIN) {
+    try { execSync('taskkill /F /IM tun-adapter.exe 2>NUL', { stdio: 'ignore' }); } catch {}
+  } else {
+    try { execSync("pkill -f 'tun-adapter' 2>/dev/null || true", { stdio: 'ignore' }); } catch {}
+    try { execSync("sudo -n pkill -f tun-adapter 2>/dev/null || true", { stdio: 'ignore', timeout: 5000 }); } catch {}
+  }
 
   // Clean up
   stopTunLogTail();
@@ -462,34 +565,49 @@ function isTunRunning() {
     const pidStr = fs.readFileSync(TUN_PID_FILE, 'utf-8').trim();
     const pid = parseInt(pidStr, 10);
     if (!isNaN(pid)) {
-      try {
-        process.kill(pid, 0);
-        return true;
-      } catch (e) {
-        if (e.code === 'EPERM') {
-          // EPERM means process exists but we don't have permission — it IS running (as root)
+      if (IS_WIN) {
+        // On Windows, check if PID exists via tasklist
+        try {
+          const out = execSync(`tasklist /FI "PID eq ${pid}" /NH`, { encoding: 'utf-8', stdio: 'pipe' });
+          if (out.includes(String(pid))) return true;
+        } catch {}
+      } else {
+        try {
+          process.kill(pid, 0);
           return true;
+        } catch (e) {
+          if (e.code === 'EPERM') return true; // Process exists but we don't own it
         }
-        // ESRCH = no such process, PID file is stale
       }
     }
   } catch {}
 
-  // Method 2: Check if any utun interface with our expected IP exists
-  // (tun-adapter creates a utun with the configured address, e.g. 10.0.0.1)
-  try {
-    const ifout = execSync('ifconfig 2>/dev/null', { encoding: 'utf-8' });
-    // Look for utun interfaces with our TUN IP (configured in tun.toml)
-    if (ifout.includes('198.18.0.1')) {
-      return true;
-    }
-  } catch {}
+  // Method 2: Check if TUN interface exists
+  if (IS_WIN) {
+    // Check for our WinTUN adapter via PowerShell
+    try {
+      const out = execSync('powershell -NoProfile -NonInteractive -Command "Get-NetAdapter | Where-Object { $_.InterfaceDescription -like \'*Wintun*\' -or $_.Name -eq \'SimplePlane\' } | Select-Object -ExpandProperty Status"', { encoding: 'utf-8', stdio: 'pipe' });
+      if (out.trim() === 'Up') return true;
+    } catch {}
+  } else {
+    try {
+      const ifout = execSync('ifconfig 2>/dev/null', { encoding: 'utf-8' });
+      if (ifout.includes('198.18.0.1')) return true;
+    } catch {}
+  }
 
-  // Method 3: Check if tun-adapter binary process is running (exclude node/grep/pgrep itself)
-  try {
-    const result = execSync("pgrep -x tun-adapter", { stdio: 'pipe', encoding: 'utf-8' });
-    if (result.trim()) return true;
-  } catch {}
+  // Method 3: Check by process name
+  if (IS_WIN) {
+    try {
+      const out = execSync('tasklist /FI "IMAGENAME eq tun-adapter.exe" /NH', { encoding: 'utf-8', stdio: 'pipe' });
+      if (out.includes('tun-adapter.exe')) return true;
+    } catch {}
+  } else {
+    try {
+      const result = execSync("pgrep -x tun-adapter", { stdio: 'pipe', encoding: 'utf-8' });
+      if (result.trim()) return true;
+    } catch {}
+  }
 
   return false;
 }
@@ -548,7 +666,7 @@ function getStatusAll() {
     };
   }
   if (!processes['proxy-local'].proc) {
-    try { execSync('lsof -i :1080 -sTCP:LISTEN', { stdio: 'ignore' }); result['proxy-local'].status = 'running (external)'; } catch {}
+    if (isPortListening(1080)) { result['proxy-local'].status = 'running (external)'; }
   }
   if (!processes['tun-adapter'].proc) {
     if (isTunRunning()) { result['tun-adapter'].status = 'running (external)'; }
@@ -564,7 +682,11 @@ function buildService(name) {
     addLog(name, '[dashboard] Building...');
     let cmd, args, cwd;
     if (name === 'proxy-local') {
-      cmd = 'mvn'; args = ['package', '-pl', 'proxy-local', '-am', '-DskipTests']; cwd = PROJECT_ROOT;
+      if (IS_WIN) {
+        cmd = 'mvn.cmd'; args = ['package', '-pl', 'proxy-local', '-am', '-DskipTests']; cwd = PROJECT_ROOT;
+      } else {
+        cmd = 'mvn'; args = ['package', '-pl', 'proxy-local', '-am', '-DskipTests']; cwd = PROJECT_ROOT;
+      }
     } else {
       cmd = 'cargo'; args = ['build', '--release']; cwd = path.join(PROJECT_ROOT, 'tun-adapter');
     }
@@ -580,9 +702,26 @@ function buildService(name) {
 }
 
 // ============================================================
-// System Proxy (macOS)
+// System Proxy — cross-platform
 // ============================================================
 function getSystemProxy() {
+  if (IS_WIN) {
+    return getSystemProxyWindows();
+  } else {
+    return getSystemProxyMacOS();
+  }
+}
+
+function setSystemProxy(enable) {
+  if (IS_WIN) {
+    return setSystemProxyWindows(enable);
+  } else {
+    return setSystemProxyMacOS(enable);
+  }
+}
+
+// ---- macOS System Proxy ----
+function getSystemProxyMacOS() {
   try {
     const lines = execSync('networksetup -listallnetworkservices', { encoding: 'utf-8' }).split('\n');
     const services = lines.filter(l => l.trim() && !l.includes('asterisk') && !l.startsWith('*'));
@@ -593,7 +732,7 @@ function getSystemProxy() {
   } catch { return { enabled: false, service: 'Wi-Fi' }; }
 }
 
-function setSystemProxy(enable) {
+function setSystemProxyMacOS(enable) {
   try {
     const lines = execSync('networksetup -listallnetworkservices', { encoding: 'utf-8' }).split('\n');
     const services = lines.filter(l => l.trim() && !l.includes('asterisk') && !l.startsWith('*'));
@@ -608,6 +747,33 @@ function setSystemProxy(enable) {
       execSync(`networksetup -setwebproxystate "${service}" off`, { stdio: 'ignore' });
       execSync(`networksetup -setsecurewebproxystate "${service}" off`, { stdio: 'ignore' });
     }
+    return { ok: true, enabled: enable };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// ---- Windows System Proxy ----
+function getSystemProxyWindows() {
+  try {
+    // Read from registry: HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings
+    const out = execSync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable', { encoding: 'utf-8' });
+    const enabled = out.includes('0x1');
+    return { enabled, service: 'Internet Settings' };
+  } catch { return { enabled: false, service: 'Internet Settings' }; }
+}
+
+function setSystemProxyWindows(enable) {
+  try {
+    if (enable) {
+      // Set proxy server and enable
+      execSync('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d "socks=127.0.0.1:1080" /f', { stdio: 'ignore' });
+      execSync('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f', { stdio: 'ignore' });
+    } else {
+      execSync('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f', { stdio: 'ignore' });
+    }
+    // Notify WinInet that settings changed (via PowerShell)
+    try {
+      execSync('powershell -NoProfile -NonInteractive -Command "[System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()"', { stdio: 'ignore' });
+    } catch {}
     return { ok: true, enabled: enable };
   } catch (e) { return { ok: false, error: e.message }; }
 }
@@ -647,6 +813,19 @@ function saveTunConfig(text) {
     fs.writeFileSync(TUN_CONFIG, text, 'utf-8');
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// ============================================================
+// Platform Info API (for frontend to display correct hints)
+// ============================================================
+function getPlatformInfo() {
+  return {
+    platform: process.platform,    // 'win32', 'darwin', 'linux'
+    isWindows: IS_WIN,
+    isMacOS: IS_MAC,
+    arch: process.arch,
+    nodeVersion: process.version,
+  };
 }
 
 // ============================================================
@@ -693,8 +872,11 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
+  // --- Platform Info ---
+  if (pathname === '/api/platform') return json(res, 200, { ok: true, ...getPlatformInfo() });
+
   // --- Service Control ---
-  if (pathname === '/api/status') return json(res, 200, { ok: true, services: getStatusAll(), systemProxy: getSystemProxy() });
+  if (pathname === '/api/status') return json(res, 200, { ok: true, services: getStatusAll(), systemProxy: getSystemProxy(), platform: getPlatformInfo() });
   if (pathname === '/api/service/start' && req.method === 'POST') {
     const b = await parseBody(req); if (!b || !b.name) return json(res, 400, { error: 'missing name' });
     const r = b.name === 'proxy-local' ? startProxyLocal() : b.name === 'tun-adapter' ? startTunAdapter() : { ok: false, error: 'unknown' };
@@ -709,7 +891,6 @@ const server = http.createServer(async (req, res) => {
     const b = await parseBody(req); if (!b || !b.name) return json(res, 400, { error: 'missing name' });
     if (b.name === 'proxy-local') {
       stopProxyLocal();
-      // Wait for process to actually die
       await new Promise(resolve => {
         let checks = 0;
         const interval = setInterval(() => {
@@ -825,16 +1006,28 @@ try { remoteConfigMtime = fs.statSync(REMOTE_CONFIG).mtimeMs; } catch {}
 try { tunConfigMtime = fs.statSync(TUN_CONFIG).mtimeMs; } catch {}
 
 server.listen(PORT, () => {
-  console.log(`\x1b[32m✓\x1b[0m SimplePlane Dashboard running at \x1b[36mhttp://localhost:${PORT}\x1b[0m`);
+  const platformLabel = IS_WIN ? 'Windows' : IS_MAC ? 'macOS' : 'Linux';
+  console.log(`\x1b[32m✓\x1b[0m SimplePlane Dashboard running at \x1b[36mhttp://localhost:${PORT}\x1b[0m (${platformLabel})`);
   console.log(`  Configs: proxy.yml | remote.yml | tun.toml`);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n[dashboard] Shutting down...');
-  if (processes['proxy-local'].proc) processes['proxy-local'].proc.kill('SIGTERM');
+  if (processes['proxy-local'].proc) {
+    if (IS_WIN) {
+      try { execSync(`taskkill /F /PID ${processes['proxy-local'].proc.pid} /T`, { stdio: 'ignore' }); } catch {}
+    } else {
+      processes['proxy-local'].proc.kill('SIGTERM');
+    }
+  }
   if (processes['tun-adapter'].proc) {
-    try { execSync(`sudo kill ${processes['tun-adapter'].proc.pid}`, { stdio: 'ignore' }); } catch {}
+    const pid = processes['tun-adapter'].proc.pid;
+    if (IS_WIN) {
+      try { execSync(`taskkill /F /PID ${pid} /T`, { stdio: 'ignore' }); } catch {}
+    } else {
+      try { execSync(`sudo -n kill ${pid}`, { stdio: 'ignore' }); } catch {}
+    }
   }
   setTimeout(() => process.exit(0), 2000);
 });

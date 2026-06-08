@@ -4,6 +4,9 @@
 
 use tun2::AbstractDevice;
 
+#[cfg(target_os = "windows")]
+use std::net::Ipv4Addr;
+
 use crate::config::{BypassConfig, IntranetDnsConfig, TunConfig};
 use crate::error::TunError;
 use crate::route_guard::RouteGuard;
@@ -52,6 +55,15 @@ impl TunManager {
             // 并在写入时自动添加 PI 头。
             p.packet_information(true);
         });
+
+        #[cfg(target_os = "windows")]
+        {
+            // Windows 使用 Wintun 驱动，不存在 macOS 的 4 字节 PI 头，无需 packet_information。
+            // 这里设置一个点对点的目标地址（TUN 子网内的对端 IP），
+            // 让 tun2/Wintun 建立 point-to-point 链路。
+            let dest_ip = Ipv4Addr::new(198, 18, 255, 254);
+            tun_config.destination(dest_ip);
+        }
 
         let device = tun2::create_as_async(&tun_config)
             .map_err(|e| TunError::TunDevice(format!("failed to create TUN device: {}", e)))?;

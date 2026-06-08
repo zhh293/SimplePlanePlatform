@@ -162,8 +162,25 @@ a { color: var(--accent); text-decoration: none; }
 
 .service-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
+.service-hint {
+  margin-top: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(255, 193, 7, 0.08);
+  border-left: 3px solid var(--warning, #ffc107);
+  border-radius: var(--radius-sm, 4px);
+  font-size: var(--text-xs);
+  color: var(--ink-secondary);
+  line-height: 1.5;
+}
+.service-hint code {
+  background: rgba(0,0,0,0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
 /* ============================================================
-   Quick Actions
+Quick Actions
    ============================================================ */
 .quick-actions { margin-top: var(--sp-8); }
 .quick-actions h2 { font-size: var(--text-lg); margin-bottom: var(--sp-4); }

@@ -133,8 +133,9 @@ pub struct LogConfig {
 
 /// 内网 DNS 分流配置
 ///
-/// 通过 macOS `/etc/resolver/` 机制，让指定域名的 DNS 查询
-/// 走内网 DNS 服务器（bypass 网段），不经过 TUN/FakeDNS。
+/// macOS: 通过 `/etc/resolver/` 机制分流
+/// Windows: 通过 NRPT (Name Resolution Policy Table) 分流
+/// 让指定域名的 DNS 查询走内网 DNS 服务器（bypass 网段），不经过 TUN/FakeDNS。
 #[derive(Debug, Clone, Deserialize)]
 pub struct IntranetDnsConfig {
     /// 内网 DNS 服务器 IP 列表
@@ -174,7 +175,18 @@ pub struct BypassConfig {
 // ===== 默认值函数 =====
 
 fn default_tun_name() -> String {
-    "utun9".to_string()
+    #[cfg(target_os = "macos")]
+    {
+        "utun9".to_string()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        "SimplePlane".to_string()
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        "tun0".to_string()
+    }
 }
 
 fn default_tun_address() -> Ipv4Addr {

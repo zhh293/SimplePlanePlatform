@@ -12,6 +12,7 @@ const App = (function () {
   let currentSection = 'dashboard';
   let currentLogService = 'proxy-local';
   let eventSource = null;
+  let platformInfo = { isWindows: false, isMacOS: true, platform: 'darwin' };
 
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
@@ -29,11 +30,40 @@ const App = (function () {
     bindNavigation();
     bindActions();
     bindGlobalKeys();
+    await loadPlatformInfo();
     await loadConfigs();
     await loadStatus();
     await loadTunConfig();
     connectSSE();
     startUptimeTimer();
+  }
+
+  // ---- Platform ----
+  async function loadPlatformInfo() {
+    try {
+      const res = await api('/platform');
+      if (res.ok) {
+        platformInfo = res;
+        updatePlatformHints();
+      }
+    } catch {}
+  }
+
+  function updatePlatformHints() {
+    // Update TUN permission hint based on platform
+    const hint = $('#tunPermissionHint');
+    if (hint) {
+      if (platformInfo.isWindows) {
+        hint.innerHTML = '<strong>Windows:</strong> Dashboard 需要以管理员身份运行才能启动 TUN 模式（右键 CMD/PowerShell → 以管理员身份运行 → <code>node server.js</code>）';
+      } else {
+        hint.innerHTML = '<strong>macOS:</strong> 首次使用 TUN 需运行 <code>./setup-tun-permissions.sh</code> 配置免密权限，且 Dashboard 需从真实终端启动';
+      }
+    }
+    // Update TUN device name
+    const devName = $('#tun-device-name');
+    if (devName) {
+      devName.textContent = platformInfo.isWindows ? '设备: SimplePlane' : '设备: utun9';
+    }
   }
 
   // ---- Navigation ----
@@ -99,14 +129,19 @@ const App = (function () {
     const res = await api('/service/start', 'POST', { name });
     if (res.ok) {
       const msg = res.message || `${name} 启动指令已发送`;
-      // If osascript auth dialog was triggered, show a specific hint
-      if (msg.includes('Authorization dialog')) {
-        toast('系统授权对话框已弹出，请输入密码', 'info');
+      toast(msg, 'success');
+    } else {
+      // Show platform-specific hint for TUN permission errors
+      if (name === 'tun-adapter' && res.error && (res.error.includes('管理员') || res.error.includes('sudo') || res.error.includes('EPERM'))) {
+        if (platformInfo.isWindows) {
+          toast('需要管理员权限。请以管理员身份重新启动 Dashboard。', 'error');
+        } else {
+          toast('权限不足。请运行 setup-tun-permissions.sh 或在真实终端中启动 Dashboard。', 'error');
+        }
       } else {
-        toast(msg, 'success');
+        toast(`启动失败: ${res.error}`, 'error');
       }
     }
-    else { toast(`启动失败: ${res.error}`, 'error'); }
     await loadStatus();
     setTimeout(loadStatus, 3000);
   }
@@ -117,10 +152,14 @@ const App = (function () {
     if (!overlay) {
       overlay = document.createElement('div');
       overlay.id = 'terminalHintOverlay';
+      const title = platformInfo.isWindows ? '需要以管理员身份运行' : '需要在终端中运行';
+      const desc = platformInfo.isWindows
+        ? '由于 Windows 安全限制，TUN 模式需要管理员权限。请以管理员身份打开 CMD 或 PowerShell 运行以下命令：'
+        : '由于 macOS 安全限制，TUN 模式需要 root 权限，请在真实终端中运行以下命令：';
       overlay.innerHTML = `
         <div class="terminal-hint-modal">
-          <h3>需要在终端中运行</h3>
-          <p>由于 macOS 安全限制，TUN 模式需要 root 权限，请在真实终端中运行以下命令：</p>
+          <h3>${title}</h3>
+          <p>${desc}</p>
           <div class="terminal-hint-cmd"><code id="terminalHintCmd"></code></div>
           <div class="terminal-hint-actions">
             <button class="btn btn-primary" id="btnCopyCmd">复制命令</button>
