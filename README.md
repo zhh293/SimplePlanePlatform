@@ -92,7 +92,7 @@ SimplePlanePlatform/
 ├── proxy-local             本地客户端：SOCKS5/HTTP CONNECT 双协议、路由分流、系统代理
 ├── proxy-remote            远程服务端：请求分发、出站连接管理、nginx 部署脚本
 ├── tun-adapter             TUN 透明代理：Rust 实现，smoltcp 协议栈 + FakeDNS + 域名路由
-├── dashboard               Web 管理面板：可视化编辑所有配置参数
+├── dashboard               Web 管理面板：可视化管理服务启停、配置编辑、日志查看
 ├── start-tun.sh            TUN 模式一键启动脚本
 └── restore-dns.sh          TUN 异常退出后的 DNS 恢复脚本
 ```
@@ -105,7 +105,8 @@ SimplePlanePlatform/
 |------|------|------|
 | JDK | 1.8+ | 编译运行 proxy-local / proxy-remote |
 | Maven | 3.6+ | Java 项目构建 |
-| Rust | stable | 编译 tun-adapter |
+| Rust | stable（1.70+） | 编译 tun-adapter |
+| Node.js | 14+ | 运行 Web Dashboard（零外部依赖，无需 npm install） |
 | macOS | 10.15+ | TUN 模式（需要 root 权限） |
 | 云服务器 | 公网 IP | 部署 proxy-remote |
 
@@ -115,7 +116,7 @@ SimplePlanePlatform/
 git clone https://github.com/zhh293/SimplePlanePlatform.git
 cd SimplePlanePlatform
 
-# Java 部分
+# Java 部分（proxy-local + proxy-remote）
 mvn clean package -DskipTests
 
 # Rust TUN 适配器
@@ -304,68 +305,173 @@ sudo ./restore-dns.sh
 
 该脚本会读取 `/tmp/tun-adapter-dns-backup.conf` 备份文件，自动恢复 DNS 设置、删除 `/etc/resolver/` 配置、刷新 DNS 缓存。
 
-### TUN 模式配置参考（tun.toml）
+## Web 管理面板（Dashboard）
+
+Dashboard 提供可视化界面来管理整个代理平台，包括一键启停服务、实时编辑配置、查看运行日志等。**零外部依赖，无需 npm install**。
+
+### 环境要求
+
+- Node.js 14+（推荐 18+）
+- 确保 Java 和 Cargo 已安装（Dashboard 会调用 `mvn` 和 `cargo` 进行编译）
+- macOS 系统（TUN 模式功能依赖 macOS utun 设备）
+
+### 启动 Dashboard
+
+```bash
+cd dashboard
+node server.js
+```
+
+看到 `✓ SimplePlane Dashboard running at http://localhost:3000` 即启动成功。在浏览器中打开 [http://localhost:3000](http://localhost:3000) 访问面板。
+
+**注意**：Dashboard 必须在真实终端中启动（如 Terminal.app、iTerm2），不能在受限的沙盒环境中运行，否则 TUN 模式的 `sudo` 调用会失败。
+
+可通过环境变量修改监听端口：
+
+```bash
+DASHBOARD_PORT=8080 node server.js
+```
+
+### TUN 模式权限配置（首次使用必须）
+
+TUN 模式需要 root 权限。为了让 Dashboard 能够免密启动/停止 tun-adapter，需要**先执行一次权限配置脚本**：
+
+```bash
+cd dashboard
+chmod +x setup-tun-permissions.sh
+./setup-tun-permissions.sh
+```
+
+脚本会要求输入一次 Mac 管理员密码，然后在 `/etc/sudoers.d/simpleplane-tun` 写入免密规则。配置完成后 Dashboard 就能直接启停 TUN 了。
+
+**注意**：每次重新编译 tun-adapter（`cargo build --release`）后，如果二进制路径未变则无需再次配置。如果迁移了项目目录需要重新运行此脚本。
+
+### Dashboard 功能概览
+
+#### 控制面板
+
+主页面展示所有服务的运行状态，提供以下操作：
+
+| 操作 | 说明 |
+|------|------|
+| 启动/停止/重启 proxy-local | 管理本地 SOCKS5/HTTP 代理服务 |
+| 启动/停止/重启 tun-adapter | 管理 TUN 全局透明代理 |
+| 编译 | 一键编译 proxy-local（mvn）或 tun-adapter（cargo） |
+| 一键代理模式 | 启动 proxy-local + 开启 macOS 系统代理 |
+| 一键 TUN 模式 | 启动 proxy-local + 启动 tun-adapter |
+| 全部停止 | 停止所有服务 + 关闭系统代理 |
+| 系统代理开关 | 切换 macOS Wi-Fi 的 SOCKS/HTTP 代理设置 |
+
+#### 代理配置（proxy.yml 可视化编辑）
+
+无需手动编辑 YAML 文件，所有 proxy-local 参数均可在界面中修改：
+
+| 配置项 | 界面位置 | 说明 |
+|--------|----------|------|
+| 监听端口 | 代理配置 → 监听端口 | SOCKS5/HTTP CONNECT 共用端口，默认 1080 |
+| 集群策略 | 代理配置 → 集群策略 | failover / failfast / forking / failback |
+| 负载均衡 | 代理配置 → 负载均衡 | roundrobin / random / leastactive / consistenthash |
+| 超时 | 代理配置 → 超时 (ms) | 请求超时毫秒数，默认 30000 |
+| 每节点连接数 | 代理配置 → 每节点连接数 | HTTP/2 多路复用连接数，1-2 即可 |
+| HTTP CONNECT | 代理配置 → HTTP CONNECT 开关 | 是否同时支持 HTTP 代理协议 |
+| 远程服务器 | 代理配置 → 远程服务器 | 可添加/删除/编辑多个服务器节点 |
+
+远程服务器每个节点可配置：Host（地址）、Port（端口）、Cipher（加密算法）、Key（密钥）、SSL（是否启用 TLS）。
+
+修改后点击左下角「保存配置」按钮，或按 `Ctrl+S` / `Cmd+S` 快捷保存。
+
+#### TUN 模式配置（tun.toml 编辑器）
+
+提供 `tun-adapter/config/tun.toml` 的文本编辑器，支持直接修改 TOML 配置。可点击「保存并重启」一键应用变更。
+
+#### 路由规则
+
+可视化编辑域名分流规则：
+
+| 配置项 | 说明 |
+|--------|------|
+| 默认路由 | `direct`（默认直连）或 `proxy`（默认走代理） |
+| 代理列表 | 走远程代理的域名，每行一条，支持 `*` 通配符 |
+| 直连列表 | 强制直连的域名（优先级最高），每行一条 |
+
+路由优先级：直连列表 > 代理列表 > 默认路由。
+
+#### 运行日志
+
+实时查看 proxy-local 和 tun-adapter 的运行日志，支持：
+
+- 切换查看不同服务的日志
+- 自动滚动到底部
+- 一键清空显示
+
+### Dashboard 配置文件路径
+
+Dashboard 直接读写以下文件：
+
+| 文件 | 路径 | 说明 |
+|------|------|------|
+| proxy.yml | `proxy-local/src/main/resources/proxy.yml` | proxy-local 主配置 |
+| remote.yml | `proxy-remote/src/main/resources/remote.yml` | proxy-remote 服务端配置 |
+| tun.toml | `tun-adapter/config/tun.toml` | TUN 适配器配置 |
+
+在 Dashboard 中修改配置后会直接写入对应文件，修改完需要重启对应服务才能生效。
+
+### Dashboard 实时通信
+
+Dashboard 通过 SSE（Server-Sent Events）实现状态实时推送：
+
+- 服务启停状态变化会自动刷新面板
+- 新产生的日志会实时推送到日志页面
+- 配置文件变更会通知前端刷新
+
+### 配置预设
+
+可以将当前配置保存为预设方便切换（如「公司网络」「家庭网络」等不同场景）。预设保存在 `dashboard/presets/` 目录下，格式为 YAML。
+
+## TUN 模式配置参考（tun.toml）
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
 | tun.name | utun9 | TUN 设备名称 |
 | tun.address | 198.18.0.1 | TUN 设备 IP 地址 |
+| tun.netmask | 255.254.0.0 | TUN 设备子网掩码 |
 | tun.mtu | 1500 | MTU 大小 |
+| tun.enabled | true | 是否启用 TUN 设备 |
 | fakeip.range | 198.18.0.0/15 | FakeDNS 虚拟 IP 分配范围 |
 | fakeip.capacity | 65536 | FakeDNS 映射表容量 |
 | proxy.socks5_addr | 127.0.0.1:1080 | 上游 SOCKS5 代理地址 |
+| proxy.health_check_interval | 5 | 健康检查间隔（秒） |
+| proxy.health_failure_threshold | 3 | 连续失败几次判定代理不可用 |
 | routing.default_action | proxy | 默认路由动作（proxy/direct） |
 | routing.rules[] | — | 域名/IP 路由规则（见下方） |
-| bypass.proxy_remote_ips | — | 代理服务器 IP（bypass 路由） |
+| bypass.proxy_remote_ips | — | 代理服务器 IP（bypass 路由，必须配置） |
 | bypass.extra_cidrs | — | 额外 bypass 网段 |
-| bypass.dns_bypass_ips | — | DNS bypass IP |
+| bypass.dns_bypass_ips | — | DNS bypass IP（如 114.114.114.114） |
 | intranet_dns.servers | — | 内网 DNS 服务器 |
 | intranet_dns.domains | — | 内网域名后缀列表 |
+| log.level | info | 日志级别（支持模块级别如 `info,tun_adapter::socks5=debug`） |
+| log.format | pretty | 日志格式 |
 
 路由规则类型支持：`domain_suffix`（域名后缀匹配）、`domain_keyword`（域名关键词匹配）、`ip_cidr`（IP 段匹配）。
 
-## Docker 部署
+示例路由规则：
 
-项目提供 docker-compose 一键编排，两端在同一 compose 网络内通信：
+```toml
+[[routing.rules]]
+type = "domain_suffix"
+value = "google.com"
+action = "proxy"
 
-```bash
-docker compose up -d --build    # 构建并启动
-docker compose logs -f          # 查看日志
-docker compose down             # 停止
+[[routing.rules]]
+type = "domain_keyword"
+value = "baidu"
+action = "direct"
+
+[[routing.rules]]
+type = "ip_cidr"
+value = "10.0.0.0/8"
+action = "direct"
 ```
-
-容器模式下 proxy-local 的 1080 端口映射到宿主机，通过服务名 `proxy-remote` 连接服务端。加密配置见 `docker/proxy.yml` 和 `docker/remote.yml`。
-
-## Web 管理面板
-
-```bash
-cd dashboard && node server.js
-# 访问 http://localhost:3000
-```
-
-支持：可视化编辑 proxy.yml / remote.yml 全部参数、远程节点增删改、路由规则编辑、配置预设管理、YAML 导入导出、外部文件变更实时推送（SSE）、表单验证。零外部依赖。
-
-## 核心特性
-
-**全链路 SPI 可插拔** — 借鉴 Dubbo ExtensionLoader，7 个扩展点（Transporter、Exchanger、Cipher、ClusterInvoker、LoadBalance、Filter、FilterChainBuilder）均通过 `@SPI` 注解标记，支持按名加载、默认实现、条件激活。扩展只需实现接口 + 在 `META-INF/proxy/` 注册。
-
-**HTTP/2 多路复用传输** — 单条 TCP 连接承载 1000+ 并发 Stream，通过 `ReentrantLock + Condition` 实现精准的 Stream 等待唤醒，极大减少连接建立开销。
-
-**TUN 全局透明代理** — Rust 实现的用户态协议栈（smoltcp），通过 macOS utun 设备劫持全部流量，配合 FakeDNS 实现域名级路由判断。内网域名自动转发到真实 DNS 解析，确保 VPN 和企业服务不受影响。
-
-**四种集群容错** — Failover（失败自动切换）、Failfast（快速失败）、Forking（并行调用取最快）、Failback（失败后台重试）。
-
-**四种负载均衡** — RoundRobin（加权轮询）、Random（加权随机）、LeastActive（最少活跃）、ConsistentHash（一致性哈希）。
-
-**多层加密体系** — AES-256-GCM（Intel AES-NI 硬件加速）、ChaCha20-Poly1305（ARM 友好，基于 BouncyCastle）、AES-CTR-HMAC（经典流式加密）、None（调试用）。
-
-**Filter 责任链** — 通过 `@Activate` 自动发现排序，内置 6 个 Filter：路由过滤、滑动窗口令牌桶限流、监控统计、访问日志、流量控制。
-
-**双协议共端口** — 首字节嗅探（0x05 = SOCKS5，ASCII = HTTP），同一端口支持 SOCKS5 和 HTTP CONNECT，动态修改 Netty Pipeline 零拷贝切换。
-
-**智能路由分流** — 基于域名的 proxyList / directList 通配符匹配，国内直连国外代理。TUN 模式下支持 domain_suffix / domain_keyword / ip_cidr 三种匹配方式。
-
-**优雅启停** — TUN 模式注册 SIGTERM handler，退出时通过 Rust Drop trait 自动恢复系统路由表和 DNS 设置，异常退出可通过 `restore-dns.sh` 手动恢复。
 
 ## 配置参考
 
@@ -378,12 +484,15 @@ cd dashboard && node server.js
 | remoteServers[].port | 9090 | 远程服务端端口 |
 | remoteServers[].cipher | none | 加密算法，需与服务端一致 |
 | remoteServers[].cipherKey | — | 加密密钥，需与服务端一致 |
+| remoteServers[].ssl | false | 是否启用 TLS |
 | cluster | failover | 集群容错策略 |
 | loadBalance | roundrobin | 负载均衡策略 |
 | timeoutMs | 30000 | 请求超时（ms） |
 | connectionsPerNode | 1 | 每节点 HTTP/2 连接数 |
 | httpProxyEnabled | true | 是否支持 HTTP CONNECT |
 | route.defaultRoute | direct | 默认路由（proxy/direct） |
+| route.proxyList | [] | 走代理的域名列表（支持通配符） |
+| route.directList | [] | 强制直连的域名列表（支持通配符） |
 | systemProxy.enabled | false | 自动设置系统代理 |
 
 ### proxy-remote（remote.yml）
@@ -400,21 +509,97 @@ cd dashboard && node server.js
 | outbound.connectTimeoutMs | 5000 | 连接目标站点超时 |
 | outbound.activeWaitTimeoutMs | 5000 | 等待出站连接就绪超时 |
 
+## Docker 部署
+
+项目提供 docker-compose 一键编排，两端在同一 compose 网络内通信：
+
+```bash
+docker compose up -d --build    # 构建并启动
+docker compose logs -f          # 查看日志
+docker compose down             # 停止
+```
+
+容器模式下 proxy-local 的 1080 端口映射到宿主机，通过服务名 `proxy-remote` 连接服务端。加密配置见 `docker/proxy.yml` 和 `docker/remote.yml`。
+
 ## 开启加密
 
 客户端和服务端设置相同的 cipher 和 cipherKey 即可：
 
 ```yaml
-# proxy.yml
-cipher: "aes-gcm"
-cipherKey: "your-secret-key"
+# proxy.yml（客户端）
+remoteServers:
+  - host: "YOUR_SERVER_IP"
+    port: 9090
+    cipher: "aes-gcm"
+    cipherKey: "your-secret-key"
 
-# remote.yml
+# remote.yml（服务端）
 cipher: aes-gcm
 cipherKey: your-secret-key
 ```
 
-支持的算法：`none`（无加密）、`aes-gcm`（推荐 x86）、`chacha20`（推荐 ARM）、`aes-ctr-hmac`（经典组合）。
+支持的算法：`none`（无加密）、`aes-gcm`（推荐 x86，Intel AES-NI 硬件加速）、`chacha20`（推荐 ARM）、`aes-ctr-hmac`（经典组合）。
+
+## 完整使用流程（从零开始）
+
+以下是一个完整的从零开始的部署示例：
+
+### 1. 部署远程服务端
+
+```bash
+# 在云服务器上
+scp -i your-key.pem proxy-remote/target/proxy-remote-1.0.0-SNAPSHOT.jar user@your-server:~/
+ssh -i your-key.pem user@your-server
+nohup java -jar proxy-remote-1.0.0-SNAPSHOT.jar > proxy-remote.log 2>&1 &
+```
+
+### 2. 配置本地客户端
+
+编辑 `proxy-local/src/main/resources/proxy.yml`，填入远程服务器 IP，设置加密密钥。
+
+### 3. 选择使用模式
+
+**代理模式**（简单，适合浏览器）：
+```bash
+java -jar proxy-local/target/proxy-local-1.0.0-SNAPSHOT.jar
+# 然后设置系统代理或浏览器代理为 127.0.0.1:1080
+```
+
+**TUN 模式**（全局，推荐）：
+```bash
+# 方式一：Dashboard 面板操作（推荐）
+cd dashboard && node server.js
+# 打开 http://localhost:3000 → 点击「一键 TUN 模式」
+
+# 方式二：命令行一键启动
+./start-tun.sh
+```
+
+### 4. 验证
+
+```bash
+curl --max-time 10 -I https://www.google.com
+```
+
+## 常见问题
+
+**启动报 `Address already in use`** — 端口被占用，`kill $(lsof -ti :1080)` 后重试。
+
+**连接远端失败 `Connection refused`** — 确认远程端已启动、nginx 正常运行、安全组已放行端口、proxy.yml 中 IP 正确。
+
+**TUN 模式启动后网络中断** — 检查 `tun.toml` 中 `bypass.proxy_remote_ips` 是否正确填写了代理服务器 IP。如果代理服务器 IP 没有被 bypass，其流量也会进入 TUN 形成死循环。
+
+**TUN 模式下内网无法访问** — 确认 `intranet_dns.domains` 包含了所有内网域名后缀，且 `intranet_dns.servers` 填写了正确的内网 DNS 地址。同时确认 `bypass.extra_cidrs` 覆盖了内网 IP 段。
+
+**TUN 异常退出后 DNS 坏了** — 运行 `sudo ./restore-dns.sh` 恢复，或手动执行 `sudo networksetup -setdnsservers Wi-Fi Empty && dscacheutil -flushcache`。
+
+**Dashboard 中 TUN 启动报 EPERM** — Dashboard 必须从真实终端启动（不能从 IDE 内置终端或沙盒环境启动）。同时确认已执行过 `setup-tun-permissions.sh`。
+
+**Dashboard 中 TUN 卡在「启动中」** — 检查 Dashboard 日志中是否有 `sudo: a password is required`，如有则说明 sudoers 配置未生效，重新运行 `setup-tun-permissions.sh`。
+
+**访问超时无报错** — 检查域名是否在 proxyList 中（代理模式），或 routing.rules 中是否配置了对应的 direct 规则（TUN 模式）。
+
+**cargo build 报错** — 确保已安装 Rust 工具链：`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 
 ## 技术栈
 
@@ -429,32 +614,15 @@ cipherKey: your-secret-key
 | BouncyCastle | 1.70 | ChaCha20-Poly1305 |
 | SnakeYAML | 2.2 | YAML 配置解析 |
 | SLF4J + Logback | 1.7.36 / 1.2.11 | 日志 |
-| JUnit 5 | 5.10.2 | 测试 |
+| Node.js | 14+ | Web 管理面板 |
 | Nginx | 1.24+ | TCP 四层反向代理 |
 | Docker | — | 容器化部署 |
-| Node.js | — | Web 管理面板 |
 
 ## 扩展指南
 
 得益于 SPI 架构，扩展任何层只需两步：实现对应接口 → 在 `META-INF/proxy/{接口全限定名}` 注册。无需修改框架已有代码，符合开闭原则。
 
 TUN 适配器的路由规则同样支持扩展，在 `tun.toml` 的 `[[routing.rules]]` 中添加新规则即可生效。
-
-## 常见问题
-
-**启动报 `Address already in use`** — 端口被占用，`kill $(lsof -ti :1080)` 后重试。
-
-**连接远端失败 `Connection refused`** — 确认远程端已启动、nginx 正常运行、安全组已放行端口、proxy.yml 中 IP 正确。
-
-**TUN 模式启动后网络中断** — 检查 `tun.toml` 中 `bypass.proxy_remote_ips` 是否正确填写了代理服务器 IP。如果代理服务器 IP 没有被 bypass，其流量也会进入 TUN 形成死循环。
-
-**TUN 模式下内网无法访问** — 确认 `intranet_dns.domains` 包含了所有内网域名后缀，且 `intranet_dns.servers` 填写了正确的内网 DNS 地址。同时确认 `bypass.extra_cidrs` 覆盖了内网 IP 段。
-
-**TUN 异常退出后 DNS 坏了** — 运行 `sudo ./restore-dns.sh` 恢复，或手动执行 `sudo networksetup -setdnsservers Wi-Fi Empty && dscacheutil -flushcache`。
-
-**访问超时无报错** — 检查域名是否在 proxyList 中（代理模式），或 routing.rules 中是否配置了对应的 direct 规则（TUN 模式）。
-
-**cargo build 报错** — 确保已安装 Rust 工具链：`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 
 ## License
 
