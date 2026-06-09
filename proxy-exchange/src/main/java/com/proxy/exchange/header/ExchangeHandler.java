@@ -4,11 +4,13 @@ import com.proxy.common.filter.Invocation;
 import com.proxy.common.filter.Invoker;
 import com.proxy.common.filter.Response;
 import com.proxy.common.model.ProxyMessage;
+import com.proxy.common.transport.FlowPermit;
 import com.proxy.common.transport.MessageHandler;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> implements MessageHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ExchangeHandler.class);
+
+    /**
+     * Channel Attribute Key —— 与 ProxyMessageDecoder 中的字符串必须完全相同。
+     * Netty 的 AttributeKey.valueOf() 按名称复用实例，两处无需共享常量。
+     */
+    private static final AttributeKey<FlowPermit> PERMIT_KEY =
+            AttributeKey.valueOf("proxy.flow.permit");
 
     /**
      * 服务端 Invoker 链引用（客户端为 null）
@@ -83,6 +92,13 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
             return;
         }
 
+        // 读取并清除 Channel Attribute 中的 FlowPermit（ProxyMessageDecoder 在 fireChannelRead 前写入）
+        // 背压关闭或客户端 pipeline 无 BackpressureHandler 时 attr 为 null → 使用 NOOP
+        FlowPermit permit = ctx.channel().attr(PERMIT_KEY).getAndSet(null);
+        if (permit == null) {
+            permit = FlowPermit.NOOP;
+        }
+
         long requestId = message.getRequestId();
         log.info("channelRead0: type={}, requestId={}, streamId={}, invoker={}, channel={}",
                 message.getType(), requestId, message.getStreamId(),
@@ -90,19 +106,17 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
 
         if (requestId > 0) {
             if (invoker != null) {
-                // 服务端：收到请求，invoke 处理后回写响应
-                handleRequest(ctx, message);
+                handleRequest(ctx, message, permit);
             } else {
-                // 客户端：收到响应，唤醒 DefaultFuture
                 handleResponse(message, requestId);
+                permit.release();  // 客户端路径：NOOP，无实际操作
             }
         } else {
             if (invoker != null) {
-                // 服务端：DATA 透传（requestId=0），走 fast-path invoke
-                handleServerData(ctx, message);
+                handleServerData(ctx, message, permit);
             } else {
-                // 客户端：服务端推送数据，按 streamId 路由写回浏览器
                 handlePush(message);
+                permit.release();  // 客户端路径：NOOP，无实际操作
             }
         }
     }
@@ -112,7 +126,7 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
     /**
      * 服务端处理控制面请求（requestId > 0：CONNECT/DISCONNECT）
      */
-    private void handleRequest(ChannelHandlerContext ctx, ProxyMessage message) {
+    private void handleRequest(ChannelHandlerContext ctx, ProxyMessage message, FlowPermit permit) {
         Invocation invocation = toInvocation(message, ctx);
 
         CompletableFuture<Response> future;
@@ -121,23 +135,22 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         } catch (Exception e) {
             log.error("Invoker.invoke() threw exception for requestId={}, type={}",
                     message.getRequestId(), message.getType(), e);
+            permit.release();  // 同步异常时立即释放
             writeErrorResponse(ctx, message.getRequestId(), e.getMessage());
             return;
         }
 
-        // 异步回写响应
         future.whenComplete((response, throwable) -> {
+            permit.release();  // 无论成功/失败，invoke 完成即归还信用
             if (throwable != null) {
                 log.error("Invoker chain completed exceptionally for requestId={}",
                         message.getRequestId(), throwable);
                 writeErrorResponse(ctx, message.getRequestId(), throwable.getMessage());
                 return;
             }
-
             if (response == null) {
-                return; // 某些消息类型可能不需要回写
+                return;
             }
-
             ProxyMessage reply = ProxyMessage.builder()
                     .requestId(message.getRequestId())
                     .type(ProxyMessage.MessageType.CONNECT_RESPONSE)
@@ -145,7 +158,6 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
                     .message(response.getErrorMessage())
                     .data(response.getData())
                     .build();
-
             if (ctx.channel().isActive()) {
                 ctx.writeAndFlush(reply);
             }
@@ -155,7 +167,7 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
     /**
      * 服务端处理数据面消息（requestId == 0：DATA 透传）
      */
-    private void handleServerData(ChannelHandlerContext ctx, ProxyMessage message) {
+    private void handleServerData(ChannelHandlerContext ctx, ProxyMessage message, FlowPermit permit) {
         Invocation invocation = toInvocation(message, ctx);
 
         CompletableFuture<Response> future;
@@ -163,11 +175,12 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
             future = invoker.invoke(invocation);
         } catch (Exception e) {
             log.error("DATA invoke failed: streamId={}", message.getStreamId(), e);
-            return; // DATA 不回写错误响应
+            permit.release();  // 同步异常时立即释放
+            return;
         }
 
-        // DATA 不需要回写响应给客户端，仅在异常时打日志
         future.whenComplete((response, throwable) -> {
+            permit.release();  // DATA 快速路径：future 已立即完成，本行同步执行
             if (throwable != null) {
                 log.error("DATA invoke completed exceptionally: streamId={}",
                         message.getStreamId(), throwable);
