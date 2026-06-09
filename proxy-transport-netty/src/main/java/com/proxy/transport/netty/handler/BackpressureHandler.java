@@ -1,6 +1,7 @@
 package com.proxy.transport.netty.handler;
 
 import com.proxy.common.transport.FlowPermit;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http2.Http2DataFrame;
@@ -80,7 +81,12 @@ public class BackpressureHandler extends ChannelInboundHandlerAdapter {
             pendingQueue.offer(dataFrame.retain());
             if (!suspended) {
                 suspended = true;
-                ctx.channel().parent().config().setAutoRead(false);
+                Channel parent = ctx.channel().parent();
+                if (parent != null) {
+                    parent.config().setAutoRead(false);
+                } else {
+                    log.warn("BackpressureHandler: no parent channel, cannot setAutoRead(false)");
+                }
                 log.debug("Backpressure engaged: pending={}", pendingQueue.size());
             }
         }
@@ -123,13 +129,19 @@ public class BackpressureHandler extends ChannelInboundHandlerAdapter {
             // 积压帧重放时同样包装成 PermittedDataFrame，信用归还路径一致
             FlowPermit permit = new FlowPermit(this::creditBack);
             c.fireChannelRead(new PermittedDataFrame(frame, permit));
+            frame.release();  // 平衡入队时的 retain()，下游通过 PermittedDataFrame 持有内容引用
         }
 
-        if (pendingQueue.isEmpty() || credits.get() > 0) {
+        if (pendingQueue.isEmpty()) {
             if (suspended) {
                 suspended = false;
-                c.channel().parent().config().setAutoRead(true);
-                log.debug("Backpressure released: resuming, credits={}", credits.get());
+                Channel parent = c.channel().parent();
+                if (parent != null) {
+                    parent.config().setAutoRead(true);
+                    log.debug("Backpressure released: resuming, credits={}", credits.get());
+                } else {
+                    log.warn("BackpressureHandler: no parent channel, cannot setAutoRead(true)");
+                }
             }
         }
     }
