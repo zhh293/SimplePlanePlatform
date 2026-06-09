@@ -3,11 +3,15 @@ port: 19090
 bizThreads: 200
 workerThreads: 0
 bossThreads: 1
-cipher: none
+cipher: aes-gcm
 cipherKey: your-cipher-key
 maxStreams: 1000
 readIdleTimeout: 60
 backlog: 1024
+# 应用层背压（默认关闭）
+# 开启后通过信用额度控制下游处理速率，额度耗尽时暂停 HTTP/2 窗口更新
+backpressure: false
+backpressurePermits: 64
 outbound:
   connectTimeoutMs: 5000
   activeWaitTimeoutMs: 5000
