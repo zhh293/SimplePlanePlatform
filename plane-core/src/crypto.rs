@@ -301,4 +301,78 @@ mod tests {
 
         assert_eq!(ct, &ks, "密文 keystream 必须从 counter=0 开始（非标准点）");
     }
+
+    // ───────────────────────── Q1：跨语言测试向量 ─────────────────────────
+    //
+    // 向量由 Java 侧权威实现 `proxy-crypto/ChaCha20Cipher.java` 真实运行产出
+    //（见 `proxy-crypto/.../CryptoVectorGenTest.java`），通过 `include_str!` 在编译期
+    // 嵌入。本测试用同一组 (raw_key, nonce, plaintext) 在 Rust 侧重放，逐字节断言
+    // ciphertext / tag / 完整输出与 Java 一致，并双向互解，从而闭合出站加密层的
+    // Go/No-Go 关口（与 proxy-remote 二进制兼容）。
+
+    /// 编译期嵌入 Java 生成的跨语言向量。文件缺失则编译失败（提示先跑 Java 生成器）。
+    const CRYPTO_VECTORS_JSON: &str = include_str!("../../docs/design/crypto-vectors.json");
+
+    /// 解析一段 hex 字符串为字节（仅测试用，零额外依赖）。
+    fn hex_decode(s: &str) -> Vec<u8> {
+        // 不用 `% 2 == 0`（clippy manual_is_multiple_of）也不用 `is_multiple_of`
+        //（后者较新工具链才稳定，避免 CI 旧版报错）：用末位 bit 判偶。
+        assert!((s.len() & 1) == 0, "hex 长度必须为偶数: {s}");
+        (0..s.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&s[i..i + 2], 16).expect("非法 hex 字符"))
+            .collect()
+    }
+
+    /// 取 serde_json::Value 里的 hex 字段并解码。
+    fn get_hex(v: &serde_json::Value, key: &str) -> Vec<u8> {
+        hex_decode(v[key].as_str().unwrap_or_else(|| panic!("缺字段 {key}")))
+    }
+
+    #[test]
+    fn cross_language_vectors_match_java() {
+        let root: serde_json::Value =
+            serde_json::from_str(CRYPTO_VECTORS_JSON).expect("向量 JSON 解析失败");
+        let vectors = root["vectors"].as_array().expect("vectors 应为数组");
+        assert!(!vectors.is_empty(), "向量集合不应为空");
+
+        for v in vectors {
+            let name = v["name"].as_str().unwrap_or("<unnamed>");
+            let raw_key = get_hex(v, "raw_key_hex");
+            let plaintext = get_hex(v, "plaintext_hex");
+            let nonce_bytes = get_hex(v, "nonce_hex");
+            let java_ct = get_hex(v, "ciphertext_hex");
+            let java_tag = get_hex(v, "tag_hex");
+            let java_full = get_hex(v, "full_output_hex");
+
+            assert_eq!(nonce_bytes.len(), NONCE_LENGTH, "[{name}] nonce 长度异常");
+            let mut nonce = [0u8; NONCE_LENGTH];
+            nonce.copy_from_slice(&nonce_bytes);
+
+            let cipher = Cipher::new(&raw_key).unwrap();
+
+            // (1) Rust 用同一 nonce 加密 → 必须逐字节等于 Java 的完整输出。
+            let rust_full = cipher.encrypt_with_nonce(&nonce, &plaintext);
+            assert_eq!(
+                rust_full, java_full,
+                "[{name}] Rust 完整输出与 Java 不一致（nonce|ct|tag）"
+            );
+
+            // (2) 分区再核对 ct / tag，定位差异更精确。
+            let rust_ct = &rust_full[NONCE_LENGTH..rust_full.len() - TAG_LENGTH];
+            let rust_tag = &rust_full[rust_full.len() - TAG_LENGTH..];
+            assert_eq!(rust_ct, java_ct.as_slice(), "[{name}] ciphertext 不一致");
+            assert_eq!(
+                rust_tag,
+                java_tag.as_slice(),
+                "[{name}] Poly1305 tag 不一致"
+            );
+
+            // (3) Rust 解 Java 的整包 → 还原明文（反向互通）。
+            let decrypted = cipher.decrypt(&java_full).unwrap_or_else(|e| {
+                panic!("[{name}] Rust 解 Java 密文失败: {e}");
+            });
+            assert_eq!(decrypted, plaintext, "[{name}] Rust 解出的明文与原文不符");
+        }
+    }
 }

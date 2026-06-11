@@ -583,16 +583,21 @@ pub fn encrypt_with_nonce(key: &[u8], nonce: &[u8;12], plain: &[u8]) -> Vec<u8>;
 
 #### 验收标准（Go/No-Go 闸口）
 
-- [~] **crypto 向量测试通过**：Rust 加密产物与 Java 逐字节一致，Java 能解 Rust 的、Rust 能解 Java 的（双向）。→ **Rust 侧已就绪**：`crypto.rs` 严格逐行复刻 Java 非标准实现（counter=0 重叠 keystream、Poly1305 仅对密文且无 padding/无 AAD/无长度尾块、非 32 字节 key 走 SHA-256），并以 11 个单测自洽锁定（含 `ciphertext_keystream_starts_at_counter_zero` 锁死非标准不变量、`non_32_byte_key_uses_sha256`）。**跨语言逐字节比对待 Q1**（需 Java 运行时产出向量文件 `crypto-vectors.json`，本轮无 Java 运行环境，登记为待联调项）。
+- [x] **crypto 向量测试通过（Q1 已闭合）**：Rust 加密产物与 Java 逐字节一致，Rust 能解 Java 的（双向）。→ Java 侧权威实现 `proxy-crypto/ChaCha20Cipher.java` 经 `CryptoVectorGenTest` 真实运行产出 5 组跨语言向量到 `docs/design/crypto-vectors.json`（含 32B key/短 key→SHA-256/二进制载荷/200B 跨块/单字节边界，nonce 为 Java `encrypt()` 实际使用值）；Rust 侧 `crypto.rs::cross_language_vectors_match_java` 用 `include_str!` 嵌入该文件、以同一 (raw_key, nonce, plaintext) 重放，**逐字节断言 ciphertext / Poly1305 tag / 完整输出 `nonce|ct|tag` 与 Java 一致，并 `decrypt(java_full)==plaintext` 反向互解**，全部通过（`cargo test` 52 项全绿）。非标准实现（counter=0 重叠 keystream、Poly1305 仅对密文且无 padding/无 AAD/无长度尾块、非 32B key 走 SHA-256）由此跨语言锁死。
 - [x] **ProxyMessage 编解码**与 Java `ProxyCodec` 互通（28B 头大端、跨帧切包正确）。→ `proxy_proto.rs` 逐字段对照 `ProxyCodec`/`ProxyMessageDecoder`，9 个单测覆盖大端偏移、ordinal 对齐、跨帧/粘包切分；与 Java 的最终互通待 Q2 harness。
 - [x] HTTP/2 首帧为 HEADERS（`:method=POST :path=/proxy`），后续 DATA 每帧恰好一条加密 ProxyMessage。→ `outbound.rs::open_proxy_stream` 对照 `ProxyMessageEncoder` 实现首帧 HEADERS（不加密）+ 每条消息一个加密 DATA 帧；窗口对齐 Java（stream 1MB / conn ~16MB）。
 - [~] 对接真实 Java proxy-remote 完成一次 CONNECT→DATA→响应往返。→ **待 Q2 / A6 联调**（需起 Java proxy-remote 且配 `cipher=chacha20`；本轮先以内存可测的 `InboundReassembler` / `encode_encrypted_frame` 单测覆盖收发链路语义）。
 - [ ] 若任一项不通过 → **No-Go**，按设计文档 8 节回退到「TUN→SOCKS5→Java proxy-local」方案。
 
 > **本轮结论（2025-，Rust 侧）**：A5 的三个 Rust 模块（crypto/proxy_proto/outbound）全部编译通过，
-> `cargo test` 51 项全绿、`cargo fmt --check` 与 `cargo clippy -D warnings` 干净，且 `tun-adapter`
-> `cargo check` 不受影响（铁律：不破坏现有代码）。**最终 Go/No-Go 判定须待 Q1（crypto 跨语言向量）
-> 与 Q2（协议互通 harness）补齐 Java 侧比对后做出**——这两项依赖 Java 运行时，列为下一步联调。
+> `cargo test` 52 项全绿、`cargo fmt --check` 与 `cargo clippy -D warnings` 干净，且 `tun-adapter`
+> `cargo check` 不受影响（铁律：不破坏现有代码）。
+>
+> **Q1（crypto 跨语言向量）已闭合**：用本机 Java 8（Corretto 1.8.0_492）+ Maven 跑
+> `proxy-crypto/CryptoVectorGenTest` 产出 5 组真实向量，Rust 侧 `cross_language_vectors_match_java`
+> 逐字节比对 ciphertext/tag/完整输出并反向解密全过 ——**出站加密层与 Java proxy-remote 二进制兼容
+> 这一最大风险点已用跨语言实证消除，加密层 Go 判定成立**。剩余 Q2（协议链路互通 harness）/ A6
+> 真实 proxy-remote 端到端往返仍待联调（需起 Java 服务且配 `cipher=chacha20`）。
 
 #### 实现记录（A5，Rust 侧）
 
