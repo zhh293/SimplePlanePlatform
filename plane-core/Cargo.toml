@@ -32,6 +32,10 @@ lru = "0.12"      # FakeIP 双向 LRU 映射
 ipnet = "2"       # FakeIP CIDR 池解析
 hickory-proto = "0.24" # DNS 报文解析/编码
 
+# A6 用户态 TCP 栈：与桌面 tun-adapter 使用**完全相同**的 smoltcp 版本与 features，
+# 确保 TCP 握手/字节流提取逻辑两端一致（见 tcp_stack.rs，移植自桌面 stack.rs）。
+smoltcp = { version = "0.11", default-features = false, features = ["std", "medium-ip", "proto-ipv4", "proto-ipv6", "socket-tcp", "socket-udp", "socket-dns"] }
+
 # A5 出站层：与 Java proxy-remote 二进制兼容的加密 HTTP/2 客户端。
 # ⚠️ 必须用 chacha20（流密码引擎）+ poly1305（裸 MAC），严禁用聚合的 chacha20poly1305 crate，
 # 后者按 RFC 8439 做 padding/长度尾块，与 Java 的非标准实现（见 ChaCha20Cipher.java）不兼容。

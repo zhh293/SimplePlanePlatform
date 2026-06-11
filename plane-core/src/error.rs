@@ -47,6 +47,10 @@ pub enum CoreError {
     /// 对齐 Java `ProxyCodec` 的 `CodecException`。
     #[error("协议编解码失败: {0}")]
     Protocol(String),
+
+    /// A6 数据面：内部通道/状态异常（如 TCP 事件通道意外关闭、栈内部不变量被破坏）。
+    #[error("内部错误: {0}")]
+    Internal(String),
 }
 
 /// 模块内统一的 `Result` 别名。

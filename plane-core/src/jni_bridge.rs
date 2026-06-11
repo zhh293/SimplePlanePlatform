@@ -33,7 +33,21 @@ use jni::sys::{jint, jlong, jstring};
 use jni::{JNIEnv, JavaVM};
 use serde::Deserialize;
 
+use crate::android_tun::AndroidTun;
+use crate::dispatcher::{run_dispatcher, DispatcherConfig};
 use crate::error::{CoreError, Result};
+use crate::net_probe::FakeDnsEngine;
+use crate::outbound::SocketProtector;
+use crate::tcp_stack::{stack_loop, TcpEvent};
+
+/// FakeIP 地址池 CIDR（与 net_probe / 桌面一致）。
+const FAKE_IP_CIDR: &str = "198.18.0.0/15";
+/// FakeDNS LRU 容量（与桌面默认对齐）。
+const FAKE_DNS_CAPACITY: usize = 4096;
+/// TcpEvent 通道缓冲（突发新连接的背压上限）。
+const TCP_EVENT_CHANNEL_CAP: usize = 256;
+/// notify 通道缓冲（栈与流之间的就绪通知）。
+const NOTIFY_CHANNEL_CAP: usize = 1024;
 
 /// 节点与运行时配置（由 Kotlin 侧 `configJson` 下发）。
 ///
@@ -52,10 +66,27 @@ pub struct AndroidConfig {
     /// remote 节点端口（A5 起使用；A2 允许缺省）。
     #[serde(default)]
     pub remote_port: u16,
+
+    /// A6：与 proxy-remote 共享的密钥（构造 ChaCha20-Poly1305 Cipher）。
+    /// 非 32 字节会按 Java 规则 SHA-256 派生。缺省为空串（无法真正出站，仅供占位/测试）。
+    #[serde(default)]
+    pub remote_key: String,
+
+    /// A6：cipher 名称，默认 "chacha20"（当前仅支持 chacha20，与 ChaCha20Cipher 兼容）。
+    #[serde(default = "default_cipher")]
+    pub cipher: String,
+
+    /// A6：是否启用 TLS 出站，默认 false（MVP 仅支持 h2c）。
+    #[serde(default)]
+    pub tls: bool,
 }
 
 fn default_mtu() -> usize {
     1500
+}
+
+fn default_cipher() -> String {
+    "chacha20".to_string()
 }
 
 impl AndroidConfig {
@@ -69,9 +100,20 @@ impl AndroidConfig {
                 mtu: default_mtu(),
                 remote_host: String::new(),
                 remote_port: 0,
+                remote_key: String::new(),
+                cipher: default_cipher(),
+                tls: false,
             });
         }
         Ok(serde_json::from_str(trimmed)?)
+    }
+
+    /// 是否具备真正出站所需的最小配置（节点地址 + 端口 + 密钥齐全）。
+    ///
+    /// 不齐全时 [`native_start_impl`] 仅建 TUN/栈但不启用出站（避免无效连接刷错误日志），
+    /// 用于 A2/A3 阶段或占位场景。
+    pub fn outbound_ready(&self) -> bool {
+        !self.remote_host.is_empty() && self.remote_port != 0 && !self.remote_key.is_empty()
     }
 }
 
@@ -110,6 +152,27 @@ impl CallbackCtx {
             &[JValue::Object(&jstr)],
         )?;
         Ok(())
+    }
+}
+
+/// 把 [`CallbackCtx`] 适配为 [`SocketProtector`]：出站 socket 的 protect 经 JNI
+/// 回调到 Kotlin 侧 `VpnService.protect(fd)`（protect 铁律 0.3-1）。
+///
+/// `dispatcher` 在 connect proxy-remote 后立即用它 protect socket fd。回调失败
+/// （含 JNI 异常）一律视为 `false`，让上层放弃该连接而非回环。
+struct JniProtector {
+    cb: std::sync::Arc<CallbackCtx>,
+}
+
+impl SocketProtector for JniProtector {
+    fn protect(&self, fd: i32) -> bool {
+        match self.cb.protect(fd) {
+            Ok(ok) => ok,
+            Err(e) => {
+                tracing::warn!(fd, error = %e, "JNI protect 回调失败，按未保护处理");
+                false
+            }
+        }
     }
 }
 
@@ -216,22 +279,118 @@ fn native_start_impl(
         .worker_threads(2)
         .enable_all()
         .build()?;
+    // shutdown 广播：stack_loop / dispatcher 各 subscribe 一份 receiver，
+    // nativeStop/Drop 时 send(true) 让二者优雅退出。
     let (shutdown, _rx) = tokio::sync::watch::channel(false);
 
+    let cb = std::sync::Arc::new(CallbackCtx { vm, bridge });
+
     let handle = Box::new(CoreHandle {
-        cb: std::sync::Arc::new(CallbackCtx { vm, bridge }),
+        cb: std::sync::Arc::clone(&cb),
         rt,
         shutdown,
-        config,
+        config: config.clone(),
     });
 
-    // A2 闭环验证：在 tokio worker 线程（**非 JNI 主线程**）上触发一次 protect 回调，
-    // 证明「Rust 任意线程 → attach_current_thread → 回调 Kotlin protect」真实生效。
-    // 这同时满足 A2 验收的两条：「非主线程能成功回调 protect」「spy 计数 ≥ 1」。
-    // A3 起此处改为不主动触发，由真实出站路径在 connect 前调用。
-    handle.spawn_initial_protect(tun_fd);
+    if config.outbound_ready() {
+        // A6 完整数据面：TUN → 用户态 TCP 栈 → 调度器 → 加密出站 → proxy-remote。
+        spawn_data_plane(&handle, &cb, tun_fd, &config)?;
+        let _ = cb.on_status("connected");
+    } else {
+        // 配置不足以出站（A2/A3 占位场景）：仅做一次 protect 回调自检，证明回调闭环可用。
+        tracing::warn!(
+            "remote_host/remote_port/remote_key 不全（host='{}', port={}, key_set={}），\
+             仅启动 protect 自检，不建立出站数据面",
+            config.remote_host,
+            config.remote_port,
+            !config.remote_key.is_empty()
+        );
+        handle.spawn_initial_protect(tun_fd);
+    }
 
     Ok(Box::into_raw(handle) as jlong)
+}
+
+/// 在句柄的 tokio 运行时上拉起完整数据面：用户态 TCP 栈 + 连接调度器。
+///
+/// - `AndroidTun::from_raw_fd(tun_fd)` 接管 TUN fd（所有权移交，stop/Drop 时由其 close）。
+/// - 一个 `Arc<Mutex<FakeDnsEngine>>` 同时供栈（写入/反查 FakeIP）与调度器（反查域名）使用。
+/// - `tcp_event` 通道把栈上报的新连接交给调度器；`notify` 通道做栈/流之间的就绪通知。
+/// - 栈与调度器各订阅一份 `shutdown` receiver，stop 时一起退出。
+fn spawn_data_plane(
+    handle: &CoreHandle,
+    cb: &std::sync::Arc<CallbackCtx>,
+    tun_fd: jint,
+    config: &AndroidConfig,
+) -> Result<()> {
+    // SAFETY: tun_fd 由 Kotlin VpnService.establish().detachFd() 移交，独占且有效。
+    let tun = unsafe { AndroidTun::from_raw_fd(tun_fd, config.mtu) }?;
+    let (tun_reader, tun_writer) = tun.split();
+
+    let fake_dns = std::sync::Arc::new(tokio::sync::Mutex::new(FakeDnsEngine::new(
+        FAKE_IP_CIDR,
+        FAKE_DNS_CAPACITY,
+    )));
+
+    let (tcp_event_tx, tcp_event_rx) =
+        tokio::sync::mpsc::channel::<TcpEvent>(TCP_EVENT_CHANNEL_CAP);
+    let (notify_tx, notify_rx) = tokio::sync::mpsc::channel::<()>(NOTIFY_CHANNEL_CAP);
+
+    let dispatcher_cfg = DispatcherConfig {
+        server_host: config.remote_host.clone(),
+        server_port: config.remote_port,
+        key: config.remote_key.clone().into_bytes(),
+        tls: config.tls,
+    };
+    let protector = std::sync::Arc::new(JniProtector {
+        cb: std::sync::Arc::clone(cb),
+    });
+
+    // 栈循环：notify_tx 同时给栈与 SmolTcpStream 使用（调度器侧 clone）。
+    let stack_fake_dns = std::sync::Arc::clone(&fake_dns);
+    let stack_notify_tx = notify_tx.clone();
+    let stack_shutdown_rx = handle.shutdown.subscribe();
+    let stack_cb = std::sync::Arc::clone(cb);
+    handle.rt.spawn(async move {
+        let res = stack_loop(
+            tun_reader,
+            tun_writer,
+            stack_fake_dns,
+            tcp_event_tx,
+            stack_notify_tx,
+            notify_rx,
+            stack_shutdown_rx,
+        )
+        .await;
+        match res {
+            Ok(()) => tracing::info!("用户态 TCP 栈已退出"),
+            Err(e) => {
+                tracing::error!(error = %e, "用户态 TCP 栈异常退出");
+                let _ = stack_cb.on_status("error");
+            }
+        }
+    });
+
+    // 调度器循环：消费 TcpEvent，接出站。
+    let disp_shutdown_rx = handle.shutdown.subscribe();
+    handle.rt.spawn(async move {
+        let res = run_dispatcher(
+            tcp_event_rx,
+            fake_dns,
+            dispatcher_cfg,
+            protector,
+            notify_tx,
+            disp_shutdown_rx,
+        )
+        .await;
+        match res {
+            Ok(()) => tracing::info!("调度器已退出"),
+            Err(e) => tracing::error!(error = %e, "调度器异常退出"),
+        }
+    });
+
+    tracing::info!("A6 数据面已启动（栈 + 调度器）");
+    Ok(())
 }
 
 /// Kotlin → Rust：启动数据面会话，返回 handle（0 表示失败）。

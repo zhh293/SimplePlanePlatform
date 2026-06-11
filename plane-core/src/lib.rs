@@ -26,11 +26,13 @@
 
 pub mod android_tun;
 pub mod crypto;
+pub mod dispatcher;
 pub mod error;
 pub mod jni_bridge;
 pub mod net_probe;
 pub mod outbound;
 pub mod proxy_proto;
+pub mod tcp_stack;
 
 use jni::objects::JClass;
 use jni::sys::jstring;
