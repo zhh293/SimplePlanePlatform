@@ -20,6 +20,8 @@ import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.proxy.transport.netty.handler.BackpressureHandler;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,6 +66,8 @@ public class NettyServer implements Server {
         int readIdleTimeout = url.getParameter("readIdleTimeout", 60);
         int maxStreams = url.getParameter("maxStreams", 100);
         String cipherName = url.getParameter("cipher", "aes-gcm");
+        boolean backpressureEnabled = url.getParameter("backpressure", false);
+        int backpressurePermits = url.getParameter("backpressurePermits", 64);
 
         bossGroup = new NioEventLoopGroup(bossThreads);
         workerGroup = workerThreads > 0
@@ -91,23 +95,29 @@ public class NettyServer implements Server {
                             // 子 Channel 初始化器（每个 HTTP/2 Stream）
                             Http2MultiplexHandler multiplexHandler = new Http2MultiplexHandler(
                                     new ChannelInitializer<Channel>() {
-                                        @Override
-                                        protected void initChannel(Channel streamCh) throws Exception {
-                                            ChannelPipeline pipeline = streamCh.pipeline();
-                                            // 根据 URL 配置加载 Cipher 实例
-                                            Cipher cipher = createCipher(cipherName);
-                                            // 入站方向（HEAD→TAIL 查找 InboundHandler）：解密 → 解码
-                                            // 出站方向（TAIL→HEAD 查找 OutboundHandler）：编码 → 加密
-                                            // 注册顺序与 Client 端一致：cipher-decode/encode → decoder/encoder → ...
-                                            pipeline.addLast("cipherDecode", new CipherDecodeHandler(cipher));
-                                            pipeline.addLast("cipherEncode", new CipherEncodeHandler(cipher));
-                                            pipeline.addLast("decoder", new ProxyMessageDecoder());
-                                            pipeline.addLast("encoder", new ProxyMessageEncoder(true));
-                                            pipeline.addLast("idleState", new IdleStateHandler(
-                                                    readIdleTimeout, 0, 0, TimeUnit.SECONDS));
-                                            pipeline.addLast("heartbeat", new HeartbeatHandler());
-                                            pipeline.addLast("handler", streamHandler);
-                                        }
+                        @Override
+                        protected void initChannel(Channel streamCh) throws Exception {
+                            ChannelPipeline pipeline = streamCh.pipeline();
+                            // 根据 URL 配置加载 Cipher 实例
+                            Cipher cipher = createCipher(cipherName);
+                            // 入站方向（HEAD→TAIL 查找 InboundHandler）：解密 → 解码
+                            // 出站方向（TAIL→HEAD 查找 OutboundHandler）：编码 → 加密
+                            // 注册顺序与 Client 端一致：cipher-decode/encode → decoder/encoder → ...
+                            pipeline.addLast("cipherDecode", new CipherDecodeHandler(cipher));
+                            pipeline.addLast("cipherEncode", new CipherEncodeHandler(cipher));
+                            // 背压处理器：位于解密之后、解码之前，拦截 Http2DataFrame
+                            // 通过信用额度控制下游处理速率，额度耗尽时暂停窗口更新形成端到端背压
+                            if (backpressureEnabled) {
+                                pipeline.addLast("backpressure",
+                                        new BackpressureHandler(backpressurePermits));
+                            }
+                            pipeline.addLast("decoder", new ProxyMessageDecoder());
+                            pipeline.addLast("encoder", new ProxyMessageEncoder(true));
+                            pipeline.addLast("idleState", new IdleStateHandler(
+                                    readIdleTimeout, 0, 0, TimeUnit.SECONDS));
+                            pipeline.addLast("heartbeat", new HeartbeatHandler());
+                            pipeline.addLast("handler", streamHandler);
+                        }
                                     });
 
                             ch.pipeline().addLast("frameCodec", frameCodec);

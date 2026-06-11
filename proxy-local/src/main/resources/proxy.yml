@@ -97,6 +97,7 @@ route:
     - "*.coding.net"
     - "*.dingtalk.com"
     - "*.feishu.cn"
+    - "*.xuexitong.com"
     - 127.0.0.1
     - localhost
 systemProxy:

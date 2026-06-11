@@ -33,6 +33,8 @@ public class RemoteConfig {
     private static final int DEFAULT_MAX_STREAMS = 100;
     private static final int DEFAULT_READ_IDLE_TIMEOUT = 60;
     private static final int DEFAULT_BACKLOG = 1024;
+    private static final boolean DEFAULT_BACKPRESSURE = false;
+    private static final int DEFAULT_BACKPRESSURE_PERMITS = 64;
 
     // Outbound 出站连接默认值
     private static final int DEFAULT_OUTBOUND_CONNECT_TIMEOUT = 5000;
@@ -66,6 +68,12 @@ public class RemoteConfig {
         url.addParameter("maxStreams", getIntValue(config, "maxStreams", DEFAULT_MAX_STREAMS));
         url.addParameter("readIdleTimeout", getIntValue(config, "readIdleTimeout", DEFAULT_READ_IDLE_TIMEOUT));
         url.addParameter("backlog", getIntValue(config, "backlog", DEFAULT_BACKLOG));
+
+        // 背压配置
+        url.addParameter("backpressure",
+                String.valueOf(getBooleanValue(config, "backpressure", DEFAULT_BACKPRESSURE)));
+        url.addParameter("backpressurePermits",
+                getIntValue(config, "backpressurePermits", DEFAULT_BACKPRESSURE_PERMITS));
 
         // Outbound 出站连接配置
         Map<String, Object> outbound = getMapValue(config, "outbound");
