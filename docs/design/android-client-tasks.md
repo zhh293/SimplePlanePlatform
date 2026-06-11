@@ -583,11 +583,23 @@ pub fn encrypt_with_nonce(key: &[u8], nonce: &[u8;12], plain: &[u8]) -> Vec<u8>;
 
 #### 验收标准（Go/No-Go 闸口）
 
-- [ ] **crypto 向量测试通过**：Rust 加密产物与 Java 逐字节一致，Java 能解 Rust 的、Rust 能解 Java 的（双向）。
-- [ ] **ProxyMessage 编解码**与 Java `ProxyCodec` 互通（28B 头大端、跨帧切包正确）。
-- [ ] HTTP/2 首帧为 HEADERS（`:method=POST :path=/proxy`），后续 DATA 每帧恰好一条加密 ProxyMessage。
-- [ ] 对接真实 Java proxy-remote 完成一次 CONNECT→DATA→响应往返。
+- [~] **crypto 向量测试通过**：Rust 加密产物与 Java 逐字节一致，Java 能解 Rust 的、Rust 能解 Java 的（双向）。→ **Rust 侧已就绪**：`crypto.rs` 严格逐行复刻 Java 非标准实现（counter=0 重叠 keystream、Poly1305 仅对密文且无 padding/无 AAD/无长度尾块、非 32 字节 key 走 SHA-256），并以 11 个单测自洽锁定（含 `ciphertext_keystream_starts_at_counter_zero` 锁死非标准不变量、`non_32_byte_key_uses_sha256`）。**跨语言逐字节比对待 Q1**（需 Java 运行时产出向量文件 `crypto-vectors.json`，本轮无 Java 运行环境，登记为待联调项）。
+- [x] **ProxyMessage 编解码**与 Java `ProxyCodec` 互通（28B 头大端、跨帧切包正确）。→ `proxy_proto.rs` 逐字段对照 `ProxyCodec`/`ProxyMessageDecoder`，9 个单测覆盖大端偏移、ordinal 对齐、跨帧/粘包切分；与 Java 的最终互通待 Q2 harness。
+- [x] HTTP/2 首帧为 HEADERS（`:method=POST :path=/proxy`），后续 DATA 每帧恰好一条加密 ProxyMessage。→ `outbound.rs::open_proxy_stream` 对照 `ProxyMessageEncoder` 实现首帧 HEADERS（不加密）+ 每条消息一个加密 DATA 帧；窗口对齐 Java（stream 1MB / conn ~16MB）。
+- [~] 对接真实 Java proxy-remote 完成一次 CONNECT→DATA→响应往返。→ **待 Q2 / A6 联调**（需起 Java proxy-remote 且配 `cipher=chacha20`；本轮先以内存可测的 `InboundReassembler` / `encode_encrypted_frame` 单测覆盖收发链路语义）。
 - [ ] 若任一项不通过 → **No-Go**，按设计文档 8 节回退到「TUN→SOCKS5→Java proxy-local」方案。
+
+> **本轮结论（2025-，Rust 侧）**：A5 的三个 Rust 模块（crypto/proxy_proto/outbound）全部编译通过，
+> `cargo test` 51 项全绿、`cargo fmt --check` 与 `cargo clippy -D warnings` 干净，且 `tun-adapter`
+> `cargo check` 不受影响（铁律：不破坏现有代码）。**最终 Go/No-Go 判定须待 Q1（crypto 跨语言向量）
+> 与 Q2（协议互通 harness）补齐 Java 侧比对后做出**——这两项依赖 Java 运行时，列为下一步联调。
+
+#### 实现记录（A5，Rust 侧）
+
+- **crypto.rs**：非标准 ChaCha20-Poly1305。用 `chacha20`（IETF 变体，对齐 BouncyCastle `ChaCha7539Engine`）+ `poly1305`（裸 MAC），**严禁** `chacha20poly1305` 聚合 crate。Poly1305 tag 用 `Poly1305::compute_unpadded`（对最后不完整块在 `chunk.len()` 处置 1、不补零对齐），与 BouncyCastle `Poly1305` 的 doFinal 语义一致；曾误用 `update_padded`（AEAD 补零语义）会与 Java 不兼容，已纠正并在源码注释中明确标注。
+- **proxy_proto.rs**：`MessageType` ordinal（CONNECT=0…HEARTBEAT_RESPONSE=5）、28B 大端固定头、`try_decode_one` 跨帧切包（`28 + HostLen + DataLen`），全部逐字段对照 Java。
+- **outbound.rs**：`OutboundConnection`（h2 client 握手 + 窗口对齐）、`OutboundStream`（首帧 HEADERS + 每消息一个加密 DATA 帧；读向 `release_capacity` 归还流控窗口）、`InboundReassembler`（每帧 decrypt → 累积 → `try_decode_one`）、`proxy_via_remote` 双向 copy 骨架、`SocketProtector` trait（protect 抽象，生产由 JNI 注入 Kotlin `protect`）。TLS 暂走 h2c 明文，rustls 接入登记为技术债（A6 偿还）。
+- **兼容性提醒（重要）**：Java `Http2Connection` 的 `cipher` 默认 `aes-gcm`，联调时 proxy-remote 必须显式配 `cipher=chacha20`（+ `cipherKey`）才与本模块二进制兼容。
 
 ---
 

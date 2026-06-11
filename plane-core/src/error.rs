@@ -34,6 +34,19 @@ pub enum CoreError {
     /// A4 数据面：DNS 报文解析/编码失败。
     #[error("DNS 处理失败: {0}")]
     Dns(String),
+
+    /// A5 出站层：ChaCha20-Poly1305 加解密失败（鉴权失败、密文过短等）。
+    ///
+    /// 对齐 Java `ChaCha20Cipher` 的 `CryptoException`：解密时 tag 不匹配报
+    /// "authentication failed (data tampered)"。
+    #[error("加密处理失败: {0}")]
+    Crypto(String),
+
+    /// A5 出站层：ProxyMessage 编解码失败（长度越界、字段非法等）。
+    ///
+    /// 对齐 Java `ProxyCodec` 的 `CodecException`。
+    #[error("协议编解码失败: {0}")]
+    Protocol(String),
 }
 
 /// 模块内统一的 `Result` 别名。

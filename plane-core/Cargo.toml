@@ -32,6 +32,18 @@ lru = "0.12"      # FakeIP 双向 LRU 映射
 ipnet = "2"       # FakeIP CIDR 池解析
 hickory-proto = "0.24" # DNS 报文解析/编码
 
+# A5 出站层：与 Java proxy-remote 二进制兼容的加密 HTTP/2 客户端。
+# ⚠️ 必须用 chacha20（流密码引擎）+ poly1305（裸 MAC），严禁用聚合的 chacha20poly1305 crate，
+# 后者按 RFC 8439 做 padding/长度尾块，与 Java 的非标准实现（见 ChaCha20Cipher.java）不兼容。
+chacha20 = "0.9"  # ChaCha20 流密码（IETF/RFC7539 变体，对齐 BouncyCastle ChaCha7539Engine）
+poly1305 = "0.8"  # 裸 Poly1305 MAC（仅对密文计算，无 AAD/无 padding/无长度尾块）
+sha2 = "0.10"     # key.len()!=32 时 SHA-256 派生 32 字节密钥（对齐 Java）
+rand = "0.8"      # 随机 nonce 生成
+# HTTP/2 出站（h2 客户端）+ 字节缓冲 + 头部类型
+h2 = "0.4"
+bytes = "1"
+http = "1"
+
 # tracing-android 仅在 Android 目标上启用，桌面（如 macOS 本机 cargo check）跳过，
 # 避免在非 Android 平台拉入 android 专用依赖导致编译失败。
 [target.'cfg(target_os = "android")'.dependencies]

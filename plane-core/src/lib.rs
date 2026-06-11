@@ -25,9 +25,12 @@
 //! - 所有出站 socket 必须先 protect 再 connect（A5 起落地）。
 
 pub mod android_tun;
+pub mod crypto;
 pub mod error;
 pub mod jni_bridge;
 pub mod net_probe;
+pub mod outbound;
+pub mod proxy_proto;
 
 use jni::objects::JClass;
 use jni::sys::jstring;
