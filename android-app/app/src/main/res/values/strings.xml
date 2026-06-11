@@ -5,7 +5,4 @@
     <string name="native_version_label">native 版本: %1$s</string>
     <string name="vpn_status_idle">未连接</string>
     <string name="notification_channel_name">VPN 状态</string>
-    <string name="hint_remote_host">节点地址（host）</string>
-    <string name="hint_remote_port">节点端口（port）</string>
-    <string name="hint_remote_key">共享密钥（key）</string>
 </resources>

@@ -3,7 +3,7 @@ port: 19090
 bizThreads: 200
 workerThreads: 0
 bossThreads: 1
-cipher: aes-gcm
+cipher: chacha20
 cipherKey: your-cipher-key
 maxStreams: 1000
 readIdleTimeout: 60

@@ -124,14 +124,18 @@ class PlaneVpnService : VpnService() {
     /**
      * 组装下发给 native 的 configJson。
      *
-     * 节点配置来自启动 Intent 的 extra（由 [MainActivity] 填入）；缺省时字段为空，
-     * native 侧会因 `outbound_ready()=false` 退回 protect 自检（不建立出站，不崩溃）。
+     * 节点配置已写死为 [DEFAULT_REMOTE_HOST]/[DEFAULT_REMOTE_PORT]/[DEFAULT_REMOTE_KEY]
+     * （对接固定服务端，cipher=chacha20）；若启动 Intent 显式传入 extra 则优先采用
+     * （保留覆盖能力，便于后续恢复可配）。
      */
     private fun buildConfigJson(intent: Intent?): String {
-        val host = intent?.getStringExtra(EXTRA_REMOTE_HOST).orEmpty()
-        val port = intent?.getIntExtra(EXTRA_REMOTE_PORT, 0) ?: 0
-        val key = intent?.getStringExtra(EXTRA_REMOTE_KEY).orEmpty()
-        val tls = intent?.getBooleanExtra(EXTRA_TLS, false) ?: false
+        val host = intent?.getStringExtra(EXTRA_REMOTE_HOST)
+            ?.takeIf { it.isNotBlank() } ?: DEFAULT_REMOTE_HOST
+        val port = (intent?.getIntExtra(EXTRA_REMOTE_PORT, 0) ?: 0)
+            .takeIf { it != 0 } ?: DEFAULT_REMOTE_PORT
+        val key = intent?.getStringExtra(EXTRA_REMOTE_KEY)
+            ?.takeIf { it.isNotBlank() } ?: DEFAULT_REMOTE_KEY
+        val tls = intent?.getBooleanExtra(EXTRA_TLS, DEFAULT_TLS) ?: DEFAULT_TLS
 
         val json = JSONObject()
             .put("mtu", TUN_MTU)
@@ -139,9 +143,7 @@ class PlaneVpnService : VpnService() {
             .put("remote_port", port)
             .put("remote_key", key)
             .put("tls", tls)
-        if (host.isEmpty() || port == 0 || key.isEmpty()) {
-            Log.w(TAG, "节点配置不完整（host/port/key），native 将仅做 protect 自检")
-        }
+        Log.i(TAG, "节点配置 host=$host port=$port tls=$tls")
         return json.toString()
     }
 
@@ -245,10 +247,21 @@ class PlaneVpnService : VpnService() {
         /** FakeDNS 服务器地址（与 native FakeIP 池 198.18.0.1 一致）。 */
         private const val FAKE_DNS_SERVER = "198.18.0.1"
 
-        /** 启动 Intent 的节点配置 extra key（由 MainActivity 填入）。 */
+        /** 启动 Intent 的节点配置 extra key（可选，缺省时用下方写死默认值）。 */
         const val EXTRA_REMOTE_HOST = "extra_remote_host"
         const val EXTRA_REMOTE_PORT = "extra_remote_port"
         const val EXTRA_REMOTE_KEY = "extra_remote_key"
         const val EXTRA_TLS = "extra_tls"
+
+        /**
+         * 写死的默认节点配置（对接固定 proxy-remote）。
+         * - host/port：nginx 入口 54.234.196.30:9090。
+         * - key：与服务端 remote.yml 的 cipherKey 一致。
+         * - cipher 固定 chacha20（与服务端一致，由 native 默认决定）。
+         */
+        private const val DEFAULT_REMOTE_HOST = "54.234.196.30"
+        private const val DEFAULT_REMOTE_PORT = 9090
+        private const val DEFAULT_REMOTE_KEY = "your-cipher-key"
+        private const val DEFAULT_TLS = false
     }
 }

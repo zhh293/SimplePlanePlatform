@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Bundle
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -57,18 +56,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startVpn() {
-        // 读取节点配置，作为 Intent extra 传给 Service（缺省时 native 退回 protect 自检）。
-        val host = findViewById<EditText>(R.id.remoteHostInput).text.toString().trim()
-        val port = findViewById<EditText>(R.id.remotePortInput).text.toString().trim()
-            .toIntOrNull() ?: 0
-        val key = findViewById<EditText>(R.id.remoteKeyInput).text.toString().trim()
-
-        val intent = Intent(this, PlaneVpnService::class.java).apply {
-            putExtra(PlaneVpnService.EXTRA_REMOTE_HOST, host)
-            putExtra(PlaneVpnService.EXTRA_REMOTE_PORT, port)
-            putExtra(PlaneVpnService.EXTRA_REMOTE_KEY, key)
-            putExtra(PlaneVpnService.EXTRA_TLS, false)
-        }
+        // 节点配置已在 PlaneVpnService 中写死（对接固定服务端），这里直接启动即可。
+        val intent = Intent(this, PlaneVpnService::class.java)
         ContextCompat.startForegroundService(this, intent)
     }
 }
