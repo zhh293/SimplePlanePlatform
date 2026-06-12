@@ -102,7 +102,10 @@ class PlaneVpnService : VpnService() {
     /**
      * 配置并建立 TUN 接口。
      *
-     * - 地址：给 TUN 一个内网私有 IPv4（10.0.0.2/32）+ IPv6（[TUN_ADDRESS_V6]/128），作为应用流量源。
+     * - 地址：给 TUN 一个 FakeIP 网段内的 IPv4（198.19.255.254/15）+ IPv6（[TUN_ADDRESS_V6]/128），作为应用流量源。
+     *   **必须**与用户态 smoltcp 栈接口同网段（198.18.0.0/15），否则栈回 SYN-ACK 时
+     *   因源地址不可路由而发不出去，三次握手永不完成，表现为「开 VPN 后 TCP 全部打不开」。
+     *   选用网段高位地址 198.19.255.254，避开从 198.18.0.1 递增分配的 FakeIP 与 DNS 服务器地址。
      * - 路由：`0.0.0.0/0` 接管所有 IPv4（含 FakeIP 段 198.18.0.0/15）；同时 `::/0`
      *   接管所有 IPv6。native 数据面 MVP 仅做 IPv4 出站，IPv6 包进栈后被丢弃，促使
      *   应用 fallback 到 IPv4——若不接管 IPv6，手机走 IPv6 时流量会绕过隧道（泄漏），
@@ -247,9 +250,15 @@ class PlaneVpnService : VpnService() {
         /** TUN MTU，与 native AndroidConfig 默认一致。 */
         private const val TUN_MTU = 1500
 
-        /** TUN 接口内网地址与前缀（应用流量源地址）。 */
-        private const val TUN_ADDRESS = "10.0.0.2"
-        private const val TUN_PREFIX = 32
+        /**
+         * TUN 接口地址与前缀（应用流量源地址）。
+         *
+         * 必须落在用户态 smoltcp 栈接口网段 198.18.0.0/15 内，否则栈无法把 SYN-ACK
+         * 路由回应用侧，TCP 握手无法完成。取网段高位 198.19.255.254 以避开 FakeIP 分配
+         * （从 198.18.0.1 起递增）与 DNS 服务器地址（198.18.0.1）。
+         */
+        private const val TUN_ADDRESS = "198.19.255.254"
+        private const val TUN_PREFIX = 15
 
         /**
          * TUN 接口 IPv6 私有地址与前缀（ULA fd00::/8 段）。
