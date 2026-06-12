@@ -1,6 +1,7 @@
 package com.proxy.cluster.filter;
 
 import com.proxy.common.filter.*;
+import com.proxy.common.model.ProxyMessage;
 import com.proxy.common.spi.Activate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,13 @@ public class AccessLogFilter implements Filter {
 
     @Override
     public CompletableFuture<Response> invoke(Invoker invoker, Invocation invocation) throws ProxyException {
+        // 性能关键：DATA 帧在大流量下每帧都会经过此 Filter，且 whenComplete 回调通常
+        // 在 IO EventLoop 线程上同步执行。每帧同步写 access log 会阻塞 IO 线程导致吞吐骤降。
+        // 故数据面（DATA）不打 access log，仅记录控制面（CONNECT/DISCONNECT）。
+        if (invocation.getType() == ProxyMessage.MessageType.DATA) {
+            return invoker.invoke(invocation);
+        }
+
         long startTime = System.currentTimeMillis();
         String host = invocation.getTargetHost();
         int port = invocation.getTargetPort();

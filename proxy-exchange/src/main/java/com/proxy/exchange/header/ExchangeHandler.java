@@ -100,9 +100,18 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         }
 
         long requestId = message.getRequestId();
-        log.info("channelRead0: type={}, requestId={}, streamId={}, invoker={}, channel={}",
-                message.getType(), requestId, message.getStreamId(),
-                invoker != null ? "SERVER" : "CLIENT", ctx.channel());
+        // 性能关键：数据面（requestId==0，DATA 帧）每帧都会进入此处，高频大流量下
+        // 同步写日志会阻塞唯一的 IO EventLoop 线程，导致吞吐骤降。故数据面降级为 debug，
+        // 仅控制面（requestId>0，CONNECT/DISCONNECT）保留 info 便于排查。
+        if (requestId > 0) {
+            log.info("channelRead0: type={}, requestId={}, streamId={}, invoker={}, channel={}",
+                    message.getType(), requestId, message.getStreamId(),
+                    invoker != null ? "SERVER" : "CLIENT", ctx.channel());
+        } else if (log.isDebugEnabled()) {
+            log.debug("channelRead0: type={}, requestId={}, streamId={}, invoker={}, channel={}",
+                    message.getType(), requestId, message.getStreamId(),
+                    invoker != null ? "SERVER" : "CLIENT", ctx.channel());
+        }
 
         if (requestId > 0) {
             if (invoker != null) {

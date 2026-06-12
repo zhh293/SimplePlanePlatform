@@ -65,10 +65,19 @@ public class CipherEncodeHandler extends MessageToMessageEncoder<Http2DataFrame>
             // 加密
             byte[] ciphertext = cipher.encrypt(plaintext);
 
-            // 封装为新的 HTTP/2 DATA 帧
-            out.add(new DefaultHttp2DataFrame(Unpooled.wrappedBuffer(ciphertext), frame.isEndStream()));
+            // 长度前缀分帧：[4字节密文总长度(大端)][nonce|ciphertext|tag]
+            // 目的：HTTP/2 不保证帧边界，大数据会被重新切分/合并，
+            // 解密侧无法依赖单帧 == 单密文块。加 4 字节长度前缀后，
+            // 解密侧可累积字节并按长度精确切出完整密文块，彻底摆脱帧边界依赖。
+            ByteBuf framed = Unpooled.buffer(4 + ciphertext.length);
+            framed.writeInt(ciphertext.length);
+            framed.writeBytes(ciphertext);
 
-            log.trace("CipherEncode: encrypted {} bytes → {} bytes", plaintext.length, ciphertext.length);
+            // 封装为新的 HTTP/2 DATA 帧（保留 endStream 语义）
+            out.add(new DefaultHttp2DataFrame(framed, frame.isEndStream()));
+
+            log.trace("CipherEncode: encrypted {} bytes → {} bytes (framed {})",
+                    plaintext.length, ciphertext.length, framed.readableBytes());
         } catch (CryptoException e) {
             log.error("Encryption failed, closing channel", e);
             ctx.close();
