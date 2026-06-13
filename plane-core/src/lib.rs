@@ -29,6 +29,7 @@ pub mod crypto;
 pub mod dispatcher;
 pub mod error;
 pub mod jni_bridge;
+pub mod logging;
 pub mod net_probe;
 pub mod outbound;
 pub mod proxy_proto;
@@ -57,6 +58,9 @@ pub extern "C" fn Java_com_proxy_android_NativeBridge_nativeVersion(
     env: JNIEnv,
     _class: JClass,
 ) -> jstring {
+    // nativeVersion 是 Kotlin 侧最早调用的「探活」接口，借此机会幂等初始化日志，
+    // 保证后续 native 日志（含加载/启动失败）都能进入 logcat（tag=plane-core）。
+    crate::logging::init();
     // A1 占位实现：不引入复杂逻辑，因此无需 catch_unwind 的复杂场景；
     // 但仍以「不 panic 跨 FFI」为准则——用 match 显式处理失败，失败时返回空字符串。
     match env.new_string(env!("CARGO_PKG_VERSION")) {

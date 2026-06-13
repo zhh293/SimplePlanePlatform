@@ -406,6 +406,10 @@ pub extern "C" fn Java_com_proxy_android_NativeBridge_nativeStart(
     tun_fd: jint,
     config_json: JString,
 ) -> jlong {
+    // 幂等初始化日志：即使 Kotlin 侧未先调用 nativeVersion，也保证从启动这一刻起
+    // 所有 native 日志都能进入 logcat（tag=plane-core）。
+    crate::logging::init();
+    tracing::info!(tun_fd, "nativeStart 被调用，数据面准备启动");
     catch_unwind_to_jlong(|| native_start_impl(&mut env, &this, tun_fd, &config_json))
 }
 

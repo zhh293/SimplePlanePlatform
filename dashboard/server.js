@@ -501,6 +501,35 @@ function bindTunProcEvents(proc, spawnFailedRef) {
   }, 4000);
 }
 
+// DNS backup file written by tun-adapter's route_guard (see route_guard.rs).
+// Its presence after stop means the Drop-based DNS restore did NOT complete.
+const TUN_DNS_BACKUP = '/tmp/tun-adapter-dns-backup.conf';
+const RESTORE_DNS_SCRIPT = path.join(PROJECT_ROOT, 'restore-dns.sh');
+
+// Fallback DNS recovery: if the tun-adapter was force-killed before its Drop
+// handler finished restoring DNS, the backup file is left behind. Replay the
+// project's restore-dns.sh (the same logic the desktop scripts use) so the
+// system DNS never gets stranded on the FakeDNS server (198.18.0.2).
+function restoreDnsFallback() {
+  if (IS_WIN) return; // Windows restore is handled by tun-adapter itself
+  if (!fs.existsSync(TUN_DNS_BACKUP)) {
+    addLog('tun-adapter', '[dashboard] DNS already restored by tun-adapter (no backup leftover).');
+    return;
+  }
+  addLog('tun-adapter', '[dashboard] DNS backup leftover detected — running restore-dns.sh fallback...', 'stderr');
+  try {
+    execSync(`sudo -n /bin/bash "${RESTORE_DNS_SCRIPT}"`, { stdio: 'pipe', timeout: 15000 });
+    addLog('tun-adapter', '[dashboard] DNS restored via fallback script.');
+  } catch (e) {
+    const out = `${e.stderr || ''}${e.message || ''}`;
+    if (/password is required|sudo:/i.test(out)) {
+      addLog('tun-adapter', `[dashboard] DNS 兜底还原需要权限。请先运行一次 dashboard/setup-tun-permissions.sh，或手动执行: sudo ${RESTORE_DNS_SCRIPT}`, 'stderr');
+    } else {
+      addLog('tun-adapter', `[dashboard] DNS fallback failed: ${out}`, 'stderr');
+    }
+  }
+}
+
 function stopTunAdapter() {
   addLog('tun-adapter', '[dashboard] Stopping...');
 
@@ -528,14 +557,17 @@ function stopTunAdapter() {
             try { execSync(`sudo -n kill ${pid}`, { stdio: 'ignore', timeout: 5000 }); } catch {}
           }
         }
-        // Give it a moment then force kill
+        // Give the Drop handler time to fully restore DNS/routes/gateway before
+        // force-killing. The restore does: remove resolver file -> restore DNS ->
+        // delete route -> restore gateway -> flush cache. 1s was too short and
+        // could strand DNS on 198.18.0.2; 5s matches start-tun.sh's grace period.
         setTimeout(() => {
           try { process.kill(pid, 'SIGKILL'); } catch (e) {
             if (e.code === 'EPERM') {
               try { execSync(`sudo -n kill -9 ${pid}`, { stdio: 'ignore', timeout: 5000 }); } catch {}
             }
           }
-        }, 1000);
+        }, 5000);
       }
     }
   } catch {}
@@ -556,6 +588,30 @@ function stopTunAdapter() {
   processes['tun-adapter'].startedAt = null;
   broadcastSSE('status', getStatusAll());
   addLog('tun-adapter', '[dashboard] Stopped.');
+
+  // Root-cause fix for the "114 DNS drags down direct connections" issue:
+  // proxy-local is always launched with -Dproxy.dns.nameservers=114.114.114.114,...
+  // and is independent of TUN. Stopping TUN while proxy-local lingers leaves that
+  // 114 resolver in play. Tear it down together so direct connections aren't
+  // affected once the user turns the proxy off. (Independent of the Drop timing,
+  // so do it immediately.)
+  if (processes['proxy-local'] && processes['proxy-local'].status !== 'stopped') {
+    addLog('tun-adapter', '[dashboard] Stopping proxy-local together (avoids stale 114 DNS)...');
+    try { stopProxyLocal(); } catch (e) {
+      addLog('tun-adapter', `[dashboard] stopProxyLocal failed: ${e.message}`, 'stderr');
+    }
+  }
+
+  // Safety net for DNS: the tun-adapter Drop handler normally restores DNS within
+  // a few hundred ms of SIGTERM and deletes the backup file. We must check AFTER
+  // giving Drop enough time (and after the 5s SIGKILL deadline above) — checking
+  // synchronously here would race the Drop and falsely trigger the fallback.
+  // If the backup file is still present at that point, Drop was interrupted and
+  // we replay restore-dns.sh to pull system DNS back off 198.18.0.2.
+  if (!IS_WIN) {
+    setTimeout(restoreDnsFallback, 5500);
+  }
+
   return { ok: true };
 }
 
@@ -732,23 +788,51 @@ function getSystemProxyMacOS() {
   } catch { return { enabled: false, service: 'Wi-Fi' }; }
 }
 
+// Run a `networksetup ...` command. macOS requires elevated rights to commit
+// changes to the SystemConfiguration database, so we first try a direct call and,
+// if it fails with a permission/commit error, fall back to `sudo -n` (relies on the
+// NOPASSWD rule installed by setup-tun-permissions.sh). Throws on hard failure.
+function runNetworkSetup(args) {
+  try {
+    execSync(`networksetup ${args}`, { stdio: 'pipe' });
+    return;
+  } catch (e) {
+    const out = `${e.stderr || ''}${e.stdout || ''}${e.message || ''}`;
+    // Only fall back to sudo for permission/commit-database style errors.
+    const needsPriv = /commit|database|permission|denied|not permitted|EPERM/i.test(out);
+    if (!needsPriv) throw e;
+    try {
+      execSync(`sudo -n /usr/sbin/networksetup ${args}`, { stdio: 'pipe', timeout: 5000 });
+      return;
+    } catch (se) {
+      const sout = `${se.stderr || ''}${se.stdout || ''}${se.message || ''}`;
+      if (/password is required|sudo:/i.test(sout)) {
+        const err = new Error('需要管理员权限修改系统代理。请先运行一次 dashboard/setup-tun-permissions.sh 配置免密授权，或在终端手动执行: sudo networksetup ' + args);
+        err.code = 'NEEDS_SETUP';
+        throw err;
+      }
+      throw se;
+    }
+  }
+}
+
 function setSystemProxyMacOS(enable) {
   try {
     const lines = execSync('networksetup -listallnetworkservices', { encoding: 'utf-8' }).split('\n');
     const services = lines.filter(l => l.trim() && !l.includes('asterisk') && !l.startsWith('*'));
     const service = services.find(s => s.includes('Wi-Fi')) || services[0] || 'Wi-Fi';
     if (enable) {
-      execSync(`networksetup -setsocksfirewallproxy "${service}" 127.0.0.1 1080`, { stdio: 'ignore' });
-      execSync(`networksetup -setsocksfirewallproxystate "${service}" on`, { stdio: 'ignore' });
-      execSync(`networksetup -setwebproxy "${service}" 127.0.0.1 1080`, { stdio: 'ignore' });
-      execSync(`networksetup -setsecurewebproxy "${service}" 127.0.0.1 1080`, { stdio: 'ignore' });
+      runNetworkSetup(`-setsocksfirewallproxy "${service}" 127.0.0.1 1080`);
+      runNetworkSetup(`-setsocksfirewallproxystate "${service}" on`);
+      runNetworkSetup(`-setwebproxy "${service}" 127.0.0.1 1080`);
+      runNetworkSetup(`-setsecurewebproxy "${service}" 127.0.0.1 1080`);
     } else {
-      execSync(`networksetup -setsocksfirewallproxystate "${service}" off`, { stdio: 'ignore' });
-      execSync(`networksetup -setwebproxystate "${service}" off`, { stdio: 'ignore' });
-      execSync(`networksetup -setsecurewebproxystate "${service}" off`, { stdio: 'ignore' });
+      runNetworkSetup(`-setsocksfirewallproxystate "${service}" off`);
+      runNetworkSetup(`-setwebproxystate "${service}" off`);
+      runNetworkSetup(`-setsecurewebproxystate "${service}" off`);
     }
     return { ok: true, enabled: enable };
-  } catch (e) { return { ok: false, error: e.message }; }
+  } catch (e) { return { ok: false, error: e.message, code: e.code }; }
 }
 
 // ---- Windows System Proxy ----

@@ -10,6 +10,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 TUN_BIN="$PROJECT_ROOT/tun-adapter/target/release/tun-adapter"
+RESTORE_DNS="$PROJECT_ROOT/restore-dns.sh"
 
 echo "╔══════════════════════════════════════════════════╗"
 echo "║   SimplePlane TUN Adapter — 权限设置            ║"
@@ -31,11 +32,14 @@ echo ""
 echo "这需要输入你的 Mac 管理员密码（仅此一次）："
 echo ""
 
-# Create sudoers rule: allow running tun-adapter and killing it without password
+# Create sudoers rule: allow running tun-adapter, killing it, toggling the
+# system proxy, and running the DNS recovery script without password
 SUDOERS_CONTENT="# SimplePlane TUN Adapter - allow dashboard to start/stop without password
 $USER_NAME ALL=(root) NOPASSWD: $TUN_BIN *
 $USER_NAME ALL=(root) NOPASSWD: /bin/kill *
-$USER_NAME ALL=(root) NOPASSWD: /usr/bin/pkill -f tun-adapter"
+$USER_NAME ALL=(root) NOPASSWD: /usr/bin/pkill -f tun-adapter
+$USER_NAME ALL=(root) NOPASSWD: /usr/sbin/networksetup
+$USER_NAME ALL=(root) NOPASSWD: /bin/bash $RESTORE_DNS"
 
 # Write to temp file first, then validate with visudo -c
 TEMP_FILE=$(mktemp)
@@ -62,6 +66,8 @@ echo "📋 已配置的规则:"
 echo "   - sudo tun-adapter（免密启动）"
 echo "   - sudo kill（免密停止进程）"
 echo "   - sudo pkill -f tun-adapter（免密清理）"
+echo "   - sudo networksetup（免密开关系统代理）"
+echo "   - sudo restore-dns.sh（免密 DNS 兜底还原）"
 echo ""
 echo "⚠️  如果 tun-adapter 二进制路径发生变化（如重新编译到其他目录），需要重新运行此脚本。"
 echo "   要移除此配置，运行: sudo rm $SUDOERS_FILE"
