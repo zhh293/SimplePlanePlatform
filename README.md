@@ -212,7 +212,10 @@ route:
 
 ```bash
 mvn package -pl proxy-local -am -DskipTests
-java -jar proxy-local/target/proxy-local-1.0.0-SNAPSHOT.jar
+
+# 启动系统代理（在 proxy-local 目录下执行）
+java -Dproxy.dns.nameservers=114.114.114.114,223.5.5.5 \
+     -jar ./target/proxy-local-1.0.0-SNAPSHOT.jar
 ```
 
 看到 `Proxy Local Server started on port 1080` 即启动成功。
@@ -264,8 +267,21 @@ domains = ["sankuai.com", "meituan.com", "sankuai.info", "neixin.cn", "dianping.
 
 **macOS：**
 
+> 启动 TUN 模式前请先关闭系统代理（代理模式与 TUN 模式不要同时开启），再运行脚本。
+
 ```bash
+# 0. 进入项目目录
+cd /Users/zhanghonghao/Desktop/SimplePlanePlatform
+
+# 1.（强烈建议）先记录当前原始 DNS，作为人工对照基线
+networksetup -getdnsservers Wi-Fi
+
+# 2. 一键启动 TUN 模式（脚本已封装：启动 proxy-local → 启动 tun-adapter → 就绪检测）
+sudo -v          # 先缓存 sudo 凭证，避免后台进程卡在密码输入
 ./start-tun.sh
+
+# 3. 停止：在运行 start-tun.sh 的那个终端按 Ctrl+C
+#    脚本会自动关掉两个进程并恢复 DNS/路由
 ```
 
 脚本自动完成以下步骤：
@@ -369,6 +385,8 @@ route delete 198.18.0.0
 ```
 
 ## 使用方式三：Android 客户端
+
+> ⚠️ **暂未开放**：Android 客户端仍在内部调试中，当前阶段请勿使用，请使用上面的代理模式或 TUN 模式。以下内容仅作开发记录。
 
 Android 客户端把整套加密隧道带到手机端：基于系统 `VpnService` 建立 TUN，应用全部流量经虚拟网卡进入用户态栈，由 Rust 数据面（`plane-core`，编译为 `libplane_core.so`）完成 FakeDNS 解析、域名路由判断与 ChaCha20 加密，再通过 HTTP/2 隧道转发到 proxy-remote。与桌面端共用同一套 ProxyMessage 协议与 ChaCha20-Poly1305 加密格式，两端完全互通。
 
@@ -482,6 +500,8 @@ keyPassword=你的key密码
 推送后在 GitHub Actions 对应运行的 `android-build` job 的 Artifacts 中即可下载 APK。
 
 ## Web 管理面板（Dashboard）
+
+> ⚠️ **暂未开放**：Web 管理面板仍在内部调试中，当前阶段请勿使用，请直接通过上面的命令行方式启动代理模式或 TUN 模式。以下内容仅作开发记录。
 
 Dashboard 提供可视化界面来管理整个代理平台，包括一键启停服务、实时编辑配置、查看运行日志等。**零外部依赖，无需 npm install**。
 
