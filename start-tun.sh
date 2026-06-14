@@ -13,13 +13,13 @@ cd "$SCRIPT_DIR"
 
 # === 配置 ===
 # proxy-local 直连用的 DNS 服务器（必须和 tun.toml 中 dns_bypass_ips 一致）
-# 注：不要随意加 223.5.5.5 作兜底——该 IP 的 53 端口在本机网络下被阻断（UDP/TCP 均超时），
-# 会导致 Netty 解析卡在它上面超时、直连域名解析失败。114 在本机网络下稳定可达。
+# 顺序兜底：优先用稳定的 114，114 不可用时才轮到 223 。
 DNS_SERVERS="114.114.114.114"
+DNS_FALLBACK="223.5.5.5"
 
 # proxy-local 的 JVM DNS 参数
 # 使用 Netty 内置 DNS resolver（系统属性 proxy.dns.nameservers）
-JVM_DNS_OPTS="-Dproxy.dns.nameservers=${DNS_SERVERS}"
+JVM_DNS_OPTS="-Dproxy.dns.nameservers=${DNS_SERVERS},${DNS_FALLBACK}"
 
 # ============================================================
 
@@ -35,7 +35,7 @@ if [ -f "$DNS_BACKUP" ]; then
     echo ""
 fi
 
-echo "DNS bypass servers: ${DNS_SERVERS}"
+echo "DNS bypass servers: ${DNS_SERVERS}, ${DNS_FALLBACK}"
 echo ""
 
 # 清理函数：Ctrl+C 时同时杀掉两个子进程
