@@ -1,0 +1,783 @@
+15:05:53.899 [main] INFO  com.proxy.local.ProxyLocalServer - Config loaded from classpath: proxy.yml
+15:05:53.942 [main] INFO  com.proxy.local.handler.RouteRule - RouteRule initialized: default=proxy, proxyRules=39, directRules=51
+15:05:53.996 [main] INFO  com.proxy.local.ProxyLocalServer - SPI loaded - Cluster: failover, LoadBalance: roundrobin, Filters: 5
+15:05:54.322 [main] INFO  c.p.t.netty.conn.Http2Connection - HTTP/2 connection established to 54.234.196.30:9090
+15:05:54.324 [main] INFO  c.proxy.transport.netty.NettyClient - NettyClient connected to 54.234.196.30:9090 via HTTP/2
+15:05:54.324 [main] INFO  c.p.transport.netty.NettyTransporter - Created NettyClient to 54.234.196.30:9090
+15:05:54.326 [main] INFO  c.p.exchange.header.HeaderExchanger - HeaderExchanger created ExchangeClient to 54.234.196.30:9090
+15:05:54.331 [nioEventLoopGroup-4-1] INFO  c.p.t.netty.conn.Http2Connection - Increased connection-level window by 16711681 (total ~16MB)
+15:05:54.337 [main] INFO  c.p.exchange.header.ExchangeHandler - ExchangeHandler: streamRegistry injected (size=0)
+15:05:54.337 [main] INFO  com.proxy.local.ProxyLocalServer - Created invoker for 54.234.196.30:9090 (ssl=false, cipher=chacha20) (connection 1)
+15:05:54.337 [main] INFO  com.proxy.local.ProxyLocalServer - Invoker chain assembled: 1 invokers, cluster=failover, loadBalance=roundrobin
+15:05:54.343 [main] INFO  com.proxy.local.ProxyLocalServer - === Proxy Local Server started on port 1080 ===
+15:05:54.343 [main] INFO  com.proxy.local.ProxyLocalServer -   SOCKS5 proxy: localhost:1080
+15:05:54.343 [main] INFO  com.proxy.local.ProxyLocalServer -   HTTP  proxy:  localhost:1080
+15:05:54.343 [main] INFO  c.p.l.s.NoopSystemProxyManager - System proxy auto-configuration is disabled or not supported on this platform
+15:05:54.914 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: logan-rtl.dreport.meituan.net:443 from /127.0.0.1:62425
+15:05:54.915 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: logan-rtl.dreport.meituan.net:443
+15:05:54.916 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62424
+15:05:54.916 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62426
+15:05:54.916 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.916 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.916 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62428
+15:05:54.917 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.917 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62427
+15:05:54.917 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.917 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62431
+15:05:54.918 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.918 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: logan-rtl.dreport.meituan.net:443 from /127.0.0.1:62433
+15:05:54.918 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: logan-rtl.dreport.meituan.net:443
+15:05:54.919 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62430
+15:05:54.919 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62432
+15:05:54.920 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.920 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.920 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62429
+15:05:54.920 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.922 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62434
+15:05:54.922 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:54.933 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:54.940 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:54.949 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62444
+15:05:54.949 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:54.951 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.953 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.dianping.com:443 from /127.0.0.1:62445
+15:05:54.953 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:62446
+15:05:54.953 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.953 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: catfront.dianping.com:443
+15:05:54.953 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:05:54.954 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.954 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.954 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.954 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.954 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.954 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.954 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:54.955 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62447
+15:05:54.955 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:54.961 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:54.970 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62448
+15:05:54.970 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:54.989 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62450
+15:05:54.990 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:54.998 [nioEventLoopGroup-3-19] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62452
+15:05:54.998 [nioEventLoopGroup-3-19] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:54.999 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:62451
+15:05:54.999 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:05:55.000 [nioEventLoopGroup-3-20] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62453
+15:05:55.000 [nioEventLoopGroup-3-20] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:55.000 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:55.005 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62460
+15:05:55.005 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:55.010 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.010 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.011 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.011 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.014 [nioEventLoopGroup-3-19] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.018 [nioEventLoopGroup-3-20] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.022 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.022 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: catfront.dianping.com:443
+15:05:55.027 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mep.sankuai.com:443 from /127.0.0.1:62463
+15:05:55.027 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:62462
+15:05:55.027 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:05:55.027 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: mep.sankuai.com:443
+15:05:55.052 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: km.sankuai.com:443 from /127.0.0.1:62464
+15:05:55.052 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: km.sankuai.com:443
+15:05:55.054 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62466
+15:05:55.054 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:55.063 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:05:55.065 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:55.078 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: mep.sankuai.com:443
+15:05:55.082 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62471
+15:05:55.082 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:05:55.095 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:05:55.097 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62473
+15:05:55.097 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:55.113 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:55.125 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: km.sankuai.com:443
+15:05:55.204 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ssosv.sankuai.com:443 from /127.0.0.1:62477
+15:05:55.205 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: ssosv.sankuai.com:443
+15:05:55.206 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ssosv.sankuai.com:443 from /127.0.0.1:62478
+15:05:55.206 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: ssosv.sankuai.com:443
+15:05:55.211 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: ssosv.sankuai.com:443
+15:05:55.213 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: ssosv.sankuai.com:443
+15:05:55.228 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ssosv.sankuai.com:443 from /127.0.0.1:62483
+15:05:55.228 [nioEventLoopGroup-3-11] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ssosv.sankuai.com:443 from /127.0.0.1:62484
+15:05:55.228 [nioEventLoopGroup-3-11] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: ssosv.sankuai.com:443
+15:05:55.228 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: ssosv.sankuai.com:443
+15:05:55.229 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: ssosv.sankuai.com:443
+15:05:55.229 [nioEventLoopGroup-3-11] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: ssosv.sankuai.com:443
+15:05:55.270 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ssosv.sankuai.com:443 from /127.0.0.1:62489
+15:05:55.270 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: ssosv.sankuai.com:443
+15:05:55.271 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: ssosv.sankuai.com:443
+15:05:55.303 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ssosv.sankuai.com:443 from /127.0.0.1:62492
+15:05:55.303 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: ssosv.sankuai.com:443
+15:05:55.304 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: ssosv.sankuai.com:443
+15:05:55.318 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=4, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 9)
+15:05:55.323 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=4, type=CONNECT_RESPONSE, status=200
+15:05:55.323 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=323ms status=200
+15:05:55.325 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599292
+15:05:55.325 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=3, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 7)
+15:05:55.325 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=3, type=CONNECT_RESPONSE, status=200
+15:05:55.326 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=372ms status=200
+15:05:55.326 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599293
+15:05:55.339 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: logan-rtl.dreport.meituan.net:443 from /127.0.0.1:62495
+15:05:55.340 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: logan-rtl.dreport.meituan.net:443
+15:05:55.340 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:55.397 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=1, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 3)
+15:05:55.398 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=1, type=CONNECT_RESPONSE, status=200
+15:05:55.398 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] logan-rtl.dreport.meituan.net:443 elapsed=477ms status=200
+15:05:55.398 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: logan-rtl.dreport.meituan.net:443, streamId=-8040614184716599294
+15:05:55.398 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=2, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 5)
+15:05:55.398 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=2, type=CONNECT_RESPONSE, status=200
+15:05:55.398 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] logan-rtl.dreport.meituan.net:443 elapsed=477ms status=200
+15:05:55.398 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: logan-rtl.dreport.meituan.net:443, streamId=-8040614184716599295
+15:05:55.585 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=5, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 11)
+15:05:55.585 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=5, type=CONNECT_RESPONSE, status=200
+15:05:55.585 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] logan-rtl.dreport.meituan.net:443 elapsed=245ms status=200
+15:05:55.585 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: logan-rtl.dreport.meituan.net:443, streamId=-8040614184716599291
+15:05:56.904 [nioEventLoopGroup-3-15] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:62497
+15:05:56.904 [nioEventLoopGroup-3-15] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:05:56.904 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:56.910 [nioEventLoopGroup-3-16] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:62498
+15:05:56.910 [nioEventLoopGroup-3-16] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:05:56.911 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:56.911 [nioEventLoopGroup-3-17] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:62499
+15:05:56.911 [nioEventLoopGroup-3-17] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:05:56.912 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:56.914 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:62500
+15:05:56.914 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:05:56.914 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:05:57.153 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=6, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 13)
+15:05:57.154 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=6, type=CONNECT_RESPONSE, status=200
+15:05:57.154 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=250ms status=200
+15:05:57.154 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599290
+15:05:57.156 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=7, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 15)
+15:05:57.157 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=7, type=CONNECT_RESPONSE, status=200
+15:05:57.157 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=247ms status=200
+15:05:57.157 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599289
+15:05:57.158 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=8, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 17)
+15:05:57.158 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=8, type=CONNECT_RESPONSE, status=200
+15:05:57.158 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=246ms status=200
+15:05:57.158 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599288
+15:05:57.159 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=9, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 19)
+15:05:57.159 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=9, type=CONNECT_RESPONSE, status=200
+15:05:57.160 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=246ms status=200
+15:05:57.160 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599287
+15:05:58.954 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:62511
+15:05:58.954 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:05:58.968 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:05:59.048 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:62513
+15:05:59.049 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:05:59.062 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:05:59.199 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:62515
+15:05:59.200 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:05:59.212 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:05:59.274 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:62517
+15:05:59.274 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:05:59.289 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:05:59.312 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:62519
+15:05:59.312 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:05:59.326 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:05:59.838 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: mdm.sankuai.com:443 from /127.0.0.1:62523
+15:05:59.838 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: mdm.sankuai.com:443
+15:05:59.841 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: mdm.sankuai.com:443
+15:05:59.903 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: broadcast.chat.bilibili.com:7826 from /127.0.0.1:62526
+15:05:59.904 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): broadcast.chat.bilibili.com:7826
+15:05:59.910 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62527
+15:05:59.910 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:05:59.922 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:05:59.957 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: broadcast.chat.bilibili.com:7826
+15:05:59.960 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.51ping.com:443 from /127.0.0.1:62531
+15:05:59.960 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: catfront.51ping.com:443
+15:05:59.961 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:06:00.208 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=10, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 21)
+15:06:00.208 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=10, type=CONNECT_RESPONSE, status=244
+15:06:00.208 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catfront.51ping.com:443 elapsed=248ms status=500
+15:06:00.208 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for catfront.51ping.com:443: Remote error
+15:06:00.978 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: data.sankuai.com:443 from /127.0.0.1:62544
+15:06:00.978 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sec-edr-esf.d.meituan.net:443 from /127.0.0.1:62543
+15:06:00.978 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: data.sankuai.com:443
+15:06:00.978 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: sec-edr-esf.d.meituan.net:443
+15:06:00.978 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:06:00.979 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sec_edr_net.dreport.meituan.net:443 from /127.0.0.1:62545
+15:06:00.980 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: sec_edr_net.dreport.meituan.net:443
+15:06:00.980 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:06:00.992 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: data.sankuai.com:443
+15:06:01.370 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=12, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 25)
+15:06:01.371 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=12, type=CONNECT_RESPONSE, status=200
+15:06:01.371 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec_edr_net.dreport.meituan.net:443 elapsed=391ms status=200
+15:06:01.371 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: sec_edr_net.dreport.meituan.net:443, streamId=-8040614184716599284
+15:06:01.527 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=11, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 23)
+15:06:01.527 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=11, type=CONNECT_RESPONSE, status=200
+15:06:01.527 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec-edr-esf.d.meituan.net:443 elapsed=549ms status=200
+15:06:01.527 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: sec-edr-esf.d.meituan.net:443, streamId=-8040614184716599285
+15:06:02.911 [nioEventLoopGroup-3-11] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:62563
+15:06:02.912 [nioEventLoopGroup-3-11] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:06:02.915 [nioEventLoopGroup-3-11] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:06:04.906 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: pike-lb.dianping.com:443 from /127.0.0.1:62571
+15:06:04.906 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: pike-lb.dianping.com:443
+15:06:05.006 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: pike-lb.dianping.com:443
+15:06:05.123 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62576
+15:06:05.123 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:05.135 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:05.277 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catpaw-agent.sankuai.com:443 from /127.0.0.1:62583
+15:06:05.277 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: catpaw-agent.sankuai.com:443
+15:06:05.306 [nioEventLoopGroup-3-14] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: catpaw-agent.sankuai.com:443
+15:06:08.071 [nioEventLoopGroup-3-15] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: POST http://catfront.dianping.com/pbbatchts?v=1&sdk=1.13.0&pageId=owl-2636bc95-4bb5-d720-be5d-728a-1781264211494&p=com.sankuai.catpaw.desk.front HTTP/1.1
+15:06:09.928 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:62603
+15:06:09.928 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:06:09.946 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:06:10.382 [nioEventLoopGroup-3-17] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: POST http://catfront.dianping.com/pbbatchts?v=1&sdk=1.13.0&pageId=owl-2636bc95-4bb5-d720-be5d-728a-1781264211494&p=com.sankuai.catpaw.desk.front HTTP/1.1
+15:06:13.064 [nioEventLoopGroup-3-11] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:13.131 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62662
+15:06:13.131 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:13.145 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:13.162 [nioEventLoopGroup-3-3] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:13.174 [nioEventLoopGroup-3-5] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:13.196 [nioEventLoopGroup-3-5] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:13.220 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: pike-lb.dianping.com:443 from /127.0.0.1:62664
+15:06:13.220 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: pike-lb.dianping.com:443
+15:06:13.227 [nioEventLoopGroup-3-6] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:13.230 [nioEventLoopGroup-3-20] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62666
+15:06:13.230 [nioEventLoopGroup-3-20] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:13.242 [nioEventLoopGroup-3-20] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:13.256 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: pike-lb.dianping.com:443
+15:06:13.258 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: pike-lb.dianping.com:443 from /127.0.0.1:62668
+15:06:13.258 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: pike-lb.dianping.com:443
+15:06:13.262 [nioEventLoopGroup-3-4] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:13.268 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62670
+15:06:13.268 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:13.281 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:13.291 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: pike-lb.dianping.com:443
+15:06:13.304 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62674
+15:06:13.304 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:13.316 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:13.415 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62678
+15:06:13.415 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:13.427 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:13.802 [nioEventLoopGroup-3-8] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:13.823 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62683
+15:06:13.823 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:13.835 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:14.349 [nioEventLoopGroup-3-7] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:14.370 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62691
+15:06:14.370 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:14.385 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:14.919 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.51ping.com:443 from /127.0.0.1:62698
+15:06:14.919 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: catfront.51ping.com:443
+15:06:14.919 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:06:15.167 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=13, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 27)
+15:06:15.167 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=13, type=CONNECT_RESPONSE, status=244
+15:06:15.167 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catfront.51ping.com:443 elapsed=248ms status=500
+15:06:15.167 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for catfront.51ping.com:443: Remote error
+15:06:23.091 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:62749
+15:06:23.091 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:06:23.103 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:06:23.176 [nioEventLoopGroup-3-13] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:28.907 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62781
+15:06:28.907 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62782
+15:06:28.907 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62783
+15:06:28.907 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:28.907 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:28.907 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:28.923 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:28.923 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:28.922 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:29.910 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62789
+15:06:29.910 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:29.922 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:31.250 [nioEventLoopGroup-3-18] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:31.348 [nioEventLoopGroup-3-20] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:31.386 [nioEventLoopGroup-3-3] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:31.386 [nioEventLoopGroup-3-2] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:31.464 [nioEventLoopGroup-3-4] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:32.873 [nioEventLoopGroup-3-6] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:35.913 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:62807
+15:06:35.913 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:06:35.917 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:06:36.912 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62812
+15:06:36.912 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:36.912 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62813
+15:06:36.912 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:36.925 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:36.925 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:36.941 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62816
+15:06:36.941 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:36.957 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:38.998 [nioEventLoopGroup-3-17] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.youtube.com:443 from /127.0.0.1:62819
+15:06:38.998 [nioEventLoopGroup-3-17] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: www.youtube.com:443
+15:06:38.998 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:06:39.251 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=14, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 29)
+15:06:39.251 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=14, type=CONNECT_RESPONSE, status=200
+15:06:39.251 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] www.youtube.com:443 elapsed=253ms status=200
+15:06:39.251 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: www.youtube.com:443, streamId=-8040614184716599282
+15:06:44.960 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: api.vc.bilibili.com:443 from /127.0.0.1:62835
+15:06:44.960 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: i2.hdslb.com:443 from /127.0.0.1:62834
+15:06:44.964 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: api.vc.bilibili.com:443
+15:06:44.964 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: i2.hdslb.com:443
+15:06:45.003 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: i2.hdslb.com:443
+15:06:45.009 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: api.vc.bilibili.com:443
+15:06:45.058 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: i1.hdslb.com:443 from /127.0.0.1:62838
+15:06:45.058 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: i1.hdslb.com:443
+15:06:45.090 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: i1.hdslb.com:443
+15:06:45.374 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62843
+15:06:45.375 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:06:45.397 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:06:45.618 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62845
+15:06:45.618 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:06:45.630 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:06:45.782 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62847
+15:06:45.782 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:06:45.797 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:06:45.823 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dev.sankuai.com:443 from /127.0.0.1:62849
+15:06:45.823 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: dev.sankuai.com:443
+15:06:45.842 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62850
+15:06:45.842 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:06:45.852 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: dev.sankuai.com:443
+15:06:45.856 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62853
+15:06:45.856 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:06:45.858 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:06:45.869 [nioEventLoopGroup-3-6] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:06:46.007 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62856
+15:06:46.007 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:06:46.020 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:06:46.042 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dev.sankuai.com:443 from /127.0.0.1:62858
+15:06:46.042 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: dev.sankuai.com:443
+15:06:46.045 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: dev.sankuai.com:443
+15:06:47.028 [nioEventLoopGroup-3-11] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:47.131 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62862
+15:06:47.131 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:47.147 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:55.000 [nioEventLoopGroup-3-14] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:06:55.036 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62883
+15:06:55.036 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:06:55.050 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:06:59.905 [nioEventLoopGroup-3-16] ERROR com.proxy.local.handler.RelayHandler - Relay error for dreport.meituan.net:443
+java.io.IOException: Connection reset by peer
+	at sun.nio.ch.FileDispatcherImpl.read0(Native Method)
+	at sun.nio.ch.SocketDispatcher.read(SocketDispatcher.java:39)
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(IOUtil.java:223)
+	at sun.nio.ch.IOUtil.read(IOUtil.java:192)
+	at sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:379)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+15:06:59.910 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:62900
+15:06:59.910 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:06:59.924 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:07:00.148 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=15, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 15)
+15:07:00.148 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=15, type=CONNECT_RESPONSE, status=200
+15:07:00.148 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=243ms status=200
+15:07:02.902 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62919
+15:07:02.903 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:07:02.913 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:62921
+15:07:02.913 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:07:02.916 [nioEventLoopGroup-3-13] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:07:02.924 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:07:02.938 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:62926
+15:07:02.938 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:02.950 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:05.263 [nioEventLoopGroup-3-9] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:07:13.157 [nioEventLoopGroup-3-10] ERROR c.p.l.h.DirectRelayHandler$BackendHandler - Direct backend error: Operation timed out
+15:07:13.652 [nioEventLoopGroup-3-15] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: www.apple.com:443 from /127.0.0.1:62943
+15:07:13.652 [nioEventLoopGroup-3-15] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: www.apple.com:443
+15:07:13.660 [nioEventLoopGroup-3-16] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: captive.apple.com:443 from /127.0.0.1:62944
+15:07:13.660 [nioEventLoopGroup-3-16] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: captive.apple.com:443
+15:07:13.662 [nioEventLoopGroup-3-17] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: GET http://www.itools.info/library/test/success.html HTTP/1.1
+15:07:13.663 [nioEventLoopGroup-3-18] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: GET http://www.ibook.info/library/test/success.html HTTP/1.1
+15:07:13.663 [nioEventLoopGroup-3-19] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: GET http://www.airport.us/library/test/success.html HTTP/1.1
+15:07:13.664 [nioEventLoopGroup-3-20] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: GET http://www.appleiphonecell.com/library/test/success.html HTTP/1.1
+15:07:13.667 [nioEventLoopGroup-3-1] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: GET http://www.thinkdifferent.us/library/test/success.html HTTP/1.1
+15:07:13.722 [nioEventLoopGroup-3-15] WARN  i.n.util.concurrent.DefaultPromise - An exception was thrown by com.proxy.local.handler.HttpConnectHandler$$Lambda$62/205077266.operationComplete()
+java.util.NoSuchElementException: com.proxy.local.handler.HttpConnectHandler
+	at io.netty.channel.DefaultChannelPipeline.getContextOrDie(DefaultChannelPipeline.java:1082)
+	at io.netty.channel.DefaultChannelPipeline.remove(DefaultChannelPipeline.java:417)
+	at com.proxy.local.handler.HttpConnectHandler.lambda$decode$0(HttpConnectHandler.java:140)
+	at io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:590)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners0(DefaultPromise.java:583)
+	at io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:559)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:492)
+	at io.netty.util.concurrent.DefaultPromise.setValue0(DefaultPromise.java:636)
+	at io.netty.util.concurrent.DefaultPromise.setSuccess0(DefaultPromise.java:625)
+	at io.netty.util.concurrent.DefaultPromise.trySuccess(DefaultPromise.java:105)
+	at io.netty.channel.DefaultChannelPromise.trySuccess(DefaultChannelPromise.java:84)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.fulfillConnectPromise(AbstractNioChannel.java:305)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:340)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+15:07:13.744 [nioEventLoopGroup-3-16] WARN  i.n.util.concurrent.DefaultPromise - An exception was thrown by com.proxy.local.handler.HttpConnectHandler$$Lambda$62/205077266.operationComplete()
+java.util.NoSuchElementException: com.proxy.local.handler.HttpConnectHandler
+	at io.netty.channel.DefaultChannelPipeline.getContextOrDie(DefaultChannelPipeline.java:1082)
+	at io.netty.channel.DefaultChannelPipeline.remove(DefaultChannelPipeline.java:417)
+	at com.proxy.local.handler.HttpConnectHandler.lambda$decode$0(HttpConnectHandler.java:140)
+	at io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:590)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners0(DefaultPromise.java:583)
+	at io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:559)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:492)
+	at io.netty.util.concurrent.DefaultPromise.setValue0(DefaultPromise.java:636)
+	at io.netty.util.concurrent.DefaultPromise.setSuccess0(DefaultPromise.java:625)
+	at io.netty.util.concurrent.DefaultPromise.trySuccess(DefaultPromise.java:105)
+	at io.netty.channel.DefaultChannelPromise.trySuccess(DefaultChannelPromise.java:84)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.fulfillConnectPromise(AbstractNioChannel.java:305)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:340)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+15:07:18.911 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: pike-xuecheng.sankuai.com:443 from /127.0.0.1:62965
+15:07:18.912 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): pike-xuecheng.sankuai.com:443
+15:07:18.924 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: pike-xuecheng.sankuai.com:443
+15:07:18.982 [nioEventLoopGroup-3-2] ERROR com.proxy.local.handler.RelayHandler - Relay error for logan-rtl.dreport.meituan.net:443
+java.io.IOException: Connection reset by peer
+	at sun.nio.ch.FileDispatcherImpl.read0(Native Method)
+	at sun.nio.ch.SocketDispatcher.read(SocketDispatcher.java:39)
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(IOUtil.java:223)
+	at sun.nio.ch.IOUtil.read(IOUtil.java:192)
+	at sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:379)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+15:07:19.224 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=16, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 5)
+15:07:19.225 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=16, type=CONNECT_RESPONSE, status=200
+15:07:19.225 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] logan-rtl.dreport.meituan.net:443 elapsed=243ms status=200
+15:07:22.678 [nioEventLoopGroup-3-3] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: POST http://catfront.dianping.com/pbbatchts?v=1&sdk=1.13.0&pageId=owl-2636bc95-4bb5-d720-be5d-728a-1781264211494&p=com.sankuai.catpaw.desk.front HTTP/1.1
+15:07:22.914 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63001
+15:07:22.914 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:07:22.926 [nioEventLoopGroup-3-4] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:07:34.863 [nioEventLoopGroup-3-5] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: clientservices.googleapis.com:443 from /127.0.0.1:63011
+15:07:34.863 [nioEventLoopGroup-3-5] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: clientservices.googleapis.com:443
+15:07:34.864 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:07:35.113 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=17, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 31)
+15:07:35.113 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=17, type=CONNECT_RESPONSE, status=200
+15:07:35.113 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] clientservices.googleapis.com:443 elapsed=249ms status=200
+15:07:35.113 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: clientservices.googleapis.com:443, streamId=-8040614184716599281
+15:07:35.918 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:63014
+15:07:35.918 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:07:35.933 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:07:35.968 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:63016
+15:07:35.969 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:07:35.982 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:07:40.162 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: update-assets.sankuai.com:443 from /127.0.0.1:63041
+15:07:40.163 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: update-assets.sankuai.com:443
+15:07:40.219 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: update-assets.sankuai.com:443
+15:07:43.474 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sec_edr_collector.dreport.meituan.net:443 from /127.0.0.1:63051
+15:07:43.474 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: sec_edr_collector.dreport.meituan.net:443
+15:07:43.475 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:07:43.787 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=18, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 33)
+15:07:43.787 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=18, type=CONNECT_RESPONSE, status=200
+15:07:43.787 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec_edr_collector.dreport.meituan.net:443 elapsed=312ms status=200
+15:07:43.787 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: sec_edr_collector.dreport.meituan.net:443, streamId=-8040614184716599280
+15:07:45.271 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63056
+15:07:45.272 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:45.303 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:45.471 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63059
+15:07:45.471 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:45.481 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:45.710 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63062
+15:07:45.710 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:45.721 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:45.757 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63064
+15:07:45.758 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:45.772 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:46.000 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63066
+15:07:46.000 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:46.011 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:46.079 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63068
+15:07:46.079 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:46.091 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:46.103 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63070
+15:07:46.103 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:46.116 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:46.233 [nioEventLoopGroup-3-17] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:63072
+15:07:46.233 [nioEventLoopGroup-3-17] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:07:46.234 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:07:46.475 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=19, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 19)
+15:07:46.475 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=19, type=CONNECT_RESPONSE, status=200
+15:07:46.475 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=242ms status=200
+15:07:46.568 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=20, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 35)
+15:07:46.568 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=20, type=CONNECT_RESPONSE, status=200
+15:07:46.568 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=334ms status=200
+15:07:46.568 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599279
+15:07:50.745 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63083
+15:07:50.746 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:07:50.825 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:07:57.032 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: cryptbox.sankuai.com:443 from /127.0.0.1:63107
+15:07:57.032 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: cryptbox.sankuai.com:443
+15:07:57.077 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: cryptbox.sankuai.com:443
+15:08:00.961 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sec_edr_log.dreport.meituan.net:443 from /127.0.0.1:63114
+15:08:00.962 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: sec_edr_log.dreport.meituan.net:443
+15:08:00.962 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:01.308 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=21, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 37)
+15:08:01.308 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=21, type=CONNECT_RESPONSE, status=200
+15:08:01.308 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec_edr_log.dreport.meituan.net:443 elapsed=346ms status=200
+15:08:01.308 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: sec_edr_log.dreport.meituan.net:443, streamId=-8040614184716599278
+15:08:02.922 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:63127
+15:08:02.922 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:08:02.932 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:08:06.734 [nioEventLoopGroup-3-10] ERROR com.proxy.local.handler.RelayHandler - Relay error for logan-rtl.dreport.meituan.net:443
+java.io.IOException: Connection reset by peer
+	at sun.nio.ch.FileDispatcherImpl.read0(Native Method)
+	at sun.nio.ch.SocketDispatcher.read(SocketDispatcher.java:39)
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(IOUtil.java:223)
+	at sun.nio.ch.IOUtil.read(IOUtil.java:192)
+	at sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:379)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+15:08:06.978 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=22, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 3)
+15:08:06.978 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=22, type=CONNECT_RESPONSE, status=200
+15:08:06.978 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] logan-rtl.dreport.meituan.net:443 elapsed=243ms status=200
+15:08:08.491 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63147
+15:08:08.491 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:08:08.517 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:08:12.045 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: safebrowsing.googleapis.com:443 from /127.0.0.1:63158
+15:08:12.045 [nioEventLoopGroup-3-3] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: safebrowsing.googleapis.com:443
+15:08:12.046 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:12.294 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=23, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 39)
+15:08:12.295 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=23, type=CONNECT_RESPONSE, status=200
+15:08:12.295 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] safebrowsing.googleapis.com:443 elapsed=249ms status=200
+15:08:12.295 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: safebrowsing.googleapis.com:443, streamId=-8040614184716599277
+15:08:14.117 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sec_edr_collector.dreport.meituan.net:443 from /127.0.0.1:63161
+15:08:14.118 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: sec_edr_collector.dreport.meituan.net:443
+15:08:14.118 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:14.357 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=24, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 33)
+15:08:14.357 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=24, type=CONNECT_RESPONSE, status=200
+15:08:14.357 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec_edr_collector.dreport.meituan.net:443 elapsed=241ms status=200
+15:08:14.363 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=25, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 41)
+15:08:14.363 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=25, type=CONNECT_RESPONSE, status=200
+15:08:14.363 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec_edr_collector.dreport.meituan.net:443 elapsed=245ms status=200
+15:08:14.363 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: sec_edr_collector.dreport.meituan.net:443, streamId=-8040614184716599276
+15:08:33.970 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63216
+15:08:33.971 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:08:33.982 [nioEventLoopGroup-3-5] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:08:34.971 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.51ping.com:443 from /127.0.0.1:63220
+15:08:34.971 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: catfront.51ping.com:443
+15:08:34.971 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:35.915 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:63221
+15:08:35.915 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:08:35.923 [nioEventLoopGroup-3-7] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:08:35.935 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63224
+15:08:35.935 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:08:35.950 [nioEventLoopGroup-3-8] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:08:35.953 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=26, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 43)
+15:08:35.953 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=26, type=CONNECT_RESPONSE, status=244
+15:08:35.953 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catfront.51ping.com:443 elapsed=982ms status=500
+15:08:35.953 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for catfront.51ping.com:443: Remote error
+15:08:36.004 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:63226
+15:08:36.004 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:08:36.027 [nioEventLoopGroup-3-9] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:08:40.027 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=27, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 37)
+15:08:40.028 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=27, type=CONNECT_RESPONSE, status=200
+15:08:40.028 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec_edr_log.dreport.meituan.net:443 elapsed=241ms status=200
+15:08:43.077 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: ocsp2.apple.com:443 from /127.0.0.1:63256
+15:08:43.078 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: ocsp2.apple.com:443
+15:08:43.123 [nioEventLoopGroup-3-10] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: ocsp2.apple.com:443
+15:08:43.409 [nioEventLoopGroup-3-11] WARN  c.p.local.handler.HttpConnectHandler - Non-CONNECT HTTP request not supported: POST http://catfront.dianping.com/pbbatchts?v=1&sdk=1.13.0&pageId=owl-2636bc95-4bb5-d720-be5d-728a-1781264211494&p=com.sankuai.catpaw.desk.front HTTP/1.1
+15:08:44.927 [nioEventLoopGroup-3-14] ERROR com.proxy.local.handler.RelayHandler - Relay error for logan-rtl.dreport.meituan.net:443
+java.io.IOException: Connection reset by peer
+	at sun.nio.ch.FileDispatcherImpl.read0(Native Method)
+	at sun.nio.ch.SocketDispatcher.read(SocketDispatcher.java:39)
+	at sun.nio.ch.IOUtil.readIntoNativeBuffer(IOUtil.java:223)
+	at sun.nio.ch.IOUtil.read(IOUtil.java:192)
+	at sun.nio.ch.SocketChannelImpl.read(SocketChannelImpl.java:379)
+	at io.netty.buffer.PooledByteBuf.setBytes(PooledByteBuf.java:255)
+	at io.netty.buffer.AbstractByteBuf.writeBytes(AbstractByteBuf.java:1132)
+	at io.netty.channel.socket.nio.NioSocketChannel.doReadBytes(NioSocketChannel.java:357)
+	at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:151)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.lang.Thread.run(Thread.java:750)
+15:08:44.928 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: api.vc.bilibili.com:443 from /127.0.0.1:63262
+15:08:44.928 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: api.vc.bilibili.com:443
+15:08:44.970 [nioEventLoopGroup-3-12] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: api.vc.bilibili.com:443
+15:08:45.036 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63264
+15:08:45.037 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.062 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:45.071 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63266
+15:08:45.071 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.071 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63267
+15:08:45.071 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.084 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:45.084 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:45.140 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63270
+15:08:45.141 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:08:45.162 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:08:45.180 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=28, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 11)
+15:08:45.180 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=28, type=CONNECT_RESPONSE, status=200
+15:08:45.181 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] logan-rtl.dreport.meituan.net:443 elapsed=253ms status=200
+15:08:45.195 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63272
+15:08:45.196 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.206 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:45.220 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:63274
+15:08:45.221 [nioEventLoopGroup-3-18] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:08:45.221 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:45.274 [nioEventLoopGroup-3-19] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63275
+15:08:45.274 [nioEventLoopGroup-3-19] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.275 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: dreport.meituan.net:443 from /127.0.0.1:63276
+15:08:45.275 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: dreport.meituan.net:443
+15:08:45.275 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:45.285 [nioEventLoopGroup-3-19] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:45.425 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63278
+15:08:45.426 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.429 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63279
+15:08:45.429 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.437 [nioEventLoopGroup-3-1] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:45.441 [nioEventLoopGroup-3-2] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:45.461 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=29, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 35)
+15:08:45.461 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=29, type=CONNECT_RESPONSE, status=200
+15:08:45.461 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=242ms status=200
+15:08:45.466 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=30, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 45)
+15:08:45.466 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=30, type=CONNECT_RESPONSE, status=200
+15:08:45.467 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=246ms status=200
+15:08:45.467 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599274
+15:08:45.520 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=31, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 47)
+15:08:45.521 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=31, type=CONNECT_RESPONSE, status=200
+15:08:45.521 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] dreport.meituan.net:443 elapsed=246ms status=200
+15:08:45.521 [nioEventLoopGroup-4-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP tunnel established: dreport.meituan.net:443, streamId=-8040614184716599273
+15:08:45.640 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63283
+15:08:45.641 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:08:45.656 [nioEventLoopGroup-3-3] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:08:46.909 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.51ping.com:443 from /127.0.0.1:63286
+15:08:46.910 [nioEventLoopGroup-3-4] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: catfront.51ping.com:443
+15:08:46.910 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:47.164 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=32, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 49)
+15:08:47.164 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=32, type=CONNECT_RESPONSE, status=244
+15:08:47.165 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catfront.51ping.com:443 elapsed=255ms status=500
+15:08:47.165 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for catfront.51ping.com:443: Remote error
+15:08:47.911 [nioEventLoopGroup-3-5] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.51ping.com:443 from /127.0.0.1:63288
+15:08:47.911 [nioEventLoopGroup-3-5] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: catfront.51ping.com:443
+15:08:47.911 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:08:48.155 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=33, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 51)
+15:08:48.156 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=33, type=CONNECT_RESPONSE, status=244
+15:08:48.156 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catfront.51ping.com:443 elapsed=245ms status=500
+15:08:48.156 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for catfront.51ping.com:443: Remote error
+15:09:02.908 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:63351
+15:09:02.909 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:09:02.911 [nioEventLoopGroup-3-6] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:09:10.528 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=34, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 41)
+15:09:10.528 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=34, type=CONNECT_RESPONSE, status=200
+15:09:10.528 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] sec_edr_collector.dreport.meituan.net:443 elapsed=241ms status=200
+15:09:29.908 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63418
+15:09:29.909 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:09:29.923 [nioEventLoopGroup-3-7] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:09:35.907 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:63427
+15:09:35.907 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:09:35.922 [nioEventLoopGroup-3-8] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:09:38.910 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63430
+15:09:38.911 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:09:38.923 [nioEventLoopGroup-3-9] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:09:45.005 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63441
+15:09:45.006 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.033 [nioEventLoopGroup-3-10] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:45.063 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wmdxlwss.meituan.com:443 from /127.0.0.1:63443
+15:09:45.064 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wmdxlwss.meituan.com:443
+15:09:45.067 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63445
+15:09:45.067 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.075 [nioEventLoopGroup-3-11] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wmdxlwss.meituan.com:443
+15:09:45.079 [nioEventLoopGroup-3-12] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:45.107 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63447
+15:09:45.107 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.121 [nioEventLoopGroup-3-13] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:45.151 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63449
+15:09:45.151 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.165 [nioEventLoopGroup-3-14] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:45.171 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63451
+15:09:45.171 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.184 [nioEventLoopGroup-3-15] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:45.204 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63453
+15:09:45.204 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.211 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63455
+15:09:45.211 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.217 [nioEventLoopGroup-3-16] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:45.224 [nioEventLoopGroup-3-17] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:45.414 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: wss.neixin.cn:443 from /127.0.0.1:63458
+15:09:45.414 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - Route DIRECT (SOCKS5): wss.neixin.cn:443
+15:09:45.427 [nioEventLoopGroup-3-18] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 direct tunnel established: wss.neixin.cn:443
+15:09:47.904 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.51ping.com:443 from /127.0.0.1:63462
+15:09:47.904 [nioEventLoopGroup-3-19] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: catfront.51ping.com:443
+15:09:47.905 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:09:48.152 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=35, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 53)
+15:09:48.152 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=35, type=CONNECT_RESPONSE, status=244
+15:09:48.152 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catfront.51ping.com:443 elapsed=248ms status=500
+15:09:48.152 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for catfront.51ping.com:443: Remote error
+15:09:48.156 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: catfront.51ping.com:443 from /127.0.0.1:63464
+15:09:48.156 [nioEventLoopGroup-3-20] INFO  c.p.local.handler.HttpConnectHandler - Route PROXY: catfront.51ping.com:443
+15:09:48.157 [nioEventLoopGroup-4-1] INFO  com.proxy.crypto.ChaCha20Cipher - ChaCha20-Poly1305 cipher initialized
+15:09:48.507 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - channelRead0: type=CONNECT_RESPONSE, requestId=36, streamId=0, invoker=CLIENT, channel=[id: 0xcc980e8f, L:/192.168.0.122:62423 - R:/54.234.196.30:9090](H2 - 55)
+15:09:48.507 [nioEventLoopGroup-4-1] INFO  c.p.exchange.header.ExchangeHandler - CLIENT received response: requestId=36, type=CONNECT_RESPONSE, status=244
+15:09:48.508 [nioEventLoopGroup-4-1] INFO  ACCESS_LOG - [OK] catfront.51ping.com:443 elapsed=352ms status=500
+15:09:48.508 [nioEventLoopGroup-4-1] WARN  c.p.local.handler.HttpConnectHandler - HTTP CONNECT rejected for catfront.51ping.com:443: Remote error
+15:10:02.914 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: sthree-itsec.meituan.com:443 from /127.0.0.1:63487
+15:10:02.914 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: sthree-itsec.meituan.com:443
+15:10:02.916 [nioEventLoopGroup-3-1] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: sthree-itsec.meituan.com:443
+15:10:18.907 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP CONNECT request: agentserver-itsec.meituan.com:443 from /127.0.0.1:63510
+15:10:18.907 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - Route DIRECT: agentserver-itsec.meituan.com:443
+15:10:18.933 [nioEventLoopGroup-3-2] INFO  c.p.local.handler.HttpConnectHandler - HTTP direct tunnel established: agentserver-itsec.meituan.com:443
+15:10:34.123 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Shutting down Proxy Local Server...
+15:10:34.130 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - Shutting down DefaultFuture, pending futures: 11
+15:10:34.131 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] safebrowsing.googleapis.com:443 elapsed=4ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.131 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.131 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] sec-edr-esf.d.meituan.net:443 elapsed=3ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.131 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.131 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] clientservices.googleapis.com:443 elapsed=3ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.131 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.131 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] dreport.meituan.net:443 elapsed=3ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] dreport.meituan.net:443 elapsed=3ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] sec_edr_net.dreport.meituan.net:443 elapsed=3ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] dreport.meituan.net:443 elapsed=3ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] dreport.meituan.net:443 elapsed=3ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] www.youtube.com:443 elapsed=2ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] dreport.meituan.net:443 elapsed=2ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.132 [shutdown-hook] INFO  ACCESS_LOG - [FAIL] dreport.meituan.net:443 elapsed=2ms error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.133 [shutdown-hook] WARN  c.p.cluster.FailoverClusterInvoker - Invoker failed, switching to next. attempt=1/3, error=java.lang.IllegalStateException: DefaultFuture shut down, all pending requests cancelled
+15:10:34.133 [shutdown-hook] INFO  c.p.exchange.header.DefaultFuture - DefaultFuture shut down complete, timer stopped
+15:10:34.133 [shutdown-hook] INFO  com.proxy.local.ProxyLocalServer - Proxy Local Server stopped.

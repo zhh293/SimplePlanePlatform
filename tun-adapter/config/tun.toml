@@ -102,7 +102,10 @@ proxy_remote_ips = ["your-remote-server-ip"]
 extra_cidrs = ["10.0.0.0/8", "11.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
 # DNS bypass：这些 DNS 服务器的流量不走 TUN（供 proxy-local 直连做真实 DNS 解析）
 # 注意：内网 DNS (11.11.11.11/12) 已通过 extra_cidrs 中的 11.0.0.0/8 覆盖
-dns_bypass_ips = ["114.114.114.114", "223.5.5.5"]
+# 注意：必须和 start-tun.sh 的 DNS_SERVERS 保持一致。
+#       已移除 223.5.5.5——该 IP 的 53 端口在本机网络下被阻断（UDP/TCP 均超时），
+#       作为兜底会导致 proxy-local 直连域名解析卡死超时。114 在本机网络下稳定可达。
+dns_bypass_ips = ["114.114.114.114"]
 
 [intranet_dns]
 # 内网 DNS 服务器（用于解析内网域名，流量走 bypass 不经过 TUN）

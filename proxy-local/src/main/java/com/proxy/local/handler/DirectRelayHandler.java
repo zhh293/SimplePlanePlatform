@@ -15,11 +15,13 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.resolver.dns.SingletonDnsServerAddressStreamProvider;
+import io.netty.resolver.dns.SequentialDnsServerAddressStreamProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -67,19 +69,33 @@ public class DirectRelayHandler extends ChannelInboundHandlerAdapter {
      * 根据系统属性 proxy.dns.nameservers 初始化 Netty DNS resolver。
      * 格式：逗号分隔的 IP 列表，如 "114.114.114.114,223.5.5.5"。
      * 未设置时返回 null，表示使用系统默认 DNS。
+     * <p>
+     * 配置的所有 DNS 服务器都会生效：使用
+     * {@link SequentialDnsServerAddressStreamProvider} 按配置顺序逐个尝试，
+     * 当前一个 DNS 解析失败时自动 fallback 到下一个，实现多 DNS 兜底。
+     * </p>
      */
     private static AddressResolverGroup<?> initResolver() {
         String dnsServers = System.getProperty("proxy.dns.nameservers");
         if (dnsServers == null || dnsServers.trim().isEmpty()) {
             return null;
         }
-        String firstDns = dnsServers.split(",")[0].trim();
-        log.info("DirectRelay using custom DNS resolver: {}", firstDns);
-        InetSocketAddress dnsAddr = new InetSocketAddress(firstDns, 53);
+        List<InetSocketAddress> dnsAddrs = new ArrayList<>();
+        for (String s : dnsServers.split(",")) {
+            String ip = s.trim();
+            if (!ip.isEmpty()) {
+                dnsAddrs.add(new InetSocketAddress(ip, 53));
+            }
+        }
+        if (dnsAddrs.isEmpty()) {
+            return null;
+        }
+        log.info("DirectRelay using custom DNS resolvers (sequential fallback): {}", dnsAddrs);
         return new DnsAddressResolverGroup(
                 new DnsNameResolverBuilder()
                         .channelType(io.netty.channel.socket.nio.NioDatagramChannel.class)
-                        .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsAddr)));
+                        .nameServerProvider(new SequentialDnsServerAddressStreamProvider(
+                                dnsAddrs.toArray(new InetSocketAddress[0]))));
     }
 
     /**
