@@ -85,9 +85,14 @@ else
 fi
 
 # Step 2: 恢复 DNS
+# 说明：macOS 只接受 "Empty" 来把 DNS 重置为「自动获取」。
+#       "DHCP" 不是合法参数（旧版本误写入备份文件，会导致
+#       "DHCP is not a valid IP address" 报错），这里向后兼容地
+#       把 "Empty" / "DHCP" / 空 都视为「恢复成自动获取」。
 echo "[2/3] Restoring DNS..."
-if [ ${#DNS_SERVERS[@]} -eq 1 ] && [ "${DNS_SERVERS[0]}" == "Empty" ]; then
-    echo "  Setting DNS to DHCP (Empty)..."
+if [ ${#DNS_SERVERS[@]} -eq 0 ] || \
+   { [ ${#DNS_SERVERS[@]} -eq 1 ] && { [ "${DNS_SERVERS[0]}" == "Empty" ] || [ "${DNS_SERVERS[0]}" == "DHCP" ]; }; }; then
+    echo "  Setting DNS to automatic (Empty)..."
     networksetup -setdnsservers "$SERVICE_NAME" Empty
 else
     echo "  Setting DNS to: ${DNS_SERVERS[*]}"

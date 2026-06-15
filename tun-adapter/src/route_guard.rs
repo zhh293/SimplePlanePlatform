@@ -402,8 +402,12 @@ impl RouteGuard {
     /// 将原始 DNS 设置持久化到文件（供异常退出后恢复）
     fn persist_dns_backup(service_name: &str, servers: &[String]) {
         let mut content = format!("service:{}\n", service_name);
+        // 当原始 DNS 为「自动获取」时，统一写入规范标记 "Empty"。
+        // 注意：macOS `networksetup -setdnsservers <svc> Empty` 中的 "Empty" 才是合法值，
+        // "DHCP" 并不是合法参数（会报 "DHCP is not a valid IP address"），
+        // 因此这里必须写 "Empty"，与 restore-dns.sh 的解析约定保持一致。
         if servers.is_empty() || (servers.len() == 1 && (servers[0] == "Empty" || servers[0] == "DHCP")) {
-            content.push_str("dns:DHCP\n");
+            content.push_str("dns:Empty\n");
         } else {
             for s in servers {
                 content.push_str(&format!("dns:{}\n", s));

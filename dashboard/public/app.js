@@ -31,11 +31,81 @@ const App = (function () {
     bindActions();
     bindGlobalKeys();
     await loadPlatformInfo();
+    await checkSetup();
     await loadConfigs();
     await loadStatus();
     await loadTunConfig();
     connectSSE();
     startUptimeTimer();
+  }
+
+  // ---- One-time setup onboarding ----
+  // On macOS, TUN / system-proxy / DNS-restore all need a one-time passwordless
+  // sudoers rule. If it isn't configured yet, surface a prominent modal up front
+  // (with the exact command + copy button) instead of letting buttons fail later.
+  async function checkSetup() {
+    try {
+      const s = await api('/setup-status');
+      if (s && s.ok && s.needsSetup) {
+        showSetupModal(s);
+      }
+    } catch {}
+  }
+
+  function showSetupModal(s) {
+    if (document.getElementById('setupModal')) return; // already shown
+    const cmd = `cd ${dirOf(s.setupScript)} && ./setup-tun-permissions.sh`;
+    const overlay = document.createElement('div');
+    overlay.id = 'setupModal';
+    overlay.className = 'setup-modal-overlay';
+    overlay.innerHTML = `
+      <div class="setup-modal" role="dialog" aria-modal="true">
+        <div class="setup-modal-icon">🔐</div>
+        <h2>首次使用：需要一次性授权</h2>
+        <p>TUN 模式、系统代理开关、以及「恢复网络」都需要管理员权限。
+        请在<strong>终端</strong>中运行下面这条命令完成<strong>一次性</strong>免密授权（只需运行一次，之后无需再输密码）：</p>
+        <div class="setup-cmd-box">
+          <code id="setupCmd">${esc(cmd)}</code>
+          <button class="btn btn-sm btn-primary" id="setupCopyBtn">复制命令</button>
+        </div>
+        <p class="setup-modal-note">
+          这条命令会写入一条 sudoers 免密规则（<code>${esc(s.sudoersFile)}</code>），
+          授权 Dashboard 免密执行：启动/停止 tun-adapter、开关系统代理、还原 DNS。<br>
+          如需撤销：<code>sudo rm ${esc(s.sudoersFile)}</code>
+        </p>
+        <div class="setup-modal-actions">
+          <button class="btn btn-ghost" id="setupRecheckBtn">我已运行，重新检测</button>
+          <button class="btn btn-ghost" id="setupLaterBtn">稍后再说</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    $('#setupCopyBtn', overlay).addEventListener('click', () => {
+      copyText(cmd);
+      $('#setupCopyBtn', overlay).textContent = '已复制 ✓';
+      setTimeout(() => { const b = $('#setupCopyBtn', overlay); if (b) b.textContent = '复制命令'; }, 1500);
+    });
+    $('#setupRecheckBtn', overlay).addEventListener('click', async () => {
+      const s2 = await api('/setup-status');
+      if (s2 && s2.ok && !s2.needsSetup) {
+        overlay.remove();
+        toast('授权已配置完成 ✓', 'success');
+      } else {
+        toast('仍未检测到授权，请确认命令已在终端成功执行', 'warning');
+      }
+    });
+    $('#setupLaterBtn', overlay).addEventListener('click', () => overlay.remove());
+  }
+
+  function dirOf(p) { return String(p || '').replace(/\/[^/]*$/, ''); }
+  function copyText(t) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t); return; }
+    } catch {}
+    const ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch {}
+    ta.remove();
   }
 
   // ---- Platform ----
@@ -222,15 +292,49 @@ const App = (function () {
       toast('tun-adapter 启动失败: ' + (r2.error || ''), 'error');
       await loadStatus(); return;
     }
-    // If auth dialog was triggered, inform the user and wait longer
+    // r2.ok only means "launch was initiated" — the tun-adapter binary may still
+    // crash immediately (e.g. failed to create its log file, missing privileges).
+    // So we must verify the REAL state by polling /api/status, not blindly claim success.
     if (r2.message && r2.message.includes('Authorization dialog')) {
       toast('系统授权对话框已弹出，请输入密码以启动 TUN', 'info');
-      await new Promise(r => setTimeout(r, 8000));
-    } else {
-      await new Promise(r => setTimeout(r, 3000));
     }
+    toast('正在确认 TUN 是否真正启动...', 'info');
+    const running = await waitForServiceRunning('tun-adapter', 12000);
     await loadStatus();
-    toast('TUN 模式已激活', 'success');
+    if (running) {
+      toast('TUN 模式已激活', 'success');
+    } else {
+      const reason = await fetchServiceFailReason('tun-adapter');
+      toast('TUN 启动失败：tun-adapter 未能运行。' + (reason ? '原因: ' + reason : '请查看运行日志。'), 'error');
+    }
+  }
+
+  // Poll /api/status until the given service reports a running state, or timeout.
+  async function waitForServiceRunning(name, timeoutMs) {
+    const deadline = Date.now() + (timeoutMs || 10000);
+    while (Date.now() < deadline) {
+      try {
+        const res = await api('/status');
+        const st = res && res.ok && res.services[name] && res.services[name].status;
+        if (st && st.includes('running')) return true;
+      } catch {}
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    return false;
+  }
+
+  // Pull the most relevant error line from a service's recent logs, so failures
+  // surface the real cause (e.g. a Rust panic) instead of a vague message.
+  async function fetchServiceFailReason(name) {
+    try {
+      const res = await api(`/logs?service=${name}`);
+      if (!res || !res.ok || !Array.isArray(res.logs)) return '';
+      const lines = res.logs.map(e => e.text).filter(Boolean);
+      // Prefer panic / permission / error lines, newest first.
+      const key = lines.reverse().find(t => /panic|permission denied|os \{ code|error|failed|sudo/i.test(t));
+      const pick = key || lines[0] || '';
+      return pick.replace(/\s+/g, ' ').trim().slice(0, 200);
+    } catch { return ''; }
   }
 
   async function quickStopAll() {
@@ -241,6 +345,21 @@ const App = (function () {
     await new Promise(r => setTimeout(r, 2000));
     await loadStatus();
     toast('所有服务已停止', 'success');
+  }
+
+  // Emergency recovery: force-restore DNS/routes and turn the system proxy off.
+  // For use when something was force-killed / the dashboard exited abnormally
+  // and the machine is left without working network.
+  async function resetNetwork() {
+    if (!confirm('恢复网络？将强制还原 DNS/路由并关闭系统代理，用于异常退出后无法上网的情况。')) return;
+    toast('正在恢复网络...', 'info');
+    const res = await api('/reset-network', 'POST', {});
+    if (res.ok) {
+      await loadStatus();
+      toast('网络已恢复' + (res.steps ? '：' + res.steps.join('；') : ''), 'success');
+    } else {
+      toast('恢复失败: ' + (res.error || ''), 'error');
+    }
   }
 
   async function toggleSystemProxy(enabled) {
@@ -494,7 +613,7 @@ const App = (function () {
   // Public API (for inline onclick handlers)
   return {
     startService, stopService, restartService, buildService,
-    quickStartProxy, quickStartTun, quickStopAll, toggleSystemProxy,
+    quickStartProxy, quickStartTun, quickStopAll, resetNetwork, toggleSystemProxy,
     loadTunConfig, saveTunConfig, switchLogService, clearLogs,
   };
 })();

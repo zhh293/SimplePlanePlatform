@@ -187,6 +187,7 @@ function switchSection(name) {
 |------|------|------|------|
 | GET | `/api/system-proxy` | — | 返回 `{ enabled }` |
 | POST | `/api/system-proxy` | `{ enabled }` | 开/关系统代理（macOS networksetup / Windows 注册表） |
+| POST | `/api/reset-network` | `{}` | 急救：强制还原 DNS/路由 + 关系统代理，返回 `{ ok, steps }` |
 
 ### 6.4 配置读写
 
@@ -242,7 +243,7 @@ function switchSection(name) {
 | `quickStartTun()` | 启动 proxy-local → 等 3s → 启动 tun-adapter（若弹授权对话框则等 8s） |
 | `quickStopAll()` | 关系统代理 → 停 tun-adapter → 停 proxy-local |
 
-> 已知问题（待 Block 1/2 改造）：`quickStartTun` 假设 proxy-local 能直接起，未处理「系统代理已占用 1080 端口」的冲突；理想行为应是检测 1080 已监听则复用、跳过重复启动。
+> 端口冲突已修复：后端 `startProxyLocal` 现在检测到 1080 已在监听就复用、跳过启动（不再无脑杀进程重启），因此「先开系统代理、再一键 TUN」不会再瞬断 proxy-local。
 
 ### 7.3 TUN 权限失败的前端提示
 
@@ -289,7 +290,7 @@ function switchSection(name) {
 - **XSS**：任何把用户/配置数据写入 `innerHTML` 的地方，字符串必须 `esc()`，属性值必须 `escAttr()`。`createServerCard`、`appendLogLine` 已遵循，新增渲染务必照做。
 - **静态文件防穿越**：`serveStatic` 已校验 `filePath.startsWith(PUBLIC_DIR)`，不要绕过。
 - **权限**：TUN/系统代理涉及 sudo 与系统设置，前端只发指令，真正的权限校验与兜底在后端；前端不要假设一定成功，始终根据返回的 `ok` 给用户反馈。
-- **DNS/网络清理**：停止 TUN 后若网络异常，后端有 `restore-dns.sh` 兜底；前端后续可增加「恢复网络」急救按钮（改造计划 Block 3）。
+- **DNS/网络清理**：停止 TUN 后若网络异常，后端有 `restore-dns.sh` 兜底；前端已提供「恢复网络」急救按钮（`#btnResetNetwork` → `App.resetNetwork()` → `POST /api/reset-network`），强制还原 DNS/路由并关闭系统代理。
 
 ---
 
@@ -313,7 +314,7 @@ function switchSection(name) {
 
 - **Block 1**：dashboard 自带一套简化的 TUN 启动逻辑，未复用项目根目录的成熟脚本，功能不对等（无按需编译就绪检测、DNS 恢复编排不完整）。
 - **Block 2**：权限/认证是「事后报错」而非「事前检测引导」；缺少启动前的环境自检清单。
-- **Block 3**：清理依赖进程优雅退出，用户直接关浏览器/终端时可能残留 DNS/路由；缺少「恢复网络」急救按钮与启动时残留自动检测。
-- **端口冲突**：系统代理已开（1080 被占）时再起 TUN 会重复启动 proxy-local，理想应「检测到 1080 已监听则复用/跳过」。
+- **Block 3（部分完成）**：已新增「恢复网络」急救按钮（`/api/reset-network`），并让 Dashboard 进程在 SIGINT/SIGTERM 退出时跑 DNS 兜底还原；仍待补：启动时残留自动检测、以及非信号方式（直接关浏览器）下的清理。
+- **端口冲突（已修复）**：系统代理已开（1080 被占）时再起 TUN，现在会复用已有 proxy-local、跳过重复启动。
 
 > 上述问题在补齐前，README 已将 Dashboard 标注为「暂未开放」，仅供开发使用。

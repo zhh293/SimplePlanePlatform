@@ -113,11 +113,19 @@ function startProxyLocal() {
       processes['proxy-local'].startedAt = null;
     }
   }
+  // Port reuse: if proxy-local is already serving on 1080 (e.g. system-proxy
+  // mode was started first, or an external start-tun.sh launched it), do NOT
+  // kill and restart it — that would briefly drop live connections. Treat it
+  // as already running and reuse the existing listener.
+  if (isPortListening(1080)) {
+    processes['proxy-local'].status = processes['proxy-local'].proc ? 'running' : 'running (external)';
+    addLog('proxy-local', '[dashboard] Port 1080 already in use — reusing existing proxy-local (skip start).');
+    broadcastSSE('status', getStatusAll());
+    return { ok: true, reused: true, message: 'proxy-local already running on :1080 (reused)' };
+  }
+
   const jar = getJarPath();
   if (!jar) return { ok: false, error: 'JAR not found. Click Build first.' };
-
-  // Also kill any leftover java process on port 1080
-  killProcessOnPort(1080);
 
   const args = ['-Dproxy.dns.nameservers=114.114.114.114,223.5.5.5', '-jar', jar];
   const proc = spawn('java', args, { cwd: PROJECT_ROOT, stdio: ['ignore', 'pipe', 'pipe'], detached: false });
@@ -260,40 +268,15 @@ function startTunAdapter() {
 // TUN Start — macOS (sudo -n with NOPASSWD)
 // ============================================================
 function startTunMacOS(bin) {
-  let proc;
-  try {
-    // First try direct spawn (works if SIP is off or binary is in trusted path)
-    proc = spawn(bin, ['-c', TUN_CONFIG], {
-      cwd: PROJECT_ROOT,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      detached: true,
-    });
-  } catch (spawnErr) {
-    // Direct spawn failed (EPERM) — fall back to sudo
-    addLog('tun-adapter', `[dashboard] Direct spawn failed (${spawnErr.code || spawnErr.message}), trying sudo...`);
-    return startTunViaSudo(bin);
-  }
-
-  // Handle the case where spawn succeeds initially but the process errors out
-  let spawnFailed = false;
-
-  proc.on('error', (err) => {
-    spawnFailed = true;
-    addLog('tun-adapter', `[dashboard] Spawn failed: ${err.message}, trying sudo fallback...`, 'stderr');
-    processes['tun-adapter'].proc = null;
-    startTunViaSudo(bin);
-  });
-
-  // Save PID
-  try { fs.writeFileSync(TUN_PID_FILE, String(proc.pid), 'utf-8'); } catch {}
-
-  processes['tun-adapter'].proc = proc;
-  addLog('tun-adapter', `[dashboard] Spawned tun-adapter (PID: ${proc.pid})`);
-  broadcastSSE('status', getStatusAll());
-
-  bindTunProcEvents(proc, spawnFailed);
-
-  return { ok: true, pid: proc.pid };
+  // Creating a utun device REQUIRES root. A plain (non-sudo) spawn of the binary
+  // will succeed at the process level but then fail with EPERM the moment it
+  // tries to create the TUN device — so "spawn succeeded" is a false signal that
+  // used to skip the sudo fallback and leave tun-adapter running as the normal
+  // user, only to exit with "failed to create TUN device: Operation not permitted".
+  // Therefore on macOS we go straight through sudo (NOPASSWD rule installed by
+  // setup-tun-permissions.sh). If sudo isn't usable, startTunViaSudo reports the
+  // accurate reason (blocked-by-environment vs. needs-setup).
+  return startTunViaSudo(bin);
 }
 
 // Fallback: use sudo (NOPASSWD) to launch tun-adapter with root privileges.
@@ -349,12 +332,17 @@ function startTunViaSudo(bin) {
     try { fs.appendFileSync(TUN_LOG_FILE, text); } catch {}
     text.split('\n').filter(l => l.trim()).forEach(l => {
       addLog('tun-adapter', l, 'stderr');
-      // "sudo: a password is required" means sudoers not configured
-      if (l.includes('password is required') || l.includes('sudo:')) {
+      // Distinguish "sudo blocked by environment" from "sudoers not configured".
+      const kind = classifySudoFailure(l);
+      if (kind === 'sudo-blocked' || kind === 'needs-setup') {
         processes['tun-adapter'].status = 'stopped';
         processes['tun-adapter'].startedAt = null;
         processes['tun-adapter'].proc = null;
-        addLog('tun-adapter', '[dashboard] sudo 需要密码。请先运行一次 setup-tun-permissions.sh 配置免密启动。', 'stderr');
+        if (kind === 'sudo-blocked') {
+          addLog('tun-adapter', '[dashboard] 当前环境不允许执行 sudo。请从真实终端启动 Dashboard（cd dashboard && node server.js）后重试。', 'stderr');
+        } else {
+          addLog('tun-adapter', '[dashboard] sudo 需要密码。请先运行一次 setup-tun-permissions.sh 配置免密启动。', 'stderr');
+        }
         broadcastSSE('status', getStatusAll());
       } else if (processes['tun-adapter'].status === 'starting') {
         processes['tun-adapter'].status = 'running';
@@ -522,12 +510,63 @@ function restoreDnsFallback() {
     addLog('tun-adapter', '[dashboard] DNS restored via fallback script.');
   } catch (e) {
     const out = `${e.stderr || ''}${e.message || ''}`;
-    if (/password is required|sudo:/i.test(out)) {
-      addLog('tun-adapter', `[dashboard] DNS 兜底还原需要权限。请先运行一次 dashboard/setup-tun-permissions.sh，或手动执行: sudo ${RESTORE_DNS_SCRIPT}`, 'stderr');
-    } else {
-      addLog('tun-adapter', `[dashboard] DNS fallback failed: ${out}`, 'stderr');
+      const kind = classifySudoFailure(out);
+      if (kind === 'sudo-blocked') {
+        addLog('tun-adapter', `[dashboard] DNS 兜底还原失败：当前环境不允许执行 sudo（请从真实终端启动 Dashboard），或手动执行: sudo ${RESTORE_DNS_SCRIPT}`, 'stderr');
+      } else if (kind === 'needs-setup') {
+        addLog('tun-adapter', `[dashboard] DNS 兜底还原需要授权。请先运行一次 dashboard/setup-tun-permissions.sh，或手动执行: sudo ${RESTORE_DNS_SCRIPT}`, 'stderr');
+      } else {
+        addLog('tun-adapter', `[dashboard] DNS fallback failed: ${out}`, 'stderr');
+      }
+  }
+}
+
+// Emergency network recovery ("Reset Network" button). Unlike restoreDnsFallback
+// (which only runs when a DNS backup leftover is detected), this forcibly pulls
+// the system back to a clean state regardless of how it got stuck: it replays
+// restore-dns.sh and turns the system proxy off. Used when the user closed the
+// browser/terminal or force-killed something and ended up with no connectivity.
+function resetNetwork() {
+  const steps = [];
+  // 1) Turn the system proxy off so traffic stops routing to a dead :1080.
+  try {
+    const r = setSystemProxy(false);
+    steps.push(r.ok ? 'system-proxy off' : `system-proxy off failed: ${r.error || ''}`);
+  } catch (e) {
+    steps.push(`system-proxy off error: ${e.message}`);
+  }
+
+  // 2) Restore DNS/routes. On Windows the tun-adapter handles its own restore,
+  //    so there is nothing to replay here.
+  if (!IS_WIN) {
+    try {
+      execSync(`sudo -n /bin/bash "${RESTORE_DNS_SCRIPT}"`, { stdio: 'pipe', timeout: 15000 });
+      steps.push('DNS/routes restored');
+      try { fs.unlinkSync(TUN_DNS_BACKUP); } catch {}
+    } catch (e) {
+      const out = `${e.stderr || ''}${e.message || ''}`;
+      const kind = classifySudoFailure(out);
+      if (kind === 'sudo-blocked') {
+        return {
+          ok: false,
+          error: `恢复网络失败：当前运行环境不允许执行 sudo（Dashboard 可能不是从真实终端启动的）。请在真实终端中运行 node server.js 后重试，或手动执行: sudo ${RESTORE_DNS_SCRIPT}`,
+          steps,
+        };
+      }
+      if (kind === 'needs-setup') {
+        return {
+          ok: false,
+          error: `恢复网络需要授权。请先运行一次 dashboard/setup-tun-permissions.sh，或在终端手动执行: sudo ${RESTORE_DNS_SCRIPT}`,
+          steps,
+        };
+      }
+      return { ok: false, error: `restore-dns.sh failed: ${out}`, steps };
     }
   }
+
+  addLog('tun-adapter', `[dashboard] Network reset complete: ${steps.join('; ')}`);
+  broadcastSSE('status', getStatusAll());
+  return { ok: true, steps };
 }
 
 function stopTunAdapter() {
@@ -788,6 +827,51 @@ function getSystemProxyMacOS() {
   } catch { return { enabled: false, service: 'Wi-Fi' }; }
 }
 
+// Classify why a `sudo -n ...` invocation failed, so callers can give an
+// accurate hint instead of always blaming the sudoers config. There are two
+// fundamentally different failure modes that used to be conflated:
+//   - SUDO_BLOCKED: the sudo binary itself could not run (e.g. the dashboard was
+//     launched from a sandboxed/restricted shell where exec of the setuid sudo is
+//     denied — "operation not permitted: sudo" / EPERM / "sudo: command not found").
+//     The fix is to start the dashboard from a real terminal, NOT to reconfigure
+//     sudoers (which may already be correct).
+//   - NEEDS_SETUP: sudo ran but demanded a password, meaning the NOPASSWD
+//     sudoers rule is missing — the fix is to run setup-tun-permissions.sh.
+// Returns 'sudo-blocked' | 'needs-setup' | 'other'.
+function classifySudoFailure(out) {
+  const s = String(out || '');
+  // Check "blocked" first: "operation not permitted" while trying to exec sudo
+  // must not be misread as a sudoers-config problem.
+  if (/operation not permitted|EPERM|command not found|no such file|cannot execute|spawn\s+sudo/i.test(s)) {
+    return 'sudo-blocked';
+  }
+  if (/password is required|a password is required|sudo:\s*a terminal is required|askpass/i.test(s)) {
+    return 'needs-setup';
+  }
+  // Bare "sudo:" prefix usually accompanies an auth/terminal complaint.
+  if (/\bsudo:/i.test(s)) return 'needs-setup';
+  return 'other';
+}
+
+// Build a clear, actionable error for a privileged operation that failed,
+// differentiating "wrong launch environment" from "missing one-time setup".
+function privilegeError(out, manualCmd) {
+  const kind = classifySudoFailure(out);
+  let msg;
+  if (kind === 'sudo-blocked') {
+    msg = `当前运行环境不允许执行 sudo（可能 Dashboard 不是从真实终端启动的）。请在真实终端中运行: cd dashboard && node server.js`;
+    if (manualCmd) msg += `\n或手动执行: ${manualCmd}`;
+  } else if (kind === 'needs-setup') {
+    msg = `需要免密授权。请先运行一次 dashboard/setup-tun-permissions.sh 配置授权`;
+    if (manualCmd) msg += `，或在终端手动执行: ${manualCmd}`;
+  } else {
+    msg = `操作失败: ${String(out).trim().slice(0, 300)}`;
+  }
+  const err = new Error(msg);
+  err.code = kind === 'sudo-blocked' ? 'SUDO_BLOCKED' : kind === 'needs-setup' ? 'NEEDS_SETUP' : 'PRIV_FAILED';
+  return err;
+}
+
 // Run a `networksetup ...` command. macOS requires elevated rights to commit
 // changes to the SystemConfiguration database, so we first try a direct call and,
 // if it fails with a permission/commit error, fall back to `sudo -n` (relies on the
@@ -806,10 +890,9 @@ function runNetworkSetup(args) {
       return;
     } catch (se) {
       const sout = `${se.stderr || ''}${se.stdout || ''}${se.message || ''}`;
-      if (/password is required|sudo:/i.test(sout)) {
-        const err = new Error('需要管理员权限修改系统代理。请先运行一次 dashboard/setup-tun-permissions.sh 配置免密授权，或在终端手动执行: sudo networksetup ' + args);
-        err.code = 'NEEDS_SETUP';
-        throw err;
+      const kind = classifySudoFailure(sout);
+      if (kind === 'sudo-blocked' || kind === 'needs-setup') {
+        throw privilegeError(sout, `sudo networksetup ${args}`);
       }
       throw se;
     }
@@ -912,6 +995,31 @@ function getPlatformInfo() {
   };
 }
 
+// Read-only check of one-time setup prerequisites, so the frontend can show an
+// up-front onboarding reminder instead of letting the user discover the missing
+// NOPASSWD sudoers rule only after a button fails. Does NOT change anything.
+const SUDOERS_FILE = '/etc/sudoers.d/simpleplane-tun';
+function getSetupStatus() {
+  const setupScript = path.join(__dirname, 'setup-tun-permissions.sh');
+  // On macOS the免密 (NOPASSWD) sudoers rule is required for TUN / system-proxy
+  // / DNS-restore to work without prompting for a password every time.
+  const sudoersConfigured = IS_MAC ? fs.existsSync(SUDOERS_FILE) : true;
+  return {
+    platform: process.platform,
+    isWindows: IS_WIN,
+    isMacOS: IS_MAC,
+    // macOS: whether the passwordless sudoers rule has been installed.
+    sudoersConfigured,
+    // Whether the one-time setup needs the user's attention.
+    needsSetup: IS_MAC && !sudoersConfigured,
+    setupScript,
+    sudoersFile: SUDOERS_FILE,
+    // Build prerequisites (informational).
+    jarBuilt: !!getJarPath(),
+    tunBuilt: !!getTunBinaryPath(),
+  };
+}
+
 // ============================================================
 // HTTP Router
 // ============================================================
@@ -958,6 +1066,9 @@ const server = http.createServer(async (req, res) => {
 
   // --- Platform Info ---
   if (pathname === '/api/platform') return json(res, 200, { ok: true, ...getPlatformInfo() });
+
+  // --- One-time setup status (drives the onboarding reminder) ---
+  if (pathname === '/api/setup-status') return json(res, 200, { ok: true, ...getSetupStatus() });
 
   // --- Service Control ---
   if (pathname === '/api/status') return json(res, 200, { ok: true, services: getStatusAll(), systemProxy: getSystemProxy(), platform: getPlatformInfo() });
@@ -1014,6 +1125,12 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/system-proxy' && req.method === 'POST') {
     const b = await parseBody(req);
     return json(res, 200, setSystemProxy(b && b.enabled));
+  }
+
+  // Emergency network recovery: force-restore DNS/routes and turn proxy off.
+  if (pathname === '/api/reset-network' && req.method === 'POST') {
+    const r = resetNetwork();
+    return json(res, r.ok ? 200 : 500, r);
   }
 
   // --- Config ---
@@ -1096,8 +1213,11 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n[dashboard] Shutting down...');
+let shuttingDown = false;
+function gracefulShutdown(signal) {
+  if (shuttingDown) return; // avoid double-handling if both signals fire
+  shuttingDown = true;
+  console.log(`\n[dashboard] Shutting down (${signal})...`);
   if (processes['proxy-local'].proc) {
     if (IS_WIN) {
       try { execSync(`taskkill /F /PID ${processes['proxy-local'].proc.pid} /T`, { stdio: 'ignore' }); } catch {}
@@ -1113,5 +1233,14 @@ process.on('SIGINT', () => {
       try { execSync(`sudo -n kill ${pid}`, { stdio: 'ignore' }); } catch {}
     }
   }
-  setTimeout(() => process.exit(0), 2000);
-});
+  // Give the tun-adapter Drop handler a moment to restore DNS itself, then
+  // replay restore-dns.sh as a safety net so the user is never stranded on the
+  // FakeDNS server (198.18.0.2) after the dashboard exits.
+  setTimeout(() => {
+    try { restoreDnsFallback(); } catch {}
+    process.exit(0);
+  }, 2000);
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

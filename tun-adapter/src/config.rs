@@ -129,6 +129,12 @@ pub struct LogConfig {
     /// 日志格式: pretty, json, compact
     #[serde(default = "default_log_format")]
     pub format: String,
+
+    /// 日志文件路径（可选）。为空时只输出到终端，不写文件。
+    /// 建议使用绝对路径，避免以 root/sudo 启动时因工作目录或文件属主
+    /// 导致创建失败。留空是最安全的默认值。
+    #[serde(default)]
+    pub file: String,
 }
 
 /// 内网 DNS 分流配置
@@ -299,6 +305,7 @@ impl Default for LogConfig {
         Self {
             level: default_log_level(),
             format: default_log_format(),
+            file: String::new(),
         }
     }
 }

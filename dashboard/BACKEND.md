@@ -97,6 +97,8 @@ function addLog(name, line, stream = 'stdout') {
   - 有 proc → macOS `SIGTERM`、Windows `taskkill /F /T`；3s 后仍在则强杀 + 清端口。
 
 > 关键设计：proxy-local 始终带 `-Dproxy.dns.nameservers=114...` 启动，**与 TUN 独立**。这也是「停 TUN 时要连带停 proxy-local」的根因（见 3.4）。
+>
+> 端口复用（已修复的冲突）：`startProxyLocal` 在启动前先用 `isPortListening(1080)` 检测，若 1080 已在监听（例如先开了系统代理、或外部 start-tun.sh 起过）则**复用现有监听、跳过启动**（返回 `{ ok:true, reused:true }`），不再无脑 `killProcessOnPort(1080)` 重启，避免瞬断正在服务的连接。
 
 ### 3.4 tun-adapter 生命周期（最复杂）
 
@@ -161,6 +163,10 @@ function getStatusAll() {
 ## 5. 系统代理控制（跨平台）
 
 入口 `getSystemProxy()` / `setSystemProxy(enable)` 按平台分叉。
+
+### 5.0 急救恢复 `resetNetwork()` / `POST /api/reset-network`
+
+与只在检测到备份文件残留时才跑的 `restoreDnsFallback()` 不同，`resetNetwork()` 是用户主动触发的「恢复网络」急救动作，**无论怎么卡住都强制拉回干净状态**：先 `setSystemProxy(false)` 关代理，再（非 Windows）`sudo -n /bin/bash restore-dns.sh` 还原 DNS/路由并删除备份文件。逐步结果放在返回的 `steps` 数组；sudo 需密码时返回明确提示引导跑 `setup-tun-permissions.sh`。适用于用户直接关浏览器/终端、或 force-kill 后无法上网的场景。
 
 ### 5.1 macOS
 
@@ -273,9 +279,9 @@ function broadcastSSE(event, data) {
 
 ## 12. 优雅关闭
 
-`process.on('SIGINT')`（第 1099 行）：Dashboard 自身被 Ctrl+C 时，尝试停掉 proxy-local（SIGTERM/taskkill）和 tun-adapter（`sudo -n kill`/taskkill），2s 后 `process.exit(0)`。
+`gracefulShutdown(signal)` 同时绑定到 `SIGINT` 和 `SIGTERM`（带 `shuttingDown` 防重入）：Dashboard 被 Ctrl+C 或 `kill`（TERM）时，先停 proxy-local（SIGTERM/taskkill）和 tun-adapter（`sudo -n kill`/taskkill），然后等 2s（留给 tun-adapter Drop 还原 DNS）后**调 `restoreDnsFallback()` 做 DNS 兜底**，再 `process.exit(0)`。这保证退出后用户不会被困在 FakeDNS（198.18.0.2）。
 
-> 当前局限：这只处理 SIGINT。若用户直接关终端窗口或 `kill -9` 掉 Dashboard 进程，清理不会触发，可能残留 DNS/路由（对应改造计划 Block 3：进程退出 hook + 启动时残留自动检测 + UI 急救按钮）。
+> 仍有局限：若用户直接关终端窗口或 `kill -9` 掉 Dashboard（SIGKILL 不可捕获），清理仍不会触发；此时需用户点「恢复网络」按钮（`/api/reset-network`）手动拉回。启动时残留自动检测仍待补。
 
 ---
 
@@ -315,7 +321,7 @@ function broadcastSSE(event, data) {
 
 - **Block 1**：dashboard 自带的 TUN 启动逻辑与项目根目录 `start-tun.sh` 是两套实现，未复用，功能不对等（无按需编译就绪检测、无完整就绪等待）。建议改为薄壳，直接调根目录脚本。
 - **Block 2**：权限/编译是「事后报错」，缺少启动前的环境自检引导。
-- **Block 3**：清理依赖进程优雅退出与 5.5s 兜底定时器，用户直接关浏览器/终端时可能残留 DNS/路由；缺少「恢复网络」急救按钮与启动时残留自动检测的 UI 入口。
-- **端口冲突**：系统代理已开（1080 被占）时再起 TUN 会重复启动 proxy-local，理想应「检测到 1080 已监听则复用/跳过」。
+- **Block 3（部分完成）**：已新增 `resetNetwork()` / `POST /api/reset-network` 急救接口与前端「恢复网络」按钮，并让 `gracefulShutdown` 在 SIGINT/SIGTERM 退出时跑 DNS 兜底；仍待补：启动时残留自动检测、SIGKILL/直接关终端场景的清理。
+- **端口冲突（已修复）**：`startProxyLocal` 检测到 1080 已监听则复用/跳过启动，不再重复拉起 proxy-local。
 
 > 上述问题在补齐前，README 已将 Dashboard 标注为「暂未开放」，仅供开发使用。

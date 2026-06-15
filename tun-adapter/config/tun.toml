@@ -96,8 +96,10 @@ level = "info,tun_adapter::socks5=debug"
 format = "pretty"
 
 [bypass]
-# proxy-remote 真实 IP，需要排除路由
-proxy_remote_ips = ["your-remote-server-ip"]
+# proxy-remote 真实 IP，需要排除路由。
+# 必须与 proxy-local 的 proxy.yml 中 remoteServers[].host 保持一致，
+# 否则 proxy-local 连接 proxy-remote 的流量会被 utun9 劫持成环路，导致全网不通。
+proxy_remote_ips = ["54.234.196.30"]
 # 额外排除的网段（不进 TUN 的网段）
 extra_cidrs = ["10.0.0.0/8", "11.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
 # DNS bypass：这些 DNS 服务器的流量不走 TUN（供 proxy-local 直连做真实 DNS 解析）

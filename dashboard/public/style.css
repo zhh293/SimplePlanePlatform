@@ -432,3 +432,34 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .terminal-hint-cmd code { color: var(--success); font-size: 0.85rem; white-space: pre-wrap; word-break: break-all; }
 .terminal-hint-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
 .terminal-hint-note { color: var(--muted); font-size: 0.8rem; margin-top: 1rem; }
+
+/* First-run Setup Onboarding Modal */
+.setup-modal-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,0.78); backdrop-filter: blur(5px);
+  display: flex; align-items: center; justify-content: center;
+  animation: setupFade 0.2s ease;
+}
+@keyframes setupFade { from { opacity: 0; } to { opacity: 1; } }
+.setup-modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 2rem 2.25rem; max-width: 600px; width: 92%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.setup-modal-icon { font-size: 2.6rem; line-height: 1; margin-bottom: 0.5rem; }
+.setup-modal h2 { color: var(--warning); margin: 0 0 1rem; font-size: 1.3rem; }
+.setup-modal p { color: var(--ink-secondary); margin: 0.6rem 0; font-size: 0.92rem; line-height: 1.6; text-align: left; }
+.setup-cmd-box {
+  display: flex; align-items: center; gap: 0.75rem;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.85rem 1rem; margin: 1.1rem 0;
+}
+.setup-cmd-box code {
+  flex: 1; color: var(--success); font-size: 0.9rem;
+  text-align: left; white-space: pre-wrap; word-break: break-all;
+}
+.setup-cmd-box .btn { flex-shrink: 0; }
+.setup-modal-note { color: var(--muted); font-size: 0.78rem; line-height: 1.6; }
+.setup-modal-note code { color: var(--ink-secondary); }
+.setup-modal-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.4rem; }

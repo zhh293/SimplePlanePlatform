@@ -53,13 +53,29 @@ fn init_tracing(log_config: &config::LogConfig) {
         .compact()
         .with_target(true);
 
-    // 文件输出层 - 写入 tun-adapter.log
-    let log_file = std::fs::File::create("tun-adapter.log")
-        .expect("Failed to create log file");
-    let file_layer = fmt::layer()
-        .with_ansi(false)
-        .with_target(true)
-        .with_writer(log_file);
+    // 文件输出层 - 仅当配置了 log.file 时才尝试写文件。
+    // 注意：以 root/sudo 启动时，相对路径或已存在文件的属主可能导致创建失败；
+    // 这种情况下绝不能让进程 panic 退出（否则 TUN 主功能也起不来），
+    // 而应打印一条警告并降级为只输出到终端。
+    let file_layer = if log_config.file.trim().is_empty() {
+        None
+    } else {
+        match std::fs::File::create(&log_config.file) {
+            Ok(f) => Some(
+                fmt::layer()
+                    .with_ansi(false)
+                    .with_target(true)
+                    .with_writer(f),
+            ),
+            Err(e) => {
+                eprintln!(
+                    "[tun-adapter] WARN: 无法创建日志文件 {:?}: {}. 将仅输出到终端。",
+                    log_config.file, e
+                );
+                None
+            }
+        }
+    };
 
     tracing_subscriber::registry()
         .with(filter)
