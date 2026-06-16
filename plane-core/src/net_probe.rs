@@ -366,7 +366,7 @@ fn build_dns_response_packet(query: &DnsQueryInfo, dns_payload: &[u8]) -> Vec<u8
 }
 
 /// 标准 16 位反码求和校验（用于 IPv4 头）。
-fn checksum(data: &[u8]) -> u16 {
+pub fn checksum(data: &[u8]) -> u16 {
     let mut sum: u32 = 0;
     let mut i = 0;
     while i + 1 < data.len() {

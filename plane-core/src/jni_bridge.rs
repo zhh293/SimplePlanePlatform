@@ -231,8 +231,14 @@ where
             tracing::error!(error = %e, "nativeStart 失败");
             0
         }
-        Err(_) => {
-            tracing::error!("nativeStart 捕获到 panic，已隔离，返回 0");
+        Err(panic_payload) => {
+            // 尝试从 panic payload 中提取消息字符串，便于定位崩溃原因。
+            let msg: String = panic_payload
+                .downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| panic_payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "(无法解析 panic 消息)".to_string());
+            tracing::error!(panic_msg = %msg, "nativeStart 捕获到 panic，已隔离，返回 0");
             0
         }
     }
@@ -324,7 +330,10 @@ fn spawn_data_plane(
     config: &AndroidConfig,
 ) -> Result<()> {
     // SAFETY: tun_fd 由 Kotlin VpnService.establish().detachFd() 移交，独占且有效。
-    let tun = unsafe { AndroidTun::from_raw_fd(tun_fd, config.mtu) }?;
+    // 必须在 tokio runtime 上下文中创建 AsyncFd，否则 panic: "no reactor running"。
+    let tun = handle.rt.block_on(async {
+        unsafe { AndroidTun::from_raw_fd(tun_fd, config.mtu) }
+    })?;
     let (tun_reader, tun_writer) = tun.split();
 
     let fake_dns = std::sync::Arc::new(tokio::sync::Mutex::new(FakeDnsEngine::new(
