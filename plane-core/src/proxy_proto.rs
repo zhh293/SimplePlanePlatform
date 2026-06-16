@@ -84,12 +84,16 @@ pub struct ProxyMessage {
 
 impl ProxyMessage {
     /// 构造 CONNECT 消息（请求侧）。
-    pub fn connect(request_id: i64, host: &str, port: u16) -> Self {
+    ///
+    /// `stream_id` 必须为每条代理 stream 分配唯一值，服务端以此为 session key。
+    /// 若所有连接共用 `stream_id=0`，服务端 SessionManager 会不断覆盖 session，
+    /// 导致并发代理全部失败。
+    pub fn connect(request_id: i64, stream_id: i64, host: &str, port: u16) -> Self {
         Self {
             type_: MessageType::Connect,
             status: 0,
             request_id,
-            stream_id: 0,
+            stream_id,
             host: host.to_string(),
             port: port as i32,
             data: Vec::new(),
@@ -97,12 +101,14 @@ impl ProxyMessage {
     }
 
     /// 构造 DATA 消息（请求侧）。
-    pub fn data(request_id: i64, payload: &[u8]) -> Self {
+    ///
+    /// `stream_id` 须与该连接的 CONNECT 消息保持一致。
+    pub fn data(request_id: i64, stream_id: i64, payload: &[u8]) -> Self {
         Self {
             type_: MessageType::Data,
             status: 0,
             request_id,
-            stream_id: 0,
+            stream_id,
             host: String::new(),
             port: 0,
             data: payload.to_vec(),
@@ -110,12 +116,14 @@ impl ProxyMessage {
     }
 
     /// 构造 DISCONNECT 消息（请求侧）。
-    pub fn disconnect(request_id: i64) -> Self {
+    ///
+    /// `stream_id` 须与该连接的 CONNECT 消息保持一致。
+    pub fn disconnect(request_id: i64, stream_id: i64) -> Self {
         Self {
             type_: MessageType::Disconnect,
             status: 0,
             request_id,
-            stream_id: 0,
+            stream_id,
             host: String::new(),
             port: 0,
             data: Vec::new(),
@@ -268,7 +276,7 @@ mod tests {
 
     #[test]
     fn encode_decode_roundtrip_connect() {
-        let msg = ProxyMessage::connect(42, "example.com", 443);
+        let msg = ProxyMessage::connect(42, 100, "example.com", 443);
         let bytes = msg.encode();
         // 头 28 + host 11
         assert_eq!(bytes.len(), FIXED_HEADER_SIZE + "example.com".len());
@@ -282,7 +290,7 @@ mod tests {
     #[test]
     fn encode_decode_roundtrip_data() {
         let payload = vec![1u8, 2, 3, 4, 5];
-        let msg = ProxyMessage::data(7, &payload);
+        let msg = ProxyMessage::data(7, 100, &payload);
         let bytes = msg.encode();
         let decoded = ProxyMessage::decode(&bytes).unwrap();
         assert_eq!(decoded, msg);
@@ -315,7 +323,7 @@ mod tests {
 
     #[test]
     fn try_decode_one_partial_returns_none() {
-        let msg = ProxyMessage::connect(1, "host", 80);
+        let msg = ProxyMessage::connect(1, 1, "host", 80);
         let full = msg.encode();
         // 喂入不足 28 字节。
         assert!(try_decode_one(&full[..10]).unwrap().is_none());
@@ -327,8 +335,8 @@ mod tests {
 
     #[test]
     fn try_decode_one_streamed_in_two_parts() {
-        let m1 = ProxyMessage::data(1, b"first");
-        let m2 = ProxyMessage::data(2, b"second-message");
+        let m1 = ProxyMessage::data(1, 1, b"first");
+        let m2 = ProxyMessage::data(2, 1, b"second-message");
         let mut stream = m1.encode();
         stream.extend_from_slice(&m2.encode());
 
@@ -354,9 +362,9 @@ mod tests {
     #[test]
     fn try_decode_one_concatenated_messages() {
         let msgs = [
-            ProxyMessage::connect(1, "a.com", 443),
-            ProxyMessage::data(1, b"payload"),
-            ProxyMessage::disconnect(1),
+            ProxyMessage::connect(1, 10, "a.com", 443),
+            ProxyMessage::data(1, 10, b"payload"),
+            ProxyMessage::disconnect(1, 10),
             ProxyMessage::heartbeat_request(99),
         ];
         let mut stream = Vec::new();
@@ -374,7 +382,7 @@ mod tests {
 
     #[test]
     fn decode_rejects_trailing_bytes() {
-        let mut bytes = ProxyMessage::data(1, b"x").encode();
+        let mut bytes = ProxyMessage::data(1, 1, b"x").encode();
         bytes.push(0xFF); // 多一个字节
         assert!(ProxyMessage::decode(&bytes).is_err());
     }

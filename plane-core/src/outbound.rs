@@ -228,6 +228,40 @@ impl RequestIdGen {
     }
 }
 
+/// 全局唯一的 stream_id 生成器。
+///
+/// 服务端 `SessionManager` 以 `streamId` 为 session key，如果所有代理连接都用
+/// `streamId=0`，会导致 session 不断被覆盖（“Replacing existing session”），
+/// 并发代理全部失败。每个 stream 必须分配独立的 stream_id。
+///
+/// 生成的值采用较大的起始值加递增，避免与 Java 客户端的 stream_id 冲突。
+#[derive(Debug)]
+pub struct StreamIdGen {
+    next: AtomicI64,
+}
+
+impl StreamIdGen {
+    /// 构造，从一个基于时间戳的唯一基数开始，避免各实例/各连接冲突。
+    pub fn new() -> Self {
+        // 用当前时间戳（毫秒）左移 20 位作为基数，高位表示时间，低位递增。
+        // 这与 Java 客户端的大数值 stream_id 类似，且不会重复。
+        let base = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+        // 左移 20 位给足约 100万个递增空间，单次会话足够用。
+        let start = (base << 20) | 1;
+        Self {
+            next: AtomicI64::new(start),
+        }
+    }
+
+    /// 取下一个全局唯一的 stream_id。
+    pub fn next_id(&self) -> i64 {
+        self.next.fetch_add(1, Ordering::Relaxed)
+    }
+}
+
 /// 出站连接 —— 一条到 proxy-remote 的 HTTP/2 连接，承载多路 stream。
 ///
 /// 通过 [`OutboundConnection::handshake`] 在「已 protect 并 connect」的 IO 流上完成 h2 握手。
@@ -236,6 +270,8 @@ pub struct OutboundConnection {
     send_request: h2::client::SendRequest<Bytes>,
     cipher: Cipher,
     req_id_gen: Arc<RequestIdGen>,
+    /// 全局唯一的 stream_id 生成器，服务端以 stream_id 为 session key。
+    stream_id_gen: Arc<StreamIdGen>,
     config: OutboundConfig,
 }
 
@@ -269,6 +305,7 @@ impl OutboundConnection {
             send_request,
             cipher,
             req_id_gen: Arc::new(RequestIdGen::new()),
+            stream_id_gen: Arc::new(StreamIdGen::new()),
             config,
         })
     }
@@ -300,7 +337,8 @@ impl OutboundConnection {
 
         // 首个 CONNECT 消息（加密 DATA 帧）。
         let request_id = self.req_id_gen.next_id();
-        let connect_msg = ProxyMessage::connect(request_id, host, port);
+        let stream_id = self.stream_id_gen.next_id();
+        let connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
         let frame = encode_encrypted_frame(&self.cipher, &connect_msg)?;
         send_stream
             .send_data(Bytes::from(frame), false)
@@ -314,6 +352,7 @@ impl OutboundConnection {
 
         Ok(OutboundStream {
             request_id,
+            stream_id,
             cipher: self.cipher.clone(),
             send_stream,
             recv_stream,
@@ -334,6 +373,8 @@ impl OutboundConnection {
 /// 接收：h2 DATA 帧 → 解密 → 切包 → DATA `ProxyMessage` → 取出业务负载。
 pub struct OutboundStream {
     request_id: i64,
+    /// 本 stream 的唯一 stream_id，服务端以此为 session key。
+    stream_id: i64,
     cipher: Cipher,
     send_stream: h2::SendStream<Bytes>,
     recv_stream: h2::RecvStream,
@@ -351,7 +392,7 @@ impl OutboundStream {
 
     /// 发送一段业务数据（包成 DATA 类型 ProxyMessage，加密为一个 h2 DATA 帧）。
     pub fn send_payload(&mut self, payload: &[u8]) -> Result<()> {
-        let msg = ProxyMessage::data(self.request_id, payload);
+        let msg = ProxyMessage::data(self.request_id, self.stream_id, payload);
         let frame = encode_encrypted_frame(&self.cipher, &msg)?;
         self.send_stream
             .send_data(Bytes::from(frame), false)
@@ -361,7 +402,7 @@ impl OutboundStream {
 
     /// 发送 DISCONNECT 并以 end_stream 关闭发送侧。
     pub fn send_disconnect(&mut self) -> Result<()> {
-        let msg = ProxyMessage::disconnect(self.request_id);
+        let msg = ProxyMessage::disconnect(self.request_id, self.stream_id);
         let frame = encode_encrypted_frame(&self.cipher, &msg)?;
         self.send_stream
             .send_data(Bytes::from(frame), true)
@@ -610,7 +651,7 @@ mod tests {
     #[test]
     fn encode_encrypted_frame_is_decryptable() {
         let cipher = test_cipher();
-        let msg = ProxyMessage::connect(42, "example.com", 443);
+        let msg = ProxyMessage::connect(42, 100, "example.com", 443);
         let frame = encode_encrypted_frame(&cipher, &msg).unwrap();
         // 加密帧 = 4字节长度前缀 + nonce(12) + ct + tag(16)，长度 = 明文 + 4 + 28。
         let plaintext = msg.encode();
@@ -634,7 +675,7 @@ mod tests {
     fn reassembler_single_frame_one_message() {
         let cipher = test_cipher();
         let mut re = InboundReassembler::new(cipher.clone());
-        let msg = ProxyMessage::data(1, b"hello world");
+        let msg = ProxyMessage::data(1, 1, b"hello world");
         let frame = encode_encrypted_frame(&cipher, &msg).unwrap();
         let got = re.push_encrypted_frame(&frame).unwrap();
         assert_eq!(got.len(), 1);
@@ -654,9 +695,9 @@ mod tests {
     fn reassembler_multiple_messages_in_one_frame() {
         // 同一加密块内含多条 ProxyMessage（明文拼接后整体加密）。
         let cipher = test_cipher();
-        let m1 = ProxyMessage::data(1, b"first");
-        let m2 = ProxyMessage::connect(1, "a.com", 80);
-        let m3 = ProxyMessage::disconnect(1);
+        let m1 = ProxyMessage::data(1, 10, b"first");
+        let m2 = ProxyMessage::connect(1, 10, "a.com", 80);
+        let m3 = ProxyMessage::disconnect(1, 10);
         let mut plaintext = Vec::new();
         plaintext.extend_from_slice(&m1.encode());
         plaintext.extend_from_slice(&m2.encode());
@@ -677,7 +718,7 @@ mod tests {
         // 重新切分成两个 DATA 帧。接收侧必须在密文层做字节级累积，
         // 集齐整块后再解密。这正是修复前会触发 Poly1305 tag 失败的场景。
         let cipher = test_cipher();
-        let msg = ProxyMessage::data(7, b"a-reasonably-long-payload-spanning-frames");
+        let msg = ProxyMessage::data(7, 7, b"a-reasonably-long-payload-spanning-frames");
         // 一条消息整体加密成一个密文块，加 4 字节长度前缀。
         let frame = frame_with_prefix(&cipher.encrypt(&msg.encode()).unwrap());
         let split = frame.len() / 2;
@@ -700,8 +741,8 @@ mod tests {
     fn reassembler_two_blocks_coalesced_in_one_frame() {
         // 两个独立密文块（各带长度前缀）在一个 DATA 帧里被合并送达。
         let cipher = test_cipher();
-        let m1 = ProxyMessage::data(1, b"alpha");
-        let m2 = ProxyMessage::data(2, b"bravo");
+        let m1 = ProxyMessage::data(1, 1, b"alpha");
+        let m2 = ProxyMessage::data(2, 2, b"bravo");
         let mut frame = encode_encrypted_frame(&cipher, &m1).unwrap();
         frame.extend_from_slice(&encode_encrypted_frame(&cipher, &m2).unwrap());
 
@@ -715,7 +756,7 @@ mod tests {
     #[test]
     fn reassembler_rejects_tampered_frame() {
         let cipher = test_cipher();
-        let msg = ProxyMessage::data(1, b"payload");
+        let msg = ProxyMessage::data(1, 1, b"payload");
         let mut frame = encode_encrypted_frame(&cipher, &msg).unwrap();
         // 篡改密文区（跳过 4 字节长度前缀）→ 解密时 Poly1305 tag 校验失败。
         let mid = CIPHER_LENGTH_PREFIX + (frame.len() - CIPHER_LENGTH_PREFIX) / 2;
