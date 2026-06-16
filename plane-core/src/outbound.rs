@@ -240,6 +240,12 @@ pub struct StreamIdGen {
     next: AtomicI64,
 }
 
+impl Default for StreamIdGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StreamIdGen {
     /// 构造，从一个基于时间戳的唯一基数开始，避免各实例/各连接冲突。
     pub fn new() -> Self {
