@@ -595,9 +595,9 @@ fn build_icmp_port_unreachable(original: &[u8]) -> Option<Vec<u8>> {
     // --- ICMP header ---
     pkt[20] = 3; // Type: Destination Unreachable
     pkt[21] = 3; // Code: Port Unreachable
-    // checksum at [22..24], compute after filling
-    // unused [24..28]
-    // Quote: original IP header + 8 bytes
+                 // checksum at [22..24], compute after filling
+                 // unused [24..28]
+                 // Quote: original IP header + 8 bytes
     pkt[28..28 + 20 + quote_len].copy_from_slice(&original[0..20 + quote_len]);
 
     // ICMP checksum over bytes [20..]

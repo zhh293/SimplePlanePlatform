@@ -473,7 +473,9 @@ impl OutboundStream {
                         if ok {
                             tracing::info!(
                                 "CONNECT_RESPONSE OK: host={}, port={}, requestId={}",
-                                m.host, m.port, m.request_id
+                                m.host,
+                                m.port,
+                                m.request_id
                             );
                         } else {
                             let reason = match m.status {

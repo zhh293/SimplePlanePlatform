@@ -331,9 +331,9 @@ fn spawn_data_plane(
 ) -> Result<()> {
     // SAFETY: tun_fd 由 Kotlin VpnService.establish().detachFd() 移交，独占且有效。
     // 必须在 tokio runtime 上下文中创建 AsyncFd，否则 panic: "no reactor running"。
-    let tun = handle.rt.block_on(async {
-        unsafe { AndroidTun::from_raw_fd(tun_fd, config.mtu) }
-    })?;
+    let tun = handle
+        .rt
+        .block_on(async { unsafe { AndroidTun::from_raw_fd(tun_fd, config.mtu) } })?;
     let (tun_reader, tun_writer) = tun.split();
 
     let fake_dns = std::sync::Arc::new(tokio::sync::Mutex::new(FakeDnsEngine::new(
