@@ -7,7 +7,6 @@ import com.proxy.common.spi.ExtensionLoader;
 import com.proxy.common.transport.MessageHandler;
 import com.proxy.transport.netty.handler.CipherDecodeHandler;
 import com.proxy.transport.netty.handler.CipherEncodeHandler;
-import com.proxy.transport.netty.handler.HeartbeatHandler;
 import com.proxy.transport.netty.handler.ProxyMessageDecoder;
 import com.proxy.transport.netty.handler.ProxyMessageEncoder;
 import io.netty.bootstrap.Bootstrap;
@@ -32,7 +31,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -367,12 +365,9 @@ public class Http2Connection {
         ch.pipeline().addLast("cipher-encode", new CipherEncodeHandler(cipher));
         ch.pipeline().addLast("decoder", new ProxyMessageDecoder());
         ch.pipeline().addLast("encoder", new ProxyMessageEncoder());
-        ch.pipeline().addLast("idle",
-                new IdleStateHandler(
-                        config.getReadIdleTimeoutSec(),
-                        config.getHeartbeatIntervalSec(),
-                        0, TimeUnit.SECONDS));
-        ch.pipeline().addLast("heartbeat", new HeartbeatHandler());
+        // 注意：不再在 Stream 级别挂 IdleStateHandler + HeartbeatHandler。
+        // 连接级探活已由 startHealthCheck() 的 HTTP/2 PING 负责；
+        // Stream 级心跳会导致已完成业务的 Stream 因心跳互保永远不关闭，造成 Stream 泄漏。
 
         // ExchangeHandler 本身即 @Sharable ChannelHandler，直接挂 pipeline
         ch.pipeline().addLast("handler", (io.netty.channel.ChannelHandler) messageHandler);

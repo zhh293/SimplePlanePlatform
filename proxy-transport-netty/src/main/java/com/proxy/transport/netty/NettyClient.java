@@ -12,7 +12,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -35,6 +39,19 @@ public class NettyClient implements Client {
 
     private static final Logger log = LoggerFactory.getLogger(NettyClient.class);
 
+    /**
+     * Stream 最大存活时间（毫秒）。
+     * <p>
+     * 兜底机制：如果因 DISCONNECT 丢失等原因导致 Stream 未被正常关闭，
+     * 超过此时间的 Stream 会被自动回收，防止 Stream 泄漏耗尽 HTTP/2 并发上限。
+     * 默认 10 分钟，足够覆盖绝大多数正常请求的生命周期。
+     * </p>
+     */
+    private static final long STREAM_MAX_LIFETIME_MS = 10 * 60 * 1000;
+
+    /** Stream 泄漏扫描间隔（毫秒）。 */
+    private static final long STREAM_CLEANUP_INTERVAL_MS = 30 * 1000;
+
     private final URL url;
     private final Http2Connection connection;
     private final MessageHandler messageHandler;
@@ -42,6 +59,9 @@ public class NettyClient implements Client {
 
     /** streamId → Stream 状态（含 Channel 与建流期间的待发队列）。 */
     private final ConcurrentHashMap<Long, StreamState> streams = new ConcurrentHashMap<>();
+
+    /** 定期扫描并关闭超龄 Stream 的调度器。 */
+    private final ScheduledExecutorService streamCleanupScheduler;
 
     public NettyClient(URL url, MessageHandler handler) {
         this.url = url;
@@ -55,6 +75,16 @@ public class NettyClient implements Client {
             log.error("Failed to connect to {}:{}", url.getHost(), url.getPort(), e);
             throw new RuntimeException("Failed to establish HTTP/2 connection", e);
         }
+
+        // 启动 Stream 泄漏扫描
+        streamCleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "stream-lifetime-cleanup");
+            t.setDaemon(true);
+            return t;
+        });
+        streamCleanupScheduler.scheduleAtFixedRate(
+                this::cleanupStaleStreams,
+                STREAM_CLEANUP_INTERVAL_MS, STREAM_CLEANUP_INTERVAL_MS, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -147,6 +177,40 @@ public class NettyClient implements Client {
         });
     }
 
+    /**
+     * 定期扫描并关闭存活时间超过 {@link #STREAM_MAX_LIFETIME_MS} 的 Stream。
+     * <p>
+     * 兜底机制：正常流程中 Stream 由 DISCONNECT 消息触发 closeStream() 关闭。
+     * 但如果 DISCONNECT 丢失或未发出，Stream 会泄漏。本方法每 30 秒扫描一次，
+     * 强制关闭超龄 Stream，防止耗尽 HTTP/2 并发 Stream 上限。
+     * </p>
+     */
+    private void cleanupStaleStreams() {
+        if (closed.get()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        int cleaned = 0;
+        for (Map.Entry<Long, StreamState> entry : streams.entrySet()) {
+            StreamState state = entry.getValue();
+            if (now - state.createTime > STREAM_MAX_LIFETIME_MS) {
+                long streamId = entry.getKey();
+                streams.remove(streamId, state);
+                Channel ch = state.channel;
+                if (ch != null && ch.isActive()) {
+                    ch.close();
+                }
+                cleaned++;
+                log.info("Stream lifetime cleanup: closed stale stream streamId={}, age={}s",
+                        streamId, (now - state.createTime) / 1000);
+            }
+        }
+        if (cleaned > 0) {
+            log.info("Stream lifetime cleanup completed: {} streams closed, {} remaining",
+                    cleaned, streams.size());
+        }
+    }
+
     private void notifyError(Throwable cause) {
         if (messageHandler != null) {
             messageHandler.onError(cause);
@@ -156,6 +220,7 @@ public class NettyClient implements Client {
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
+            streamCleanupScheduler.shutdownNow();
             for (StreamState state : streams.values()) {
                 Channel ch = state.channel;
                 if (ch != null && ch.isActive()) {
@@ -219,5 +284,7 @@ public class NettyClient implements Client {
         volatile Channel channel;
         volatile boolean failed;
         final Deque<ProxyMessage> pending = new ArrayDeque<>();
+        /** Stream 创建时间戳（用于超龄检测）。 */
+        final long createTime = System.currentTimeMillis();
     }
 }

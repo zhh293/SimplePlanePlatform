@@ -9,14 +9,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 心跳处理器
- * <p>
- * 在 HTTP/2 Stream 子 Channel 上处理心跳逻辑：
- * - 写空闲时发送 HEARTBEAT_REQUEST
- * - 收到 HEARTBEAT_REQUEST 时回复 HEARTBEAT_RESPONSE
- * - 读空闲超时时关闭连接
- * </p>
+ * 心跳处理器（已废弃，不再挂载到任何 Pipeline）
+ *
+ * <p><b>废弃原因：</b>
+ * 该 Handler 原本挂在每个 HTTP/2 Stream 子 Channel 上，负责写空闲时发 HEARTBEAT_REQUEST、
+ * 读空闲超时时关闭 Stream。但这导致了严重的 Stream 泄漏：
+ * <ul>
+ *   <li>浏览器侧连接关闭后，服务端如果未收到 DISCONNECT，对应的 Stream 上的心跳
+ *       会让 {@code channel.isActive()} 永远返回 true，使 {@code SessionManager} 的
+ *       inactive 清理完全失效。</li>
+ *   <li>HTTP/2 连接级探活（{@code Http2Connection} 中的 PING 帧调度）已覆盖
+ *       "判断 TCP 连接是否存活"的需求，Stream 级心跳属于多余的重复探活。</li>
+ * </ul>
+ *
+ * <p><b>替代方案：</b>
+ * <ul>
+ *   <li>连接级探活：{@code Http2Connection.startPingScheduler()} 定期发送 HTTP/2 PING 帧。</li>
+ *   <li>Stream 超龄兜底：{@code NettyClient.cleanupStaleStreams()} 和
+ *       {@code SessionManager.cleanupSessions()} 定期强制关闭存活时间超过阈值的 Stream/Session。</li>
+ * </ul>
+ *
+ * @deprecated 已从 stream pipeline 移除，保留此类仅作历史参考。
  */
+@Deprecated
 public class HeartbeatHandler extends ChannelDuplexHandler {
 
     private static final Logger log = LoggerFactory.getLogger(HeartbeatHandler.class);

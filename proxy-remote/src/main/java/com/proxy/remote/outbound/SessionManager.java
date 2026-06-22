@@ -19,21 +19,32 @@ public class SessionManager {
 
     private static final Logger log = LoggerFactory.getLogger(SessionManager.class);
 
+    /**
+     * Session 最大存活时间（毫秒）。
+     * <p>
+     * 兜底机制：当 DISCONNECT 因网络抖动或客户端异常退出而丢失，
+     * session 不会被正常流程关闭。超过此时间的 session 会被强制回收，
+     * 防止 outbound TCP 连接和内存持续泄漏。
+     * 默认 10 分钟，与客户端侧 Stream 兜底时间保持一致。
+     * </p>
+     */
+    private static final long SESSION_MAX_LIFETIME_MS = 10 * 60 * 1000;
+
     private final ConcurrentHashMap<String, OutboundSession> sessions = new ConcurrentHashMap<>();
 
     /**
-     * 定期扫描清理不活跃 session 的调度器
+     * 定期扫描清理不活跃或超龄 session 的调度器
      */
     private final ScheduledExecutorService cleanupScheduler;
 
     public SessionManager() {
-        // 每 10 秒扫描一次，清理 inboundCtx 已不活跃的 session
+        // 每 10 秒扫描一次
         cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "session-cleanup");
             t.setDaemon(true);
             return t;
         });
-        cleanupScheduler.scheduleAtFixedRate(this::cleanupInactiveSessions, 10, 10, TimeUnit.SECONDS);
+        cleanupScheduler.scheduleAtFixedRate(this::cleanupSessions, 10, 10, TimeUnit.SECONDS);
     }
 
     /**
@@ -85,26 +96,46 @@ public class SessionManager {
     }
 
     /**
-     * 扫描并清理 inboundCtx 已不活跃的 session
-     * <p>
-     * 当客户端 HTTP/2 stream 断开但 DISCONNECT 未发到时，
-     * 这个定期清理机制保证 session 不会永远泄漏。
-     * </p>
+     * 扫描并清理 session：
+     * <ol>
+     *   <li><b>Inactive 清理</b>：inboundCtx channel 已不活跃（HTTP/2 stream 断开后触发），
+     *       说明连接层已经断开，对应 session 可以立即回收。</li>
+     *   <li><b>超龄兜底</b>：session 存活超过 {@link #SESSION_MAX_LIFETIME_MS}，
+     *       但 inbound channel 仍然 active——这是 DISCONNECT 丢失导致的泄漏场景，
+     *       强制关闭并记录 warn，供后续排查。</li>
+     * </ol>
      */
-    private void cleanupInactiveSessions() {
-        int cleaned = 0;
+    private void cleanupSessions() {
+        int inactiveCleaned = 0;
+        int staleCleaned = 0;
+        long now = System.currentTimeMillis();
+
         for (java.util.Map.Entry<String, OutboundSession> entry : sessions.entrySet()) {
             OutboundSession session = entry.getValue();
+            String key = entry.getKey();
+
             if (!session.getInboundCtx().channel().isActive()) {
-                sessions.remove(entry.getKey(), session);
+                // 正常路径：stream channel 断了，session 应随之清理
+                sessions.remove(key, session);
                 session.close();
-                cleaned++;
-                log.info("Cleanup: closed inactive session, sessionKey={}, target={}:{}",
-                        entry.getKey(), session.getTargetHost(), session.getTargetPort());
+                inactiveCleaned++;
+                log.info("Cleanup[inactive]: closed session, sessionKey={}, target={}:{}",
+                        key, session.getTargetHost(), session.getTargetPort());
+
+            } else if (now - session.getCreateTime() > SESSION_MAX_LIFETIME_MS) {
+                // 兜底路径：channel 仍然 active，但 session 存活时间异常，DISCONNECT 可能已丢失
+                sessions.remove(key, session);
+                session.close();
+                staleCleaned++;
+                log.warn("Cleanup[stale]: force-closed long-lived session, sessionKey={}, target={}:{}, age={}s",
+                        key, session.getTargetHost(), session.getTargetPort(),
+                        (now - session.getCreateTime()) / 1000);
             }
         }
-        if (cleaned > 0) {
-            log.info("Session cleanup completed: {} sessions cleaned, {} remaining", cleaned, sessions.size());
+
+        if (inactiveCleaned > 0 || staleCleaned > 0) {
+            log.info("Session cleanup: inactive={}, stale={}, remaining={}",
+                    inactiveCleaned, staleCleaned, sessions.size());
         }
     }
 

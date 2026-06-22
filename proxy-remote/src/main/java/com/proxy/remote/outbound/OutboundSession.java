@@ -40,13 +40,16 @@ public class OutboundSession {
     private final AtomicReference<SessionState> state = new AtomicReference<>(SessionState.CONNECTING);
     private final CompletableFuture<Void> activeFuture = new CompletableFuture<>();
 
+    /** Session 创建时间戳（毫秒），用于 SessionManager 的超龄兜底清理。 */
+    private final long createTime = System.currentTimeMillis();
+
     private volatile Channel outboundChannel;
 
     /**
      * @param inboundCtx  客户端 Stream 的 ChannelHandlerContext，用于回写数据
      * @param targetHost  目标主机
      * @param targetPort  目标端口
-     * @param sessionKey  复合 session key（parentChannelId:streamId），用于 SessionManager 查找
+     * @param sessionKey  session 查找键，值为 {@code String.valueOf(rawStreamId)}，由 ExchangeHandler 设置
      * @param rawStreamId 原始数字 streamId，用于回写推送消息时设置到 ProxyMessage
      */
     public OutboundSession(ChannelHandlerContext inboundCtx, String targetHost, int targetPort, String sessionKey, long rawStreamId) {
@@ -198,6 +201,10 @@ public class OutboundSession {
 
     public ChannelHandlerContext getInboundCtx() {
         return inboundCtx;
+    }
+
+    public long getCreateTime() {
+        return createTime;
     }
 
     public Channel getOutboundChannel() {

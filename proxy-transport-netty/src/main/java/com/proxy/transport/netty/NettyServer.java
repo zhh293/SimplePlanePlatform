@@ -8,7 +8,6 @@ import com.proxy.common.transport.Server;
 import com.proxy.common.transport.TransportException;
 import com.proxy.transport.netty.handler.CipherDecodeHandler;
 import com.proxy.transport.netty.handler.CipherEncodeHandler;
-import com.proxy.transport.netty.handler.HeartbeatHandler;
 import com.proxy.transport.netty.handler.ProxyMessageDecoder;
 import com.proxy.transport.netty.handler.ProxyMessageEncoder;
 import io.netty.bootstrap.ServerBootstrap;
@@ -16,7 +15,6 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http2.*;
-import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <pre>
  * 父 Channel: Http2FrameCodec → Http2MultiplexHandler
  * 子 Channel (每个 Stream):
- *   入站: CipherDecodeHandler → ProxyMessageDecoder → IdleStateHandler → HeartbeatHandler → ExchangeHandler
+ *   入站: CipherDecodeHandler → ProxyMessageDecoder → ExchangeHandler
  *   出站: CipherEncodeHandler → ProxyMessageEncoder
  * </pre>
  * </p>
@@ -63,7 +61,6 @@ public class NettyServer implements Server {
         int bossThreads = url.getParameter("bossThreads", 1);
         int workerThreads = url.getParameter("workerThreads", 0);
         int backlog = url.getParameter("backlog", 1024);
-        int readIdleTimeout = url.getParameter("readIdleTimeout", 60);
         int maxStreams = url.getParameter("maxStreams", 100);
         String cipherName = url.getParameter("cipher", "aes-gcm");
         boolean backpressureEnabled = url.getParameter("backpressure", false);
@@ -113,9 +110,10 @@ public class NettyServer implements Server {
                             }
                             pipeline.addLast("decoder", new ProxyMessageDecoder());
                             pipeline.addLast("encoder", new ProxyMessageEncoder(true));
-                            pipeline.addLast("idleState", new IdleStateHandler(
-                                    readIdleTimeout, 0, 0, TimeUnit.SECONDS));
-                            pipeline.addLast("heartbeat", new HeartbeatHandler());
+                            // 注意：不再在 Stream 级别挂 IdleStateHandler + HeartbeatHandler。
+                            // 客户端已用 HTTP/2 PING 做连接级探活；Stream 级心跳会导致
+                            // 已完成业务的 Stream 因心跳互保永远不关闭，造成 Stream/Session 泄漏。
+                            // Session 超时兜底由 SessionManager.cleanupStaleSessions() 负责。
                             pipeline.addLast("handler", streamHandler);
                         }
                                     });

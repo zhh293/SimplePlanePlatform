@@ -168,7 +168,13 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
                     .data(response.getData())
                     .build();
             if (ctx.channel().isActive()) {
-                ctx.writeAndFlush(reply);
+                if (message.getType() == ProxyMessage.MessageType.DISCONNECT) {
+                    // DISCONNECT 响应写完后主动关闭 stream channel：
+                    // 不依赖客户端发 RST_STREAM 来被动触发，避免网络问题导致孤立 stream 长时间挂着。
+                    ctx.writeAndFlush(reply).addListener(f -> ctx.close());
+                } else {
+                    ctx.writeAndFlush(reply);
+                }
             }
         });
     }
