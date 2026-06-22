@@ -175,11 +175,18 @@ jobs:
           mv ~/proxy-remote-1.0.0-SNAPSHOT.jar.new \
              ~/proxy-remote-1.0.0-SNAPSHOT.jar
 
-          echo "[3/5] 停止旧进程..."
+          echo "[3/5] 停止旧进程并等待端口释放..."
           pkill -f "proxy-remote-1.0.0-SNAPSHOT.jar" 2>/dev/null || true
-          sleep 2
+          # 等待进程真正退出（最多 10s），再确认端口已释放（最多 5s）
+          for i in \$(seq 1 10); do
+            pgrep -f "proxy-remote-1.0.0-SNAPSHOT.jar" >/dev/null 2>&1 || break
+            sleep 1
+          done
           pkill -9 -f "proxy-remote-1.0.0-SNAPSHOT.jar" 2>/dev/null || true
-          sleep 1
+          for i in \$(seq 1 5); do
+            ss -tlnp | grep -q 19090 || break
+            sleep 1
+          done
 
           echo "[4/5] 启动新进程..."
           nohup java -jar ~/proxy-remote-1.0.0-SNAPSHOT.jar \
