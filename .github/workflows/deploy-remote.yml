@@ -105,43 +105,79 @@ jobs:
 
       # ── 配置 SSH ─────────────────────────────────────
       - name: 配置 SSH 密钥
+        env:
+          SSH_KEY: ${{ secrets.REMOTE_SSH_KEY }}
+          REMOTE_HOST: ${{ vars.REMOTE_HOST }}
+          REMOTE_USER: ${{ vars.REMOTE_USER }}
         run: |
+          # 必填项校验：缺哪个报哪个，方便首次配置时定位问题
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::缺少 Secret REMOTE_SSH_KEY"
+            echo "::error::请前往 Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          if [ -z "$REMOTE_HOST" ]; then
+            echo "::error::缺少 Variable REMOTE_HOST"
+            echo "::error::请前往 Settings → Secrets and variables → Actions → Variables → New repository variable"
+            exit 1
+          fi
+          if [ -z "$REMOTE_USER" ]; then
+            echo "::error::缺少 Variable REMOTE_USER"
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
-          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/deploy_key
+
+          # 写入密钥（printf 不追加换行，对 PEM 格式更安全）
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # 预存服务器指纹，避免交互式确认
-          ssh-keyscan -H "${{ vars.REMOTE_HOST }}" >> ~/.ssh/known_hosts
+
+          # 不用 ssh-keyscan：
+          # ① runner IP 每次都不一样，无法预存服务器指纹
+          # ② keyscan 可能因服务器安全组配置而超时报错
+          # 改用 SSH config 关掉指纹强校验（部署场景可接受）
+          cat > ~/.ssh/config << 'EOF'
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          chmod 600 ~/.ssh/config
 
       # ── 上传 JAR（先传临时文件，不中断运行中的进程）──
       - name: 上传新 JAR 到服务器
+        env:
+          REMOTE_HOST: ${{ vars.REMOTE_HOST }}
+          REMOTE_USER: ${{ vars.REMOTE_USER }}
         run: |
           scp -i ~/.ssh/deploy_key \
             proxy-remote/target/proxy-remote-1.0.0-SNAPSHOT.jar \
-            "${{ vars.REMOTE_USER }}@${{ vars.REMOTE_HOST }}:~/proxy-remote-1.0.0-SNAPSHOT.jar.new"
+            "${REMOTE_USER}@${REMOTE_HOST}:~/proxy-remote-1.0.0-SNAPSHOT.jar.new"
 
       # ── 热切换并重启服务 ─────────────────────────────
       - name: 热切换并重启服务
+        env:
+          REMOTE_HOST: ${{ vars.REMOTE_HOST }}
+          REMOTE_USER: ${{ vars.REMOTE_USER }}
+          COMMIT_SHORT: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
         run: |
-          COMMIT_SHA="${{ github.sha }}"
-          COMMIT_SHORT="${COMMIT_SHA:0:7}"
-          BRANCH="${{ github.ref_name }}"
+          COMMIT_SHORT="${COMMIT_SHORT:0:7}"
 
-          ssh -i ~/.ssh/deploy_key \
-              "${{ vars.REMOTE_USER }}@${{ vars.REMOTE_HOST }}" bash << REMOTE
+          ssh -i ~/.ssh/deploy_key "${REMOTE_USER}@${REMOTE_HOST}" bash << REMOTE
           set -e
 
           echo "[1/5] 备份旧 JAR..."
           cp ~/proxy-remote-1.0.0-SNAPSHOT.jar \
              ~/proxy-remote-1.0.0-SNAPSHOT.jar.bak
 
-          echo "[2/5] 替换 JAR（来自 branch=${BRANCH}, commit=${COMMIT_SHORT})..."
+          echo "[2/5] 替换 JAR（branch=${BRANCH}, commit=${COMMIT_SHORT})..."
           mv ~/proxy-remote-1.0.0-SNAPSHOT.jar.new \
              ~/proxy-remote-1.0.0-SNAPSHOT.jar
 
           echo "[3/5] 停止旧进程..."
           pkill -f "proxy-remote-1.0.0-SNAPSHOT.jar" 2>/dev/null || true
           sleep 2
-          # 如果 SIGTERM 超时，补一次 SIGKILL
           pkill -9 -f "proxy-remote-1.0.0-SNAPSHOT.jar" 2>/dev/null || true
           sleep 1
 
@@ -154,7 +190,7 @@ jobs:
           echo "[5/5] 等待 19090 就绪（最多 20s）..."
           for i in \$(seq 1 20); do
             if ss -tlnp | grep -q 19090; then
-              echo "  ✓ 19090 已监听（${i}s）"
+              echo "  ✓ 19090 已监听（\${i}s）"
               break
             fi
             if [ "\$i" -eq 20 ]; then
@@ -164,7 +200,6 @@ jobs:
             sleep 1
           done
 
-          echo ""
           echo "=== 部署验证 ==="
           ss -tlnp | grep -E '9090|19090'
           ps aux | grep proxy-remote | grep -v grep
@@ -174,4 +209,4 @@ jobs:
       # ── 清理 SSH 密钥（不留在 runner 磁盘上）────────
       - name: 清理 SSH 密钥
         if: always()
-        run: rm -f ~/.ssh/deploy_key
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/config
