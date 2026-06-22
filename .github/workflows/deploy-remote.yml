@@ -1,0 +1,177 @@
+# deploy-remote.yml —— proxy-remote 自动部署流水线
+#
+# 触发条件：
+#   push 到 main / release/** 分支，且变更涉及 proxy-remote 依赖链中的任意模块。
+#   PR 不触发部署（只跑测试门禁，保持生产环境只接受合并后的代码）。
+#
+# 流程：
+#   job test   → mvn test（proxy-crypto / common / transport / local 确定性模块）
+#   job deploy → 测试全过后，构建 proxy-remote fat-jar 并 SSH 部署到生产服务器
+#
+# 所需 GitHub Secrets（Settings → Secrets and variables → Actions）：
+#   REMOTE_SSH_KEY  ── ladder.pem 的完整内容（cat ladder.pem，复制粘贴）
+#
+# 所需 GitHub Variables（Settings → Secrets and variables → Actions → Variables）：
+#   REMOTE_HOST     ── 服务器 IP，如 54.234.196.30
+#   REMOTE_USER     ── SSH 用户名，如 ubuntu
+#
+# 服务器端约定：
+#   ~/proxy-remote-1.0.0-SNAPSHOT.jar     正在运行的 JAR
+#   ~/proxy-remote-1.0.0-SNAPSHOT.jar.bak 上一版本备份（每次部署自动覆盖）
+#   ~/proxy-remote.log                     标准输出日志
+
+name: Deploy proxy-remote
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+    paths:
+      # proxy-remote 本身
+      - "proxy-remote/**"
+      # proxy-remote 的直接依赖模块：任一变动都需要重新打包
+      - "proxy-exchange/**"
+      - "proxy-transport-netty/**"
+      - "proxy-common/**"
+      - "proxy-crypto/**"
+      # 根 pom 变动可能影响依赖版本
+      - "pom.xml"
+      # workflow 自身变动也应重跑
+      - ".github/workflows/deploy-remote.yml"
+
+concurrency:
+  # 同一分支同时只跑一个部署，新的 push 取消旧的（避免并发部署乱序）
+  group: deploy-remote-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ────────────────────────────────────────────────────────
+  # 1. 测试门禁
+  #    与 tests.yml 中的 java-unit job 保持一致：
+  #    跑确定性模块，proxy-remote 的 E2E 集成测试需要真实网络，CI 不跑。
+  # ────────────────────────────────────────────────────────
+  test:
+    name: 测试门禁（Java 确定性模块）
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+
+      - name: mvn test
+        run: >-
+          mvn -B test
+          -pl proxy-crypto,proxy-common,proxy-transport-netty,proxy-local
+          -am
+
+  # ────────────────────────────────────────────────────────
+  # 2. 构建 + 部署
+  #    needs: test 确保测试全过才执行。
+  # ────────────────────────────────────────────────────────
+  deploy:
+    name: 部署 proxy-remote 到生产服务器
+    needs: test
+    runs-on: ubuntu-latest
+
+    # environment 字段可在 GitHub 仓库设置里配保护规则（如需人工审批可在此加）
+    # environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+
+      # ── 构建 fat-jar ──────────────────────────────────
+      - name: 构建 proxy-remote fat-jar
+        run: mvn -B package -pl proxy-remote -am -DskipTests -q
+
+      - name: 验证 JAR 存在
+        run: |
+          JAR=proxy-remote/target/proxy-remote-1.0.0-SNAPSHOT.jar
+          test -f "$JAR" || { echo "JAR not found: $JAR"; exit 1; }
+          ls -lh "$JAR"
+
+      # ── 配置 SSH ─────────────────────────────────────
+      - name: 配置 SSH 密钥
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.REMOTE_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # 预存服务器指纹，避免交互式确认
+          ssh-keyscan -H "${{ vars.REMOTE_HOST }}" >> ~/.ssh/known_hosts
+
+      # ── 上传 JAR（先传临时文件，不中断运行中的进程）──
+      - name: 上传新 JAR 到服务器
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            proxy-remote/target/proxy-remote-1.0.0-SNAPSHOT.jar \
+            "${{ vars.REMOTE_USER }}@${{ vars.REMOTE_HOST }}:~/proxy-remote-1.0.0-SNAPSHOT.jar.new"
+
+      # ── 热切换并重启服务 ─────────────────────────────
+      - name: 热切换并重启服务
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHA:0:7}"
+          BRANCH="${{ github.ref_name }}"
+
+          ssh -i ~/.ssh/deploy_key \
+              "${{ vars.REMOTE_USER }}@${{ vars.REMOTE_HOST }}" bash << REMOTE
+          set -e
+
+          echo "[1/5] 备份旧 JAR..."
+          cp ~/proxy-remote-1.0.0-SNAPSHOT.jar \
+             ~/proxy-remote-1.0.0-SNAPSHOT.jar.bak
+
+          echo "[2/5] 替换 JAR（来自 branch=${BRANCH}, commit=${COMMIT_SHORT})..."
+          mv ~/proxy-remote-1.0.0-SNAPSHOT.jar.new \
+             ~/proxy-remote-1.0.0-SNAPSHOT.jar
+
+          echo "[3/5] 停止旧进程..."
+          pkill -f "proxy-remote-1.0.0-SNAPSHOT.jar" 2>/dev/null || true
+          sleep 2
+          # 如果 SIGTERM 超时，补一次 SIGKILL
+          pkill -9 -f "proxy-remote-1.0.0-SNAPSHOT.jar" 2>/dev/null || true
+          sleep 1
+
+          echo "[4/5] 启动新进程..."
+          nohup java -jar ~/proxy-remote-1.0.0-SNAPSHOT.jar \
+            >> ~/proxy-remote.log 2>&1 &
+          NEW_PID=\$!
+          echo "  新进程 PID=\${NEW_PID}"
+
+          echo "[5/5] 等待 19090 就绪（最多 20s）..."
+          for i in \$(seq 1 20); do
+            if ss -tlnp | grep -q 19090; then
+              echo "  ✓ 19090 已监听（${i}s）"
+              break
+            fi
+            if [ "\$i" -eq 20 ]; then
+              echo "  ✗ 20s 内未就绪，部署失败"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          echo ""
+          echo "=== 部署验证 ==="
+          ss -tlnp | grep -E '9090|19090'
+          ps aux | grep proxy-remote | grep -v grep
+          ls -lh ~/proxy-remote-1.0.0-SNAPSHOT.jar
+          REMOTE
+
+      # ── 清理 SSH 密钥（不留在 runner 磁盘上）────────
+      - name: 清理 SSH 密钥
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
