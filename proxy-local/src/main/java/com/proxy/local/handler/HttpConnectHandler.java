@@ -23,20 +23,72 @@ import java.util.List;
  * 自动处理 TCP 粘包/拆包问题和 ByteBuf 的生命周期管理，
  * 避免手动管理 cumulation 可能导致的内存泄漏。
  * </p>
+ *
+ * <h3>HTTPS 隧道建立与 TLS 握手流程</h3>
  * <p>
- * HTTP CONNECT 请求格式：
+ * 浏览器访问 HTTPS 网站时与本处理器的交互时序：
+ * </p>
+ * <pre>
+ * ┌────────┐          ┌────────────┐        ┌─────────────┐        ┌──────────────┐
+ * │ Browser│          │ proxy-local│        │proxy-remote │        │example.com:443│
+ * └───┬────┘          └─────┬──────┘        └──────┬──────┘        └──────┬───────┘
+ *     │  TCP connect (明文)  │                      │                      │
+ *     │────────────────────→│                      │                      │
+ *     │                     │                      │                      │
+ *     │ CONNECT example.com:443 HTTP/1.1           │                      │
+ *     │────────────────────→│                      │                      │
+ *     │                     │  ProxyMessage(CONNECT)│                      │
+ *     │                     │─────────────────────→│                      │
+ *     │                     │                      │  TCP connect (裸TCP) │
+ *     │                     │                      │─────────────────────→│
+ *     │                     │                      │  TCP connected       │
+ *     │                     │                      │←─────────────────────│
+ *     │                     │  CONNECT_RESPONSE     │                      │
+ *     │                     │←─────────────────────│                      │
+ *     │ HTTP/1.1 200 Connection Established        │                      │
+ *     │←────────────────────│                      │                      │
+ *     │                     │                      │                      │
+ *     │  ═══════ 以下进入隧道透传模式（RelayHandler）═══════                │
+ *     │                     │                      │                      │
+ *     │ TLS ClientHello     │  DATA (透传)         │  TLS ClientHello     │
+ *     │────────────────────→│─────────────────────→│─────────────────────→│
+ *     │                     │                      │                      │
+ *     │ TLS ServerHello+Cert│  DATA (透传)         │  TLS ServerHello+Cert│
+ *     │←────────────────────│←─────────────────────│←─────────────────────│
+ *     │                     │                      │                      │
+ *     │ TLS Key Exchange    │  DATA (透传)         │  TLS Key Exchange    │
+ *     │────────────────────→│─────────────────────→│─────────────────────→│
+ *     │                     │                      │                      │
+ *     │  ═══════ TLS 握手完成，开始加密通信 ═══════                        │
+ *     │                     │                      │                      │
+ *     │ Encrypted HTTP Req  │  DATA (透传密文)     │  Encrypted HTTP Req  │
+ *     │────────────────────→│─────────────────────→│─────────────────────→│
+ *     │                     │                      │                      │
+ *     │ Encrypted HTTP Resp │  DATA (透传密文)     │  Encrypted HTTP Resp │
+ *     │←────────────────────│←─────────────────────│←─────────────────────│
+ * </pre>
+ *
+ * <h3>关键设计说明</h3>
+ * <ul>
+ *   <li>本处理器只负责解析 CONNECT 请求行并建立隧道，不参与后续 TLS 握手</li>
+ *   <li>TLS 握手是浏览器与目标网站之间的端到端过程，代理仅做字节透传</li>
+ *   <li>TLS 帧格式为 TLS Record Protocol（非 HTTP 文本），首字节 0x16=Handshake, 0x17=Application Data</li>
+ *   <li>隧道建立后 pipeline 切换到 {@link RelayHandler}，本处理器从 pipeline 中移除</li>
+ *   <li>代理无法解密隧道内容，仅能从 CONNECT 请求中获知目标域名和端口</li>
+ * </ul>
+ *
+ * <h3>HTTP CONNECT 请求格式</h3>
  * <pre>
  * CONNECT www.google.com:443 HTTP/1.1\r\n
  * Host: www.google.com:443\r\n
  * \r\n
  * </pre>
- * <p>
- * 成功响应：
+ *
+ * <h3>成功响应</h3>
  * <pre>
  * HTTP/1.1 200 Connection Established\r\n
  * \r\n
  * </pre>
- * </p>
  */
 public class HttpConnectHandler extends ByteToMessageDecoder {
 
