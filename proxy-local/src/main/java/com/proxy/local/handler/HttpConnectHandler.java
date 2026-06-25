@@ -14,9 +14,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * HTTP CONNECT 隧道处理器
+ * HTTP 代理请求处理器（支持 CONNECT 隧道 + HTTP 普通代理）
  * <p>
- * 处理 HTTP 代理的 CONNECT 方法，建立隧道后切换到 RelayHandler。
+ * 处理两种 HTTP 代理模式：
+ * <ul>
+ *   <li>CONNECT 隧道（HTTPS）：收到 CONNECT 请求后建立隧道，切换到 {@link RelayHandler}</li>
+ *   <li>HTTP 普通代理（HTTP）：收到 GET/POST 等请求后解析目标地址、重写 URL，
+ *       切换到 {@link HttpProxyRelayHandler} 或 {@link DirectRelayHandler}</li>
+ * </ul>
  * </p>
  * <p>
  * 继承 {@link ByteToMessageDecoder}，利用 Netty 内置的累积缓冲机制，
@@ -146,11 +151,17 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
         String requestLine = data.substring(0, data.indexOf("\r\n"));
         String[] parts = requestLine.split(" ");
 
-        if (parts.length < 3 || !"CONNECT".equalsIgnoreCase(parts[0])) {
-            // 不是 CONNECT 方法，暂不支持普通 HTTP 代理
-            log.warn("Non-CONNECT HTTP request not supported: {}", requestLine);
+        // 请求行格式校验
+        if (parts.length < 3) {
+            log.warn("Malformed HTTP request line: {}", requestLine);
             ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_REQUEST, StandardCharsets.UTF_8));
             ctx.close();
+            return;
+        }
+
+        // 非 CONNECT → HTTP 普通代理模式
+        if (!"CONNECT".equalsIgnoreCase(parts[0])) {
+            handlePlainHttpProxy(ctx, headerBytes);
             return;
         }
 
@@ -259,9 +270,135 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
         return -1;
     }
 
+    // ==================== HTTP 普通代理相关方法 ====================
+
+    /**
+     * 处理 HTTP 普通代理请求（GET/POST/PUT 等非 CONNECT 方法）。
+     * <p>
+     * 核心流程：
+     * <ol>
+     *   <li>用 {@link HttpRequestParser} 从请求中解析目标 host:port，并重写绝对 URL</li>
+     *   <li>通过路由规则判断走代理还是直连</li>
+     *   <li>建连成功后，将重写后的首条请求立即转发（不回 200）</li>
+     *   <li>切换到 {@link HttpProxyRelayHandler} 或 {@link DirectRelayHandler} 继续透传</li>
+     * </ol>
+     * </p>
+     *
+     * @param ctx        当前 channel 上下文
+     * @param rawRequest 原始 HTTP 请求头字节（包含 \r\n\r\n）
+     */
+    private void handlePlainHttpProxy(ChannelHandlerContext ctx, byte[] rawRequest) {
+        // 1. 解析并重写
+        HttpRequestParser.ParseResult result;
+        try {
+            result = HttpRequestParser.parse(rawRequest);
+        } catch (IllegalArgumentException e) {
+            log.warn("Failed to parse HTTP proxy request: {}", e.getMessage());
+            ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_REQUEST, StandardCharsets.UTF_8));
+            ctx.close();
+            return;
+        }
+
+        String host = result.getHost();
+        int port = result.getPort();
+        byte[] rewritten = result.getRewritten();
+
+        log.info("HTTP plain proxy request: {}:{} from {}", host, port, ctx.channel().remoteAddress());
+
+        // 2. 路由判断
+        if (routeRule != null && !routeRule.shouldProxy(host)) {
+            // 直连模式
+            handleDirectPlainProxy(ctx, host, port, rewritten);
+        } else {
+            // 代理模式
+            handleRemotePlainProxy(ctx, host, port, rewritten);
+        }
+    }
+
+    /**
+     * HTTP 普通代理 —— 直连模式。
+     * <p>
+     * 直接建立到目标服务器的 TCP 连接，建连成功后不回复 200，
+     * 而是通过 {@code fireChannelRead} 将首条请求注入 {@link DirectRelayHandler}。
+     * </p>
+     *
+     * @param ctx       当前 channel 上下文
+     * @param host      目标主机名
+     * @param port      目标端口
+     * @param rewritten 重写后的首条 HTTP 请求字节
+     */
+    private void handleDirectPlainProxy(ChannelHandlerContext ctx,
+                                         String host, int port, byte[] rewritten) {
+        log.info("Route DIRECT: {}:{}", host, port);
+        DirectRelayHandler directHandler = new DirectRelayHandler(host, port);
+        directHandler.connect(ctx).addListener(future -> {
+            if (future.isSuccess()) {
+                // ★ 不回 200！直接切换到 relay 模式
+                ctx.pipeline().addLast("direct-relay", directHandler);
+                ctx.pipeline().remove(HttpConnectHandler.this);
+                // 首条请求立即发送给目标服务器
+                ctx.fireChannelRead(Unpooled.wrappedBuffer(rewritten));
+                log.info("HTTP plain proxy direct tunnel established: {}:{}", host, port);
+            } else {
+                log.debug("HTTP plain proxy direct connection failed for {}:{}", host, port);
+                ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
+                ctx.close();
+            }
+        });
+    }
+
+    /**
+     * HTTP 普通代理 —— 远程代理模式。
+     * <p>
+     * 先通过 CONNECT 在远端建立到目标服务器的 TCP 连接，
+     * 成功后切换到 {@link HttpProxyRelayHandler}，由其在 handlerAdded 中发送首条请求。
+     * </p>
+     *
+     * @param ctx       当前 channel 上下文
+     * @param host      目标主机名
+     * @param port      目标端口
+     * @param rewritten 重写后的首条 HTTP 请求字节
+     */
+    private void handleRemotePlainProxy(ChannelHandlerContext ctx,
+                                         String host, int port, byte[] rewritten) {
+        log.info("Route PROXY: {}:{}", host, port);
+
+        final long streamId = streamRegistry.nextStreamId();
+        streamRegistry.register(streamId, ctx);
+
+        // 先通过 CONNECT 在远端建立到目标的 TCP 连接
+        Invocation connectInv = new Invocation(host, port, null, ProxyMessage.MessageType.CONNECT);
+        connectInv.setAttachment("streamId", streamId);
+
+        invoker.invoke(connectInv).whenComplete((response, throwable) -> {
+            if (throwable != null) {
+                log.error("HTTP plain proxy CONNECT failed for {}:{}", host, port, throwable);
+                streamRegistry.unregister(streamId);
+                ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
+                ctx.close();
+                return;
+            }
+
+            if (response != null && response.isSuccess()) {
+                // ★ 不回 200！切换到 HttpProxyRelayHandler
+                ctx.pipeline().addLast("http-proxy-relay",
+                        new HttpProxyRelayHandler(invoker, host, port, streamId, rewritten));
+                ctx.pipeline().remove(HttpConnectHandler.this);
+
+                log.info("HTTP plain proxy tunnel established: {}:{}, streamId={}", host, port, streamId);
+            } else {
+                String errMsg = response != null ? response.getErrorMessage() : "unknown error";
+                log.warn("HTTP plain proxy CONNECT rejected for {}:{}: {}", host, port, errMsg);
+                streamRegistry.unregister(streamId);
+                ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
+                ctx.close();
+            }
+        });
+    }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("HTTP CONNECT error from {}", ctx.channel().remoteAddress(), cause);
+        log.error("HTTP handler error from {}", ctx.channel().remoteAddress(), cause);
         ctx.close();
     }
 }
