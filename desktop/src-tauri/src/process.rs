@@ -245,7 +245,8 @@ pub async fn start_proxy_local(state: &mut AppState) -> Result<(), String> {
     // 生成 Java 兼容格式的配置文件（扁平驼峰命名：localPort, remoteServers 等）
     // Rust 桌面端的 proxy.yml 是嵌套蛇形格式，与 Java 不兼容
     // 因此转换为 proxy-java.yml 单独给 Java 进程使用
-    match config::write_java_config() {
+    let tun_mode = state.proxy_mode == crate::state::ProxyMode::Tun;
+    match config::write_java_config(tun_mode) {
         Ok(java_config_path) => {
             cmd.arg(java_config_path.to_str().unwrap_or_default());
             log::info!("Generated Java-compatible config: {:?}", java_config_path);

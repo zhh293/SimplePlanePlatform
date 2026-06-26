@@ -527,7 +527,7 @@ fn parse_server_entry(value: &serde_yaml::Value) -> Result<RemoteConfig, String>
 
 /// 将 ProxyConfig 转为 Java 兼容的 YAML 格式字符串
 /// Java 的 ProxyConfig 使用扁平驼峰命名：localPort, remoteServers, httpProxyEnabled 等
-pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
+pub fn generate_java_compatible_yaml(config: &ProxyConfig, tun_mode: bool) -> String {
     let mut yaml = String::new();
 
     // localPort
@@ -549,6 +549,9 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
 
     // httpProxyEnabled
     yaml.push_str(&format!("httpProxyEnabled: {}\n", config.local.http_proxy_enabled));
+
+    // tunMode: TUN 模式下所有流量走 proxy-remote，避免 DirectRelayHandler 回环
+    yaml.push_str(&format!("tunMode: {}\n", tun_mode));
 
     // route
     yaml.push_str("route:\n");
@@ -577,9 +580,10 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
 }
 
 /// 生成 Java 兼容配置文件并写入磁盘，返回文件路径
-pub fn write_java_config() -> Result<PathBuf, String> {
+/// tun_mode: 是否为 TUN 模式（影响 RouteRule 行为）
+pub fn write_java_config(tun_mode: bool) -> Result<PathBuf, String> {
     let config = load_proxy_config()?;
-    let java_yaml = generate_java_compatible_yaml(&config);
+    let java_yaml = generate_java_compatible_yaml(&config, tun_mode);
     let java_config_path = get_config_dir().join("proxy-java.yml");
     fs::write(&java_config_path, java_yaml)
         .map_err(|e| format!("Failed to write Java config: {}", e))?;

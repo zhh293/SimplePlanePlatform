@@ -1,6 +1,6 @@
 [package]
 name = "simple-plane-desktop"
-version = "0.1.7"
+version = "0.1.8"
 description = "SimplePlanePlatform Desktop Client"
 authors = ["zhanghonghao"]
 edition = "2021"

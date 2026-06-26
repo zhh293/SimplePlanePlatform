@@ -61,6 +61,16 @@ public class ProxyConfig {
     private RouteConfig route = new RouteConfig();
 
     /**
+     * TUN 透明代理模式
+     * <p>
+     * 开启后 RouteRule.shouldProxy() 始终返回 true，所有流量统一走 proxy-remote，
+     * 不走 DirectRelayHandler 直连。原因：TUN 模式下 DirectRelayHandler 在本机发起的
+     * 出站 TCP 会被 TUN 再次截获，形成路由回环导致连接超时。
+     * </p>
+     */
+    private boolean tunMode = false;
+
+    /**
      * 系统代理配置
      */
     public static class SystemProxy {
@@ -315,5 +325,13 @@ public class ProxyConfig {
 
     public void setRoute(RouteConfig route) {
         this.route = route;
+    }
+
+    public boolean isTunMode() {
+        return tunMode;
+    }
+
+    public void setTunMode(boolean tunMode) {
+        this.tunMode = tunMode;
     }
 }

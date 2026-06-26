@@ -71,7 +71,7 @@ public class ProxyLocalServer {
         }
 
         // 初始化路由规则
-        this.routeRule = new RouteRule(config.getRoute());
+        this.routeRule = new RouteRule(config.getRoute(), config.isTunMode());
 
         // 组装调用链
         this.clusterInvoker = buildInvokerChain();

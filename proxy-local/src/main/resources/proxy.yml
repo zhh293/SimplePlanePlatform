@@ -10,6 +10,7 @@ loadBalance: roundrobin
 timeoutMs: 8000
 connectionsPerNode: 1
 httpProxyEnabled: true
+tunMode: false
 route:
   defaultRoute: proxy
   proxyList:

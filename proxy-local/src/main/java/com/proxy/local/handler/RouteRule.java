@@ -23,13 +23,19 @@ public class RouteRule {
     private final String defaultRoute;
     private final List<String> proxyPatterns;
     private final List<String> directPatterns;
+    private final boolean tunMode;
 
     public RouteRule(ProxyConfig.RouteConfig config) {
+        this(config, false);
+    }
+
+    public RouteRule(ProxyConfig.RouteConfig config, boolean tunMode) {
         this.defaultRoute = config.getDefaultRoute();
         this.proxyPatterns = new ArrayList<>(config.getProxyList());
         this.directPatterns = new ArrayList<>(config.getDirectList());
-        log.info("RouteRule initialized: default={}, proxyRules={}, directRules={}",
-                defaultRoute, proxyPatterns.size(), directPatterns.size());
+        this.tunMode = tunMode;
+        log.info("RouteRule initialized: default={}, proxyRules={}, directRules={}, tunMode={}",
+                defaultRoute, proxyPatterns.size(), directPatterns.size(), tunMode);
     }
 
     /**
@@ -39,6 +45,11 @@ public class RouteRule {
      * @return true=走远程代理, false=直连
      */
     public boolean shouldProxy(String host) {
+        // TUN 模式下所有流量统一走 proxy-remote，避免 DirectRelayHandler 回环
+        if (tunMode) {
+            return true;
+        }
+
         if (host == null || host.isEmpty()) {
             return "proxy".equals(defaultRoute);
         }
