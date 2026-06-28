@@ -6,7 +6,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -166,67 +165,5 @@ class Socks5ConnectHandlerTest {
         assertNull(response, "数据不足时不应回复");
         assertTrue(ch.isActive(), "数据不足时不应关闭连接");
         ch.finish();
-    }
-
-    // ---- TC-LOCAL-003e：异步建连 → 立即回复 SOCKS5 成功，autoRead 被暂停 ----
-
-    @Test
-    void testAsyncConnectRepliesImmediatelyAndPausesAutoRead() {
-        // 用一个未完成的 CompletableFuture 模拟远端连接还在进行中
-        CompletableFuture<com.proxy.common.filter.Response> pendingFuture = new CompletableFuture<>();
-        com.proxy.common.filter.Invoker delayedInvoker = invocation -> pendingFuture;
-
-        EmbeddedChannel ch = new EmbeddedChannel(
-                new Socks5ConnectHandler(delayedInvoker, alwaysProxyRule()));
-
-        // 发送正常的域名 CONNECT 请求
-        ByteBuf request = buildConnectDomain("www.google.com", 443);
-        ch.writeInbound(request);
-
-        // 异步建连改动后：应立即收到 SOCKS5 成功回复（REP=0x00），不等远端
-        ByteBuf response = ch.readOutbound();
-        assertNotNull(response, "应立即回复 SOCKS5 成功（异步建连）");
-        assertEquals(0x05, response.readByte() & 0xFF, "VER");
-        assertEquals(0x00, response.readByte() & 0xFF, "REP 应为 SUCCESS (0x00)，不等待远端");
-        response.release();
-
-        // autoRead 应被暂停（等远端建连完成后再恢复）
-        assertFalse(ch.config().isAutoRead(), "异步建连期间 autoRead 应被暂停");
-
-        // 通道应仍然活跃
-        assertTrue(ch.isActive(), "异步建连期间通道应保持活跃");
-
-        // 模拟远端建连成功
-        pendingFuture.complete(com.proxy.common.filter.Response.ok());
-
-        // autoRead 应被恢复
-        assertTrue(ch.config().isAutoRead(), "远端建连成功后 autoRead 应恢复");
-
-        ch.finish();
-    }
-
-    // ---- TC-LOCAL-003f：异步建连失败 → 通道被关闭 ----
-
-    @Test
-    void testAsyncConnectFailureClosesChannel() {
-        CompletableFuture<com.proxy.common.filter.Response> pendingFuture = new CompletableFuture<>();
-        com.proxy.common.filter.Invoker delayedInvoker = invocation -> pendingFuture;
-
-        EmbeddedChannel ch = new EmbeddedChannel(
-                new Socks5ConnectHandler(delayedInvoker, alwaysProxyRule()));
-
-        ByteBuf request = buildConnectDomain("www.google.com", 443);
-        ch.writeInbound(request);
-
-        // 应立即回复成功
-        ByteBuf response = ch.readOutbound();
-        assertNotNull(response, "应立即回复 SOCKS5 成功");
-        response.release();
-
-        // 模拟远端建连失败
-        pendingFuture.completeExceptionally(new RuntimeException("Connection timed out"));
-
-        // 通道应被关闭
-        assertFalse(ch.isActive(), "远端建连失败后通道应被关闭");
     }
 }

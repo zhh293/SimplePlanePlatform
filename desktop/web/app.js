@@ -254,14 +254,6 @@ const App = (function () {
     setVal('#localPort', c.local.port);
     $('#httpProxyEnabled').checked = c.local.http_proxy_enabled;
 
-    // 高级配置
-    if (c.advanced) {
-      setVal('#cluster', c.advanced.cluster || 'failover');
-      setVal('#loadBalance', c.advanced.load_balance || 'roundrobin');
-      setVal('#timeoutMs', c.advanced.timeout_ms ?? 5000);
-      setVal('#connectionsPerNode', c.advanced.connections_per_node ?? 4);
-    }
-
     // 远端服务器
     renderServerCards([c.remote]);
 
@@ -280,14 +272,6 @@ const App = (function () {
       port: intVal('#localPort', 1080),
       http_proxy_enabled: $('#httpProxyEnabled').checked,
       http_proxy_port: intVal('#localPort', 1080), // HTTP 与 SOCKS5 共用端口
-    };
-
-    // 高级配置
-    localConfig.advanced = {
-      cluster: val('#cluster') || 'failover',
-      load_balance: val('#loadBalance') || 'roundrobin',
-      timeout_ms: intVal('#timeoutMs', 5000),
-      connections_per_node: intVal('#connectionsPerNode', 4),
     };
 
     // 收集服务器卡片

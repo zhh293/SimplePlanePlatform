@@ -163,36 +163,29 @@ public class Socks5ConnectHandler extends ChannelInboundHandlerAdapter {
                 Invocation invocation = new Invocation(targetHost, targetPort, null, ProxyMessage.MessageType.CONNECT);
                 invocation.setAttachment("streamId", streamId);
 
-                // 异步建连：立即回复 SOCKS5 成功，不等待远端连接结果，减少浏览器 stalled 时间
-                // 暂停读取，避免在远端连接尚未就绪时收到浏览器数据
-                ctx.channel().config().setAutoRead(false);
-
-                // 先回复 SOCKS5 成功，让浏览器立即开始后续流程
-                sendReply(ctx, REP_SUCCESS);
-
-                // 切换到 Relay 模式
-                ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
-                ctx.pipeline().remove(Socks5ConnectHandler.this);
-
-                log.info("SOCKS5 tunnel pre-established (async): {}:{}, streamId={}", host, port, streamId);
-
-                // 异步等待远端建连结果
                 invoker.invoke(invocation).whenComplete((response, throwable) -> {
                     if (throwable != null) {
-                        log.error("SOCKS5 CONNECT async failed for {}:{}", host, port, throwable);
+                        log.error("CONNECT failed for {}:{}", host, port, throwable);
                         streamRegistry.unregister(streamId);
+                        sendReply(ctx, REP_HOST_UNREACHABLE);
                         ctx.close();
                         return;
                     }
 
                     if (response != null && response.isSuccess()) {
-                        // 远端建连成功，恢复读取，开始透传缓冲的数据
-                        ctx.channel().config().setAutoRead(true);
-                        log.info("SOCKS5 tunnel async connected: {}:{}, streamId={}", host, port, streamId);
+                        // 连接成功，回复 SOCKS5 成功
+                        sendReply(ctx, REP_SUCCESS);
+
+                        // 切换到 Relay 模式
+                        ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
+                        ctx.pipeline().remove(Socks5ConnectHandler.this);
+
+                        log.info("SOCKS5 tunnel established: {}:{}, streamId={}", host, port, streamId);
                     } else {
                         String errMsg = response != null ? response.getErrorMessage() : "unknown error";
-                        log.warn("SOCKS5 CONNECT async rejected for {}:{}: {}", host, port, errMsg);
+                        log.warn("CONNECT rejected for {}:{}: {}", host, port, errMsg);
                         streamRegistry.unregister(streamId);
+                        sendReply(ctx, REP_HOST_UNREACHABLE);
                         ctx.close();
                     }
                 });

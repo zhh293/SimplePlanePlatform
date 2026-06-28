@@ -9,32 +9,6 @@ pub struct ProxyConfig {
     pub remote: RemoteConfig,
     #[serde(default)]
     pub route: RouteConfig,
-    #[serde(default)]
-    pub advanced: AdvancedConfig,
-}
-
-/// 高级配置（集群策略、负载均衡、超时、连接数）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AdvancedConfig {
-    #[serde(default = "default_cluster")]
-    pub cluster: String,
-    #[serde(default = "default_load_balance")]
-    pub load_balance: String,
-    #[serde(default = "default_timeout_ms")]
-    pub timeout_ms: u64,
-    #[serde(default = "default_connections_per_node")]
-    pub connections_per_node: u32,
-}
-
-impl Default for AdvancedConfig {
-    fn default() -> Self {
-        Self {
-            cluster: default_cluster(),
-            load_balance: default_load_balance(),
-            timeout_ms: default_timeout_ms(),
-            connections_per_node: default_connections_per_node(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,10 +46,6 @@ fn default_http_enabled() -> bool { true }
 fn default_http_port() -> u16 { 1080 }
 fn default_cipher() -> String { "chacha20".to_string() }
 fn default_route_mode() -> String { "proxy".to_string() }
-fn default_cluster() -> String { "failover".to_string() }
-fn default_load_balance() -> String { "roundrobin".to_string() }
-fn default_timeout_ms() -> u64 { 5000 }
-fn default_connections_per_node() -> u32 { 4 }
 
 /// TUN 配置（对应 tun.toml）
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -323,7 +293,6 @@ fn get_default_proxy_config() -> ProxyConfig {
                 "localhost".to_string(),
             ],
         },
-        advanced: AdvancedConfig::default(),
     }
 }
 
@@ -572,11 +541,11 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig, tun_mode: bool) -> St
     yaml.push_str(&format!("    cipherKey: \"{}\"\n", config.remote.key));
     yaml.push_str("    ssl: false\n");
 
-    // cluster & loadBalance（从配置读取，不再硬编码）
-    yaml.push_str(&format!("cluster: {}\n", config.advanced.cluster));
-    yaml.push_str(&format!("loadBalance: {}\n", config.advanced.load_balance));
-    yaml.push_str(&format!("timeoutMs: {}\n", config.advanced.timeout_ms));
-    yaml.push_str(&format!("connectionsPerNode: {}\n", config.advanced.connections_per_node));
+    // cluster & loadBalance
+    yaml.push_str("cluster: failover\n");
+    yaml.push_str("loadBalance: roundrobin\n");
+    yaml.push_str("timeoutMs: 8000\n");
+    yaml.push_str("connectionsPerNode: 1\n");
 
     // httpProxyEnabled
     yaml.push_str(&format!("httpProxyEnabled: {}\n", config.local.http_proxy_enabled));
