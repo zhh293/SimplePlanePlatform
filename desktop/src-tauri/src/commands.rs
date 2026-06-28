@@ -417,6 +417,7 @@ fn get_builtin_presets() -> Vec<Preset> {
                     ],
                     direct_list: vec![],
                 },
+                advanced: config::AdvancedConfig::default(),
             },
         },
         Preset {
@@ -446,6 +447,7 @@ fn get_builtin_presets() -> Vec<Preset> {
                         "192.168.0.0/16".to_string(),
                     ],
                 },
+                advanced: config::AdvancedConfig::default(),
             },
         },
         Preset {
@@ -487,6 +489,7 @@ fn get_builtin_presets() -> Vec<Preset> {
                     ],
                     direct_list: vec![],
                 },
+                advanced: config::AdvancedConfig::default(),
             },
         },
     ]

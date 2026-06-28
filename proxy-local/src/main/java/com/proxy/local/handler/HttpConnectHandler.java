@@ -221,29 +221,36 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
             Invocation invocation = new Invocation(targetHost, targetPort, null, ProxyMessage.MessageType.CONNECT);
             invocation.setAttachment("streamId", streamId);
 
+            // 异步建连：立即回复 200，不等待远端连接结果，减少浏览器 stalled 时间
+            // 暂停读取，避免在远端连接尚未就绪时收到浏览器 TLS ClientHello
+            ctx.channel().config().setAutoRead(false);
+
+            // 先回复 200，让浏览器立即开始 TLS 握手
+            ctx.writeAndFlush(Unpooled.copiedBuffer(CONNECT_RESPONSE, StandardCharsets.UTF_8));
+
+            // 切换到 Relay 模式
+            ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
+            ctx.pipeline().remove(HttpConnectHandler.this);
+
+            log.info("HTTP tunnel pre-established (async): {}:{}, streamId={}", host, port, streamId);
+
+            // 异步等待远端建连结果
             invoker.invoke(invocation).whenComplete((response, throwable) -> {
                 if (throwable != null) {
-                    log.error("HTTP CONNECT failed for {}:{}", host, port, throwable);
+                    log.error("HTTP CONNECT async failed for {}:{}", host, port, throwable);
                     streamRegistry.unregister(streamId);
-                    ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
                     ctx.close();
                     return;
                 }
 
                 if (response != null && response.isSuccess()) {
-                    // 回复 200 Connection Established
-                    ctx.writeAndFlush(Unpooled.copiedBuffer(CONNECT_RESPONSE, StandardCharsets.UTF_8));
-
-                    // 切换到 Relay 模式：先添加 RelayHandler，再移除自身
-                    ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
-                    ctx.pipeline().remove(HttpConnectHandler.this);
-
-                    log.info("HTTP tunnel established: {}:{}, streamId={}", host, port, streamId);
+                    // 远端建连成功，恢复读取，开始透传缓冲的 TLS 数据
+                    ctx.channel().config().setAutoRead(true);
+                    log.info("HTTP tunnel async connected: {}:{}, streamId={}", host, port, streamId);
                 } else {
                     String errMsg = response != null ? response.getErrorMessage() : "unknown error";
-                    log.warn("HTTP CONNECT rejected for {}:{}: {}", host, port, errMsg);
+                    log.warn("HTTP CONNECT async rejected for {}:{}: {}", host, port, errMsg);
                     streamRegistry.unregister(streamId);
-                    ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
                     ctx.close();
                 }
             });
