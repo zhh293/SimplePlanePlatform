@@ -8,7 +8,8 @@ authors = ["zhanghonghao"]
 # Android 通过 JNI 加载本 crate，必须产出动态库（libplane_core.so）。
 [lib]
 name = "plane_core"
-crate-type = ["cdylib"]
+# Android loads the cdylib through JNI; rlib keeps host-side CI tests linkable.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # JNI 桥接（A2 起使用，A1 仅用于 nativeVersion 占位导出）
@@ -47,6 +48,7 @@ rand = "0.8"      # 随机 nonce 生成
 h2 = "0.4"
 bytes = "1"
 http = "1"
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 
 # tracing-android 仅在 Android 目标上启用，桌面（如 macOS 本机 cargo check）跳过，
 # 避免在非 Android 平台拉入 android 专用依赖导致编译失败。

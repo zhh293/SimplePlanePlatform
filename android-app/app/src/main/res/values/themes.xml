@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 基于 Material 3 的应用主题 -->
-    <style name="Theme.SimplePlane" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.SimplePlane" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="colorPrimary">@color/app_primary</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+    </style>
+
+    <style name="AppSectionTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">24dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textColor">@color/app_text_primary</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>

@@ -30,9 +30,12 @@ pub mod dispatcher;
 pub mod error;
 pub mod jni_bridge;
 pub mod logging;
+pub mod mobile_config;
 pub mod net_probe;
 pub mod outbound;
 pub mod proxy_proto;
+pub mod routing;
+pub mod stats;
 pub mod tcp_stack;
 
 use jni::objects::JClass;

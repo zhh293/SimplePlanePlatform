@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.Exec
+import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -120,7 +121,27 @@ val buildRust by tasks.registering(Exec::class) {
     description = "Cross-compile plane-core (Rust) into jniLibs via cargo-ndk"
     workingDir = rootProject.projectDir.parentFile // 仓库根目录（android-app 的上一级）
     val profile = if (project.hasProperty("rustRelease")) "release" else "debug"
-    commandLine("bash", "scripts/build-rust.sh", profile)
+    val isWindows = System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
+    val bashExecutable = if (isWindows) {
+        // Windows' PATH may resolve `bash` to WSL, which cannot reliably consume
+        // this checkout's paths. Prefer an explicit Git Bash installation.
+        val configured = providers.gradleProperty("gitBash").orNull
+            ?: System.getenv("GIT_BASH")
+        val candidates = listOfNotNull(
+            configured?.let(::File),
+            System.getenv("ProgramFiles")?.let { File(it, "Git/bin/bash.exe") },
+            System.getenv("ProgramFiles(x86)")?.let { File(it, "Git/bin/bash.exe") },
+            System.getenv("LOCALAPPDATA")?.let { File(it, "Programs/Git/bin/bash.exe") },
+        )
+        candidates.firstOrNull(File::isFile)?.absolutePath
+            ?: throw GradleException(
+                "Git Bash was not found. Install Git for Windows or set " +
+                    "GIT_BASH / -PgitBash=C:\\path\\to\\bash.exe",
+            )
+    } else {
+        "bash"
+    }
+    commandLine(bashExecutable, "scripts/build-rust.sh", profile)
 }
 
 tasks.named("preBuild") {

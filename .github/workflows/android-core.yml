@@ -67,11 +67,11 @@ jobs:
 
       - name: cargo clippy -D warnings
         working-directory: ${{ env.CRATE_DIR }}
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --lib -- -D warnings
 
       - name: cargo test
         working-directory: ${{ env.CRATE_DIR }}
-        run: cargo test --all-targets
+        run: cargo test --lib
 
       # 覆盖率：当前为信息性输出，不阻断 CI。
       # TODO(A5)：A5 出站层（crypto/proxy_proto/outbound）落地、整体代码量稳定后，

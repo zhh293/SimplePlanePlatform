@@ -1,8 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SimplePlane</string>
-    <string name="toggle_vpn">连接 / 断开 VPN</string>
+    <string name="connect_vpn">连接 VPN</string>
+    <string name="disconnect_vpn">断开 VPN</string>
     <string name="native_version_label">native 版本: %1$s</string>
+    <string name="native_version_placeholder">native 版本: -</string>
     <string name="vpn_status_idle">未连接</string>
+    <string name="vpn_status_connecting">正在连接...</string>
+    <string name="vpn_status_connected">已连接</string>
+    <string name="vpn_status_disconnecting">正在断开...</string>
+    <string name="vpn_status_error">连接异常</string>
     <string name="notification_channel_name">VPN 状态</string>
+
+    <string name="nodes_title">节点</string>
+    <string name="add_node">添加节点</string>
+    <string name="node_keep_one">至少保留一个节点</string>
+    <string name="routing_title">路由规则</string>
+    <string name="default_route_label">默认路由</string>
+    <string name="direct_list_hint">直连域名，每行一个，例如 *.cn 或 baidu.com</string>
+    <string name="proxy_list_hint">代理域名，每行一个，例如 github.com 或 *.google.com</string>
+    <string name="advanced_rules_hint">高级规则，每行 type,value,action，例如 ip_cidr,10.0.0.0/8,direct 或 port,53,reject</string>
+
+    <string name="preset_title">预设与导入</string>
+    <string name="preset_name_hint">预设名称</string>
+    <string name="save_preset">保存预设</string>
+    <string name="load_preset">载入</string>
+    <string name="delete_preset">删除</string>
+    <string name="no_presets">暂无预设</string>
+    <string name="preset_name_required">请填写预设名称</string>
+    <string name="preset_saved">预设已保存</string>
+    <string name="preset_loaded">预设已载入</string>
+    <string name="preset_deleted">预设已删除</string>
+    <string name="import_config_hint">粘贴 Android JSON 或桌面 proxy.yml 片段，可包含 remoteServers、route.proxyList、route.directList</string>
+    <string name="import_config">导入配置</string>
+    <string name="export_config">导出到输入框</string>
+    <string name="config_imported">配置已导入</string>
+    <string name="config_exported">已生成桌面兼容 YAML</string>
+
+    <string name="log_title">日志</string>
+    <string name="clear_log">清空日志</string>
+    <string name="stats_empty">暂无流量统计</string>
+    <string name="save_config">保存配置</string>
+    <string name="config_saved">配置已保存</string>
+    <string name="config_error_host">请填写远端地址</string>
+    <string name="config_error_port">端口需在 1-65535 之间</string>
+    <string name="config_error_key">请填写加密密钥</string>
+    <string name="cn_direct_label">国内流量智能直连</string>
 </resources>

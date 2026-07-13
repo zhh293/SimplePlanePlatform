@@ -1,23 +1,237 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp">
+    android:background="@color/app_background"
+    android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/nativeVersionText"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/mainContent"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:textSize="16sp"
-        android:text="native 版本: -" />
+        android:descendantFocusability="beforeDescendants"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <Button
-        android:id="@+id/toggleVpnButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/toggle_vpn" />
+        <TextView
+            android:id="@+id/nativeVersionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/native_version_placeholder"
+            android:textColor="@color/app_text_secondary"
+            android:textSize="14sp" />
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/vpnStatusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="@string/vpn_status_idle"
+            android:textColor="@color/app_text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/statsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="@string/stats_empty"
+            android:textColor="@color/app_text_secondary"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/toggleVpnButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/app_primary"
+            android:text="@string/connect_vpn"
+            android:textColor="@android:color/white" />
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/nodes_title" />
+
+        <LinearLayout
+            android:id="@+id/nodesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/addNodeButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/add_node" />
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/routing_title" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/default_route_label"
+            android:textColor="@color/app_text_primary" />
+
+        <Spinner
+            android:id="@+id/defaultRouteSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp" />
+
+        <CheckBox
+            android:id="@+id/cnDirectCheckBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:checked="true"
+            android:text="@string/cn_direct_label" />
+
+        <EditText
+            android:id="@+id/directListInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/direct_list_hint"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:minLines="3"
+            android:textColor="@color/app_text_primary"
+            android:textColorHint="@color/app_text_secondary" />
+
+        <EditText
+            android:id="@+id/proxyListInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/proxy_list_hint"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:minLines="3"
+            android:textColor="@color/app_text_primary"
+            android:textColorHint="@color/app_text_secondary" />
+
+        <EditText
+            android:id="@+id/advancedRulesInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/advanced_rules_hint"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:minLines="3"
+            android:textColor="@color/app_text_primary"
+            android:textColorHint="@color/app_text_secondary" />
+
+        <Button
+            android:id="@+id/saveConfigButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="@color/app_primary"
+            android:text="@string/save_config"
+            android:textColor="@android:color/white" />
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/preset_title" />
+
+        <EditText
+            android:id="@+id/presetNameInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/preset_name_hint"
+            android:inputType="text"
+            android:singleLine="true"
+            android:textColor="@color/app_text_primary"
+            android:textColorHint="@color/app_text_secondary" />
+
+        <Spinner
+            android:id="@+id/presetSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/savePresetButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/save_preset" />
+
+            <Button
+                android:id="@+id/loadPresetButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/load_preset" />
+
+            <Button
+                android:id="@+id/deletePresetButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/delete_preset" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/importConfigInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/import_config_hint"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:minLines="6"
+            android:textColor="@color/app_text_primary"
+            android:textColorHint="@color/app_text_secondary" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/importConfigButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/import_config" />
+
+            <Button
+                android:id="@+id/exportConfigButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/export_config" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/log_title" />
+
+        <TextView
+            android:id="@+id/logText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="96dp"
+            android:textColor="@color/app_text_secondary"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/clearLogButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/clear_log" />
+
+    </LinearLayout>
+</ScrollView>

@@ -301,6 +301,7 @@ pub async fn stack_loop(
                 handle,
                 tx: app_tx,
                 rx: app_rx,
+                pending_to_stack: None,
                 conn_tuple,
                 notify: notify_tx.clone(),
             });
@@ -338,19 +339,22 @@ pub async fn stack_loop(
 
             // smoltcp → app
             while socket.can_recv() {
+                // Reserve capacity before recv_slice consumes bytes from smoltcp.
+                let permit = match conn.tx.try_reserve() {
+                    Ok(permit) => permit,
+                    Err(mpsc::error::TrySendError::Full(_)) => break,
+                    Err(mpsc::error::TrySendError::Closed(_)) => {
+                        socket.close();
+                        closed_tuples.push(conn.conn_tuple);
+                        return false;
+                    }
+                };
                 let mut buf = vec![0u8; 16384];
                 match socket.recv_slice(&mut buf) {
                     Ok(n) if n > 0 => {
                         buf.truncate(n);
-                        match conn.tx.try_send(StreamCommand::Data(buf)) {
-                            Ok(()) => had_data = true,
-                            Err(mpsc::error::TrySendError::Full(_)) => break,
-                            Err(mpsc::error::TrySendError::Closed(_)) => {
-                                socket.close();
-                                closed_tuples.push(conn.conn_tuple);
-                                return false;
-                            }
-                        }
+                        permit.send(StreamCommand::Data(buf));
+                        had_data = true;
                     }
                     _ => break,
                 }
@@ -358,22 +362,45 @@ pub async fn stack_loop(
 
             // app → smoltcp
             while socket.can_send() {
-                match conn.rx.try_recv() {
-                    Ok(StreamCommand::Data(data)) => {
-                        let _ = socket.send_slice(&data);
-                        had_data = true;
+                if conn.pending_to_stack.is_none() {
+                    match conn.rx.try_recv() {
+                        Ok(StreamCommand::Data(data)) => {
+                            conn.pending_to_stack = Some(PendingStackWrite::new(data));
+                        }
+                        Ok(StreamCommand::Close) => {
+                            socket.close();
+                            closed_tuples.push(conn.conn_tuple);
+                            return false;
+                        }
+                        Err(mpsc::error::TryRecvError::Disconnected) => {
+                            socket.close();
+                            closed_tuples.push(conn.conn_tuple);
+                            return false;
+                        }
+                        Err(mpsc::error::TryRecvError::Empty) => break,
                     }
-                    Ok(StreamCommand::Close) => {
-                        socket.close();
-                        closed_tuples.push(conn.conn_tuple);
-                        return false;
-                    }
-                    Err(mpsc::error::TryRecvError::Disconnected) => {
-                        socket.close();
-                        closed_tuples.push(conn.conn_tuple);
-                        return false;
-                    }
-                    Err(mpsc::error::TryRecvError::Empty) => break,
+                }
+
+                let pending = conn.pending_to_stack.as_mut().unwrap();
+                if pending.is_complete() {
+                    conn.pending_to_stack = None;
+                    continue;
+                }
+                let written = match socket.send_slice(pending.remaining()) {
+                    Ok(written) => written,
+                    Err(_) => break,
+                };
+                if written == 0 {
+                    break;
+                }
+
+                pending.advance(written);
+                had_data = true;
+                if pending.is_complete() {
+                    conn.pending_to_stack = None;
+                } else {
+                    // Keep the unsent tail until smoltcp has buffer space again.
+                    break;
                 }
             }
             true
@@ -548,9 +575,36 @@ struct ActiveConnection {
     handle: SocketHandle,
     tx: mpsc::Sender<StreamCommand>,
     rx: mpsc::Receiver<StreamCommand>,
+    pending_to_stack: Option<PendingStackWrite>,
     conn_tuple: (Ipv4Addr, u16, Ipv4Addr, u16),
     #[allow(dead_code)]
     notify: mpsc::Sender<()>,
+}
+
+/// A channel message can be larger than the free space in smoltcp's send buffer.
+/// Retain its unwritten tail so TCP receives the exact ordered byte stream.
+struct PendingStackWrite {
+    data: Vec<u8>,
+    offset: usize,
+}
+
+impl PendingStackWrite {
+    fn new(data: Vec<u8>) -> Self {
+        Self { data, offset: 0 }
+    }
+
+    fn remaining(&self) -> &[u8] {
+        &self.data[self.offset..]
+    }
+
+    fn advance(&mut self, written: usize) {
+        debug_assert!(written <= self.remaining().len());
+        self.offset += written;
+    }
+
+    fn is_complete(&self) -> bool {
+        self.offset == self.data.len()
+    }
 }
 
 /// smoltcp 虚拟设备：桥接 TUN 与 smoltcp（移植自桌面 `stack.rs`）。
@@ -647,6 +701,7 @@ pub struct SmolTcpStream {
     read_buf: Vec<u8>,
     pending_reserve: Option<ReserveFuture>,
     notify: mpsc::Sender<()>,
+    shutdown_sent: bool,
 }
 
 impl SmolTcpStream {
@@ -662,6 +717,7 @@ impl SmolTcpStream {
             read_buf: Vec::new(),
             pending_reserve: None,
             notify,
+            shutdown_sent: false,
         }
     }
 }
@@ -701,6 +757,27 @@ impl tokio::io::AsyncWrite for SmolTcpStream {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> std::task::Poll<std::io::Result<usize>> {
+        // Complete an earlier reservation before trying a fresh send. Otherwise
+        // a stale waiter can survive a successful try_send and reorder messages.
+        if let Some(reserve_fut) = self.pending_reserve.as_mut() {
+            match reserve_fut.as_mut().poll(cx) {
+                std::task::Poll::Ready(Ok(permit)) => {
+                    self.pending_reserve = None;
+                    permit.send(StreamCommand::Data(buf.to_vec()));
+                    let _ = self.notify.try_send(());
+                    return std::task::Poll::Ready(Ok(buf.len()));
+                }
+                std::task::Poll::Ready(Err(_)) => {
+                    self.pending_reserve = None;
+                    return std::task::Poll::Ready(Err(std::io::Error::new(
+                        std::io::ErrorKind::BrokenPipe,
+                        "stream closed",
+                    )));
+                }
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+            }
+        }
+
         match self.tx.try_send(StreamCommand::Data(buf.to_vec())) {
             Ok(()) => {
                 let _ = self.notify.try_send(());
@@ -747,12 +824,50 @@ impl tokio::io::AsyncWrite for SmolTcpStream {
 
     fn poll_shutdown(
         mut self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
-        let _ = self.tx.try_send(StreamCommand::Close);
-        let _ = self.notify.try_send(());
-        self.pending_reserve = None;
-        std::task::Poll::Ready(Ok(()))
+        if self.shutdown_sent {
+            return std::task::Poll::Ready(Ok(()));
+        }
+
+        if self.pending_reserve.is_none() {
+            match self.tx.try_send(StreamCommand::Close) {
+                Ok(()) => {
+                    self.shutdown_sent = true;
+                    let _ = self.notify.try_send(());
+                    return std::task::Poll::Ready(Ok(()));
+                }
+                Err(mpsc::error::TrySendError::Closed(_)) => {
+                    return std::task::Poll::Ready(Err(std::io::Error::new(
+                        std::io::ErrorKind::BrokenPipe,
+                        "stream closed",
+                    )));
+                }
+                Err(mpsc::error::TrySendError::Full(_)) => {
+                    let tx = self.tx.clone();
+                    self.pending_reserve = Some(Box::pin(async move { tx.reserve_owned().await }));
+                }
+            }
+        }
+
+        let reserve_fut = self.pending_reserve.as_mut().unwrap();
+        match reserve_fut.as_mut().poll(cx) {
+            std::task::Poll::Ready(Ok(permit)) => {
+                self.pending_reserve = None;
+                permit.send(StreamCommand::Close);
+                self.shutdown_sent = true;
+                let _ = self.notify.try_send(());
+                std::task::Poll::Ready(Ok(()))
+            }
+            std::task::Poll::Ready(Err(_)) => {
+                self.pending_reserve = None;
+                std::task::Poll::Ready(Err(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "stream closed",
+                )))
+            }
+            std::task::Poll::Pending => std::task::Poll::Pending,
+        }
     }
 }
 
@@ -842,5 +957,46 @@ mod tests {
         // 加上 ACK（0x10）后不应再匹配（SYN-ACK 不是发起 SYN）。
         pkt[33] = 0x12;
         assert!(extract_tcp_syn_info(&pkt).is_none());
+    }
+
+    #[test]
+    fn pending_stack_write_retains_partial_tail() {
+        let original = b"0123456789".to_vec();
+        let mut pending = PendingStackWrite::new(original.clone());
+        let mut forwarded = Vec::new();
+
+        for capacity in [3, 2, 5] {
+            let written = capacity.min(pending.remaining().len());
+            forwarded.extend_from_slice(&pending.remaining()[..written]);
+            pending.advance(written);
+        }
+
+        assert!(pending.is_complete());
+        assert_eq!(forwarded, original);
+    }
+
+    #[tokio::test]
+    async fn stream_write_waits_for_channel_capacity() {
+        use tokio::io::AsyncWriteExt;
+
+        let (tx, mut stack_rx) = mpsc::channel(1);
+        tx.try_send(StreamCommand::Data(b"first".to_vec())).unwrap();
+        let (_incoming_tx, incoming_rx) = mpsc::channel(1);
+        let (notify_tx, _notify_rx) = mpsc::channel(1);
+        let mut stream = SmolTcpStream::new(tx, incoming_rx, notify_tx);
+
+        let writer = tokio::spawn(async move { stream.write_all(b"second").await });
+        tokio::task::yield_now().await;
+        assert!(!writer.is_finished());
+
+        let first = stack_rx.recv().await.unwrap();
+        assert!(matches!(first, StreamCommand::Data(data) if data == b"first"));
+
+        let second = tokio::time::timeout(std::time::Duration::from_secs(1), stack_rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(matches!(second, StreamCommand::Data(data) if data == b"second"));
+        writer.await.unwrap().unwrap();
     }
 }
