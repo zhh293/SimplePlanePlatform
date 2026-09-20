@@ -168,14 +168,22 @@ function toYaml(obj, indent = 0) {
         for (const item of value) {
           if (typeof item === 'object' && item !== null) {
             const entries = Object.entries(item);
-            if (entries.length > 0) {
-              const [firstKey, firstVal] = entries[0];
-              let line = `${prefix}  - ${firstKey}: ${formatValue(firstVal)}`;
-              for (let i = 1; i < entries.length; i++) {
-                const [k, v] = entries[i];
-                line += `, ${k}: ${formatValue(v)}`;
+            if (entries.length === 0) continue;
+            const [firstKey, firstVal] = entries[0];
+            if (firstVal !== null && typeof firstVal === 'object') {
+              lines.push(`${prefix}  - ${firstKey}:`);
+              lines.push(toYaml(firstVal, indent + 3));
+            } else {
+              lines.push(`${prefix}  - ${firstKey}: ${formatValue(firstVal)}`);
+            }
+            for (let i = 1; i < entries.length; i++) {
+              const [k, v] = entries[i];
+              if (v !== null && typeof v === 'object') {
+                lines.push(`${prefix}    ${k}:`);
+                lines.push(toYaml(v, indent + 3));
+              } else {
+                lines.push(`${prefix}    ${k}: ${formatValue(v)}`);
               }
-              lines.push(line);
             }
           } else {
             lines.push(`${prefix}  - ${formatValue(item)}`);

@@ -102,9 +102,9 @@ public final class Http3Connection {
                 .endpointIdentificationAlgorithm("HTTPS");
         String caFile = url.getParameter("http3.caFile", "");
         if (!caFile.isEmpty()) {
-            File file = new File(caFile);
-            if (!file.isFile()) {
-                throw new IllegalArgumentException("HTTP/3 caFile is not readable: " + caFile);
+            try (InputStream ignored = openCaStream(caFile)) {
+                // The CA may be an external file or a classpath resource.  The
+                // latter is important for the IDE and shaded local client.
             }
         }
         String certificatePin = url.getParameter("http3.certificatePin", "");
@@ -123,7 +123,7 @@ public final class Http3Connection {
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
             keyStore.load(null, null);
-            try (InputStream input = new java.io.FileInputStream(caFile)) {
+            try (InputStream input = openCaStream(caFile)) {
                 Collection<? extends Certificate> certificates = certificateFactory.generateCertificates(input);
                 int index = 0;
                 for (Certificate certificate : certificates) {
@@ -141,6 +141,18 @@ public final class Http3Connection {
             }
         }
         throw new IllegalStateException("No X509TrustManager available for HTTP/3 TLS");
+    }
+
+    private static InputStream openCaStream(String caFile) throws Exception {
+        File file = new File(caFile);
+        if (file.isFile()) {
+            return new java.io.FileInputStream(file);
+        }
+        InputStream resource = Http3Connection.class.getClassLoader().getResourceAsStream(caFile);
+        if (resource != null) {
+            return resource;
+        }
+        throw new IllegalArgumentException("HTTP/3 caFile is not readable as file or classpath resource: " + caFile);
     }
 
     private static final class PinningTrustManager extends X509ExtendedTrustManager {

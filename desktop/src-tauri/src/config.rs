@@ -29,6 +29,60 @@ pub struct RemoteConfig {
     pub cipher: String,
     #[serde(default)]
     pub key: String,
+    #[serde(default = "default_transport")]
+    pub transport: String,
+    #[serde(default)]
+    pub http3: Http3Config,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Http3Config {
+    #[serde(default = "default_http3_server_name", alias = "serverName")]
+    pub server_name: String,
+    #[serde(default = "default_http3_ca_file", alias = "caFile")]
+    pub ca_file: String,
+    #[serde(default = "default_http3_certificate_pin", alias = "certificatePin")]
+    pub certificate_pin: String,
+    #[serde(default = "default_http3_handshake_timeout_ms", alias = "handshakeTimeoutMs")]
+    pub handshake_timeout_ms: u64,
+    #[serde(default = "default_http3_idle_timeout_ms", alias = "idleTimeoutMs")]
+    pub idle_timeout_ms: u64,
+    #[serde(default = "default_http3_max_streams", alias = "maxStreams")]
+    pub max_streams: u64,
+    #[serde(default = "default_http3_initial_connection_window", alias = "initialConnectionWindow")]
+    pub initial_connection_window: u64,
+    #[serde(default = "default_http3_initial_stream_window", alias = "initialStreamWindow")]
+    pub initial_stream_window: u64,
+    #[serde(default = "default_http3_max_proxy_message_bytes", alias = "maxProxyMessageBytes")]
+    pub max_proxy_message_bytes: u64,
+    #[serde(default = "default_http3_stream_pending_hard_limit", alias = "streamPendingHardLimit")]
+    pub stream_pending_hard_limit: u64,
+    #[serde(default = "default_http3_connection_pending_hard_limit", alias = "connectionPendingHardLimit")]
+    pub connection_pending_hard_limit: u64,
+    #[serde(default = "default_http3_write_buffer_low_water_mark", alias = "writeBufferLowWaterMark")]
+    pub write_buffer_low_water_mark: u64,
+    #[serde(default = "default_http3_write_buffer_high_water_mark", alias = "writeBufferHighWaterMark")]
+    pub write_buffer_high_water_mark: u64,
+}
+
+impl Default for Http3Config {
+    fn default() -> Self {
+        Self {
+            server_name: default_http3_server_name(),
+            ca_file: default_http3_ca_file(),
+            certificate_pin: default_http3_certificate_pin(),
+            handshake_timeout_ms: default_http3_handshake_timeout_ms(),
+            idle_timeout_ms: default_http3_idle_timeout_ms(),
+            max_streams: default_http3_max_streams(),
+            initial_connection_window: default_http3_initial_connection_window(),
+            initial_stream_window: default_http3_initial_stream_window(),
+            max_proxy_message_bytes: default_http3_max_proxy_message_bytes(),
+            stream_pending_hard_limit: default_http3_stream_pending_hard_limit(),
+            connection_pending_hard_limit: default_http3_connection_pending_hard_limit(),
+            write_buffer_low_water_mark: default_http3_write_buffer_low_water_mark(),
+            write_buffer_high_water_mark: default_http3_write_buffer_high_water_mark(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -45,7 +99,22 @@ fn default_socks_port() -> u16 { 1080 }
 fn default_http_enabled() -> bool { true }
 fn default_http_port() -> u16 { 1080 }
 fn default_cipher() -> String { "chacha20".to_string() }
+pub fn default_cipher_key() -> String { "your-cipher-key".to_string() }
 fn default_route_mode() -> String { "proxy".to_string() }
+fn default_transport() -> String { "http3".to_string() }
+fn default_http3_server_name() -> String { "54.172.101.190".to_string() }
+fn default_http3_ca_file() -> String { "http3-remote-ca.crt".to_string() }
+fn default_http3_certificate_pin() -> String { String::new() }
+fn default_http3_handshake_timeout_ms() -> u64 { 5000 }
+fn default_http3_idle_timeout_ms() -> u64 { 60000 }
+fn default_http3_max_streams() -> u64 { 1000 }
+fn default_http3_initial_connection_window() -> u64 { 16777216 }
+fn default_http3_initial_stream_window() -> u64 { 1048576 }
+fn default_http3_max_proxy_message_bytes() -> u64 { 8388608 }
+fn default_http3_stream_pending_hard_limit() -> u64 { 4194304 }
+fn default_http3_connection_pending_hard_limit() -> u64 { 67108864 }
+fn default_http3_write_buffer_low_water_mark() -> u64 { 262144 }
+fn default_http3_write_buffer_high_water_mark() -> u64 { 1048576 }
 
 /// TUN 配置（对应 tun.toml）
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -255,10 +324,12 @@ fn get_default_proxy_config() -> ProxyConfig {
             http_proxy_port: 1080,
         },
         remote: RemoteConfig {
-            host: "54.234.196.30".to_string(),
+            host: "54.172.101.190".to_string(),
             port: 9090,
             cipher: "chacha20".to_string(),
-            key: String::new(),
+            key: default_cipher_key(),
+            transport: default_transport(),
+            http3: Http3Config::default(),
         },
         route: RouteConfig {
             default_route: "proxy".to_string(),
@@ -326,7 +397,7 @@ fn get_default_tun_config() -> TunConfig {
             ],
         }),
         bypass: Some(BypassSection {
-            proxy_remote_ips: vec!["54.234.196.30".to_string()],
+            proxy_remote_ips: vec!["54.172.101.190".to_string()],
             extra_cidrs: vec![
                 "10.0.0.0/8".to_string(),
                 "11.0.0.0/8".to_string(),
@@ -412,7 +483,7 @@ action = "direct"
 
 [bypass]
 # 代理远程服务器自身的 IP（必须绕过 TUN，否则流量会死循环）
-proxy_remote_ips = ["54.234.196.30"]
+proxy_remote_ips = ["54.172.101.190"]
 # 额外需要绕过 TUN 的网段（公司内网等，确保这些 IP 不会被劫持到代理）
 extra_cidrs = ["10.0.0.0/8", "11.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
 # DNS 服务器 IP（这些 IP 的 53 端口请求需要绕过，否则 DNS 查询本身也会被劫持）
@@ -517,11 +588,27 @@ fn parse_server_entry(value: &serde_yaml::Value) -> Result<RemoteConfig, String>
         .unwrap_or("")
         .to_string();
 
+    let transport = value
+        .get("transport")
+        .and_then(|v| v.as_str())
+        .unwrap_or("http2")
+        .to_string();
+
+    let http3 = value
+        .get("http3")
+        .cloned()
+        .map(|v| serde_yaml::from_value::<Http3Config>(v))
+        .transpose()
+        .map_err(|e| format!("HTTP/3 配置解析失败: {}", e))?
+        .unwrap_or_default();
+
     Ok(RemoteConfig {
         host,
         port,
         cipher,
         key,
+        transport,
+        http3,
     })
 }
 
@@ -540,6 +627,21 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
     yaml.push_str(&format!("    cipher: {}\n", config.remote.cipher));
     yaml.push_str(&format!("    cipherKey: \"{}\"\n", config.remote.key));
     yaml.push_str("    ssl: false\n");
+    yaml.push_str(&format!("    transport: {}\n", config.remote.transport));
+    yaml.push_str("    http3:\n");
+    yaml.push_str(&format!("      serverName: \"{}\"\n", config.remote.http3.server_name));
+    yaml.push_str(&format!("      caFile: \"{}\"\n", config.remote.http3.ca_file));
+    yaml.push_str(&format!("      certificatePin: \"{}\"\n", config.remote.http3.certificate_pin));
+    yaml.push_str(&format!("      handshakeTimeoutMs: {}\n", config.remote.http3.handshake_timeout_ms));
+    yaml.push_str(&format!("      idleTimeoutMs: {}\n", config.remote.http3.idle_timeout_ms));
+    yaml.push_str(&format!("      maxStreams: {}\n", config.remote.http3.max_streams));
+    yaml.push_str(&format!("      initialConnectionWindow: {}\n", config.remote.http3.initial_connection_window));
+    yaml.push_str(&format!("      initialStreamWindow: {}\n", config.remote.http3.initial_stream_window));
+    yaml.push_str(&format!("      maxProxyMessageBytes: {}\n", config.remote.http3.max_proxy_message_bytes));
+    yaml.push_str(&format!("      streamPendingHardLimit: {}\n", config.remote.http3.stream_pending_hard_limit));
+    yaml.push_str(&format!("      connectionPendingHardLimit: {}\n", config.remote.http3.connection_pending_hard_limit));
+    yaml.push_str(&format!("      writeBufferLowWaterMark: {}\n", config.remote.http3.write_buffer_low_water_mark));
+    yaml.push_str(&format!("      writeBufferHighWaterMark: {}\n", config.remote.http3.write_buffer_high_water_mark));
 
     // cluster & loadBalance
     yaml.push_str("cluster: failover\n");

@@ -400,10 +400,12 @@ fn get_builtin_presets() -> Vec<Preset> {
                     http_proxy_port: 1080,
                 },
                 remote: config::RemoteConfig {
-                    host: "54.234.196.30".to_string(),
+                    host: "54.172.101.190".to_string(),
                     port: 9090,
                     cipher: "chacha20".to_string(),
-                    key: String::new(),
+                    key: config::default_cipher_key(),
+                    transport: "http3".to_string(),
+                    http3: config::Http3Config::default(),
                 },
                 route: config::RouteConfig {
                     default_route: "direct".to_string(),
@@ -429,10 +431,12 @@ fn get_builtin_presets() -> Vec<Preset> {
                     http_proxy_port: 1080,
                 },
                 remote: config::RemoteConfig {
-                    host: "54.234.196.30".to_string(),
+                    host: "54.172.101.190".to_string(),
                     port: 9090,
                     cipher: "chacha20".to_string(),
-                    key: String::new(),
+                    key: config::default_cipher_key(),
+                    transport: "http3".to_string(),
+                    http3: config::Http3Config::default(),
                 },
                 route: config::RouteConfig {
                     default_route: "proxy".to_string(),
@@ -458,10 +462,12 @@ fn get_builtin_presets() -> Vec<Preset> {
                     http_proxy_port: 7891,
                 },
                 remote: config::RemoteConfig {
-                    host: "54.234.196.30".to_string(),
+                    host: "54.172.101.190".to_string(),
                     port: 9090,
                     cipher: "chacha20".to_string(),
-                    key: String::new(),
+                    key: config::default_cipher_key(),
+                    transport: "http3".to_string(),
+                    http3: config::Http3Config::default(),
                 },
                 route: config::RouteConfig {
                     default_route: "direct".to_string(),

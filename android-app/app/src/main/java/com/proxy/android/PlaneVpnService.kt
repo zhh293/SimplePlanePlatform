@@ -278,11 +278,11 @@ class PlaneVpnService : VpnService() {
 
         /**
          * 写死的默认节点配置（对接固定 proxy-remote）。
-         * - host/port：nginx 入口 54.234.196.30:9090。
+         * - host/port：nginx 入口 54.172.101.190:9090。
          * - key：与服务端 remote.yml 的 cipherKey 一致。
          * - cipher 固定 chacha20（与服务端一致，由 native 默认决定）。
          */
-        private const val DEFAULT_REMOTE_HOST = "54.234.196.30"
+        private const val DEFAULT_REMOTE_HOST = "54.172.101.190"
         private const val DEFAULT_REMOTE_PORT = 9090
         private const val DEFAULT_REMOTE_KEY = "your-cipher-key"
         private const val DEFAULT_TLS = false
