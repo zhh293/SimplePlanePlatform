@@ -1,6 +1,6 @@
 host: 127.0.0.1
 port: 19090
-transport: http2
+transport: http3
 bizThreads: 200
 workerThreads: 0
 bossThreads: 1
@@ -8,8 +8,8 @@ cipher: chacha20
 cipherKey: your-cipher-key
 maxStreams: 1000
 http3:
-  certificateFile: /etc/simpleplane/tls/fullchain.pem
-  privateKeyFile: /etc/simpleplane/tls/privkey.pem
+  certificateFile: /etc/roto-kb/tls/fullchain.pem
+  privateKeyFile: /etc/roto-kb/tls/privkey.pem
   idleTimeoutMs: 60000
   maxStreamsPerConnection: 1000
   initialConnectionWindow: 16777216
@@ -21,8 +21,6 @@ http3:
   writeBufferHighWaterMark: 1048576
 readIdleTimeout: 60
 backlog: 1024
-# 应用层背压（默认关闭）
-# 开启后通过信用额度控制下游处理速率，额度耗尽时暂停 HTTP/2 窗口更新
 backpressure: false
 backpressurePermits: 64
 outbound:

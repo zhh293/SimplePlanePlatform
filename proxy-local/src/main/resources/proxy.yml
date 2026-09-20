@@ -1,7 +1,22 @@
 localPort: 1080
 remoteServers:
-  - host: 54.234.196.30
+  - host: 54.172.101.190
     port: 9090
+    transport: http2
+    http3:
+      serverName: ""
+      caFile: ""
+      certificatePin: ""
+      handshakeTimeoutMs: 5000
+      idleTimeoutMs: 60000
+      maxStreams: 1000
+      initialConnectionWindow: 16777216
+      initialStreamWindow: 1048576
+      maxProxyMessageBytes: 8388608
+      streamPendingHardLimit: 4194304
+      connectionPendingHardLimit: 67108864
+      writeBufferLowWaterMark: 262144
+      writeBufferHighWaterMark: 1048576
     cipher: chacha20
     cipherKey: your-cipher-key
     ssl: false

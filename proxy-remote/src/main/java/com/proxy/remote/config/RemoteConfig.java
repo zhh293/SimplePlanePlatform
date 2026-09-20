@@ -54,6 +54,7 @@ public class RemoteConfig {
         int port = getIntValue(config, "port", DEFAULT_PORT);
 
         URL url = new URL("proxy", host, port);
+        url.addParameter("transport", getStringValue(config, "transport", "http2"));
 
         // 线程配置
         url.addParameter("bizThreads", getIntValue(config, "bizThreads", DEFAULT_BIZ_THREADS));
@@ -74,6 +75,22 @@ public class RemoteConfig {
                 String.valueOf(getBooleanValue(config, "backpressure", DEFAULT_BACKPRESSURE)));
         url.addParameter("backpressurePermits",
                 getIntValue(config, "backpressurePermits", DEFAULT_BACKPRESSURE_PERMITS));
+
+        Map<String, Object> http3 = getMapValue(config, "http3");
+        copyHttp3Parameter(url, http3, "certificateFile", "");
+        copyHttp3Parameter(url, http3, "privateKeyFile", "");
+        copyHttp3Parameter(url, http3, "serverName", "");
+        copyHttp3Parameter(url, http3, "caFile", "");
+        copyHttp3Parameter(url, http3, "idleTimeoutMs", 60000);
+        copyHttp3Parameter(url, http3, "maxConnections", 10000);
+        copyHttp3Parameter(url, http3, "maxStreamsPerConnection", 1000);
+        copyHttp3Parameter(url, http3, "initialConnectionWindow", 16777216);
+        copyHttp3Parameter(url, http3, "initialStreamWindow", 1048576);
+        copyHttp3Parameter(url, http3, "maxProxyMessageBytes", 8388608);
+        copyHttp3Parameter(url, http3, "streamPendingHardLimit", 4194304);
+        copyHttp3Parameter(url, http3, "connectionPendingHardLimit", 67108864);
+        copyHttp3Parameter(url, http3, "writeBufferLowWaterMark", 262144);
+        copyHttp3Parameter(url, http3, "writeBufferHighWaterMark", 1048576);
 
         // Outbound 出站连接配置
         Map<String, Object> outbound = getMapValue(config, "outbound");
@@ -148,5 +165,10 @@ public class RemoteConfig {
             return (Map<String, Object>) value;
         }
         return Collections.emptyMap();
+    }
+
+    private void copyHttp3Parameter(URL url, Map<String, Object> values, String key, Object defaultValue) {
+        Object value = values.get(key);
+        url.addParameter("http3." + key, value != null ? String.valueOf(value) : String.valueOf(defaultValue));
     }
 }

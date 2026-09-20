@@ -16,6 +16,7 @@
         <module>proxy-common</module>
         <module>proxy-exchange</module>
         <module>proxy-transport-netty</module>
+        <module>proxy-transport-http3</module>
         <module>proxy-crypto</module>
         <module>proxy-cluster</module>
         <module>proxy-local</module>
@@ -29,7 +30,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Dependencies versions -->
-        <netty.version>4.1.108.Final</netty.version>
+        <netty.version>4.2.18.Final</netty.version>
         <slf4j.version>1.7.36</slf4j.version>
         <logback.version>1.2.11</logback.version>
         <snakeyaml.version>2.2</snakeyaml.version>
@@ -55,6 +56,11 @@
             <dependency>
                 <groupId>com.proxy</groupId>
                 <artifactId>proxy-transport-netty</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.proxy</groupId>
+                <artifactId>proxy-transport-http3</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

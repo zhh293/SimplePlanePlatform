@@ -133,6 +133,72 @@ public class ProxyConfig {
         private boolean ssl = true;
         private String cipher = "aes-gcm";
         private String cipherKey = "";
+        private String transport = "http2";
+        private Http3Config http3 = new Http3Config();
+
+        public static class Http3Config {
+            private String serverName = "";
+            private String caFile = "";
+            private String certificatePin = "";
+            private int handshakeTimeoutMs = 5000;
+            private int idleTimeoutMs = 60000;
+            private int maxStreams = 1000;
+            private long initialConnectionWindow = 16777216L;
+            private long initialStreamWindow = 1048576L;
+            private int maxProxyMessageBytes = 8388608;
+            private long streamPendingHardLimit = 4194304L;
+            private long connectionPendingHardLimit = 67108864L;
+            private int writeBufferLowWaterMark = 262144;
+            private int writeBufferHighWaterMark = 1048576;
+
+            public void toUrlParameters(com.proxy.common.model.URL url) {
+                url.addParameter("http3.serverName", serverName);
+                url.addParameter("http3.caFile", caFile);
+                url.addParameter("http3.certificatePin", certificatePin);
+                url.addParameter("http3.handshakeTimeoutMs", handshakeTimeoutMs);
+                url.addParameter("http3.idleTimeoutMs", idleTimeoutMs);
+                url.addParameter("http3.maxStreams", maxStreams);
+                url.addParameter("http3.initialConnectionWindow", initialConnectionWindow);
+                url.addParameter("http3.initialStreamWindow", initialStreamWindow);
+                url.addParameter("http3.maxProxyMessageBytes", maxProxyMessageBytes);
+                url.addParameter("http3.streamPendingHardLimit", streamPendingHardLimit);
+                url.addParameter("http3.connectionPendingHardLimit", connectionPendingHardLimit);
+                url.addParameter("http3.writeBufferLowWaterMark", writeBufferLowWaterMark);
+                url.addParameter("http3.writeBufferHighWaterMark", writeBufferHighWaterMark);
+            }
+
+            public String getServerName() { return serverName; }
+            public void setServerName(String value) { serverName = value; }
+            public String getCaFile() { return caFile; }
+            public void setCaFile(String value) { caFile = value; }
+            public String getCertificatePin() { return certificatePin; }
+            public void setCertificatePin(String value) { certificatePin = value; }
+            public int getHandshakeTimeoutMs() { return handshakeTimeoutMs; }
+            public void setHandshakeTimeoutMs(int value) { handshakeTimeoutMs = value; }
+            public int getIdleTimeoutMs() { return idleTimeoutMs; }
+            public void setIdleTimeoutMs(int value) { idleTimeoutMs = value; }
+            public int getMaxStreams() { return maxStreams; }
+            public void setMaxStreams(int value) { maxStreams = value; }
+            public long getInitialConnectionWindow() { return initialConnectionWindow; }
+            public void setInitialConnectionWindow(long value) { initialConnectionWindow = value; }
+            public long getInitialStreamWindow() { return initialStreamWindow; }
+            public void setInitialStreamWindow(long value) { initialStreamWindow = value; }
+            public int getMaxProxyMessageBytes() { return maxProxyMessageBytes; }
+            public void setMaxProxyMessageBytes(int value) { maxProxyMessageBytes = value; }
+            public long getStreamPendingHardLimit() { return streamPendingHardLimit; }
+            public void setStreamPendingHardLimit(long value) { streamPendingHardLimit = value; }
+            public long getConnectionPendingHardLimit() { return connectionPendingHardLimit; }
+            public void setConnectionPendingHardLimit(long value) { connectionPendingHardLimit = value; }
+            public int getWriteBufferLowWaterMark() { return writeBufferLowWaterMark; }
+            public void setWriteBufferLowWaterMark(int value) { writeBufferLowWaterMark = value; }
+            public int getWriteBufferHighWaterMark() { return writeBufferHighWaterMark; }
+            public void setWriteBufferHighWaterMark(int value) { writeBufferHighWaterMark = value; }
+        }
+
+        public String getTransport() { return transport; }
+        public void setTransport(String value) { transport = value == null ? "http2" : value; }
+        public Http3Config getHttp3() { return http3; }
+        public void setHttp3(Http3Config value) { http3 = value == null ? new Http3Config() : value; }
 
         public String getHost() {
             return host;
@@ -240,6 +306,14 @@ public class ProxyConfig {
             if (server.getPort() <= 0 || server.getPort() > 65535) {
                 throw new IllegalArgumentException("Invalid remote server port: " + server.getPort());
             }
+            if (!"http2".equals(server.getTransport()) && !"http3".equals(server.getTransport())
+                    && !"netty".equals(server.getTransport())) {
+                throw new IllegalArgumentException("Unknown transport: " + server.getTransport());
+            }
+        }
+        long http3Nodes = remoteServers.stream().filter(s -> "http3".equals(s.getTransport())).count();
+        if (http3Nodes > 0 && (remoteServers.size() != 1 || connectionsPerNode != 1)) {
+            throw new IllegalArgumentException("HTTP/3 V1 requires exactly one remote server and connectionsPerNode=1");
         }
     }
 

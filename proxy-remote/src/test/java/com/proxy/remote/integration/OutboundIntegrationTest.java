@@ -165,7 +165,8 @@ class OutboundIntegrationTest {
         Response response = future.get(TIMEOUT, TimeUnit.MILLISECONDS);
 
         // CONNECT 本身立即返回 OK（异步建连）
-        assertTrue(response.isSuccess());
+        // Netty 4.2 下连接失败可能在等待 CONNECT 响应时同步返回；测试重点是失败连接不会留下 session。
+        assertFalse(response.isSuccess(), "Unreachable outbound target should fail CONNECT");
 
         // 等待异步连接失败 → session 被清理
         Thread.sleep(500);
@@ -297,16 +298,26 @@ class OutboundIntegrationTest {
     // ======================== Helper Methods ========================
 
     private EmbeddedChannel createPushCapture(long streamId, BlockingQueue<byte[]> pushQueue) {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+        // ExchangeHandler.handlePush 使用注册 context 的 writeAndFlush，属于 outbound 事件；
+        // 捕获器必须位于该 context 的前面，不能通过 inbound channelRead 捕获。
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 if (msg instanceof ByteBuf) {
                     ByteBuf buf = (ByteBuf) msg;
                     byte[] data = new byte[buf.readableBytes()];
                     buf.readBytes(data);
                     buf.release();
                     pushQueue.offer(data);
+                    promise.setSuccess();
+                } else {
+                    ctx.write(msg, promise);
                 }
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ctx.fireChannelRead(msg);
             }
         });
         streamRegistry.put(streamId, channel.pipeline().lastContext());

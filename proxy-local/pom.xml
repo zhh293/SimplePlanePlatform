@@ -29,6 +29,10 @@
         </dependency>
         <dependency>
             <groupId>com.proxy</groupId>
+            <artifactId>proxy-transport-http3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.proxy</groupId>
             <artifactId>proxy-cluster</artifactId>
         </dependency>
         <dependency>
