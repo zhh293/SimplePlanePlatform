@@ -47,7 +47,7 @@ rand = "0.8"      # 随机 nonce 生成
 h3 = "0.0.8"
 h3-quinn = "0.0.10"
 quinn = { version = "0.11.12", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
-rustls = "0.23"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-pemfile = "2"
 webpki-roots = "0.26"
 futures-util = "0.3"
