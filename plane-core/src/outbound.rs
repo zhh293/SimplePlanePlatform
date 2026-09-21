@@ -47,6 +47,109 @@ pub struct OutboundConfig {
     pub tls: bool,
 }
 
+/// Verifies the normal WebPKI chain, with a narrowly-scoped compatibility path for the
+/// first HTTP/3 deployment, which incorrectly used its self-signed CA certificate as the
+/// server certificate. The compatibility path is still pinned to the exact bundled DER
+/// certificate and is only used for webpki's CA-as-end-entity error; arbitrary certificates,
+/// hostname failures, expiry, and unknown issuers remain rejected.
+#[derive(Debug)]
+struct PinnedServerCertVerifier {
+    standard: Arc<rustls::client::WebPkiServerVerifier>,
+    legacy_ca_certificates: Vec<Vec<u8>>,
+    provider: Arc<rustls::crypto::CryptoProvider>,
+}
+
+impl PinnedServerCertVerifier {
+    fn new(
+        roots: &rustls::RootCertStore,
+        legacy_ca_certificates: Vec<Vec<u8>>,
+    ) -> Result<Arc<Self>> {
+        let provider = Arc::new(rustls::crypto::ring::default_provider());
+        let standard = rustls::client::WebPkiServerVerifier::builder(Arc::new(roots.clone()))
+            .build()
+            .map_err(|error| {
+                CoreError::Protocol(format!("HTTP/3 TLS verifier setup failed: {error}"))
+            })?;
+        Ok(Arc::new(Self {
+            standard,
+            legacy_ca_certificates,
+            provider,
+        }))
+    }
+}
+
+impl rustls::client::danger::ServerCertVerifier for PinnedServerCertVerifier {
+    fn verify_server_cert(
+        &self,
+        end_entity: &rustls::pki_types::CertificateDer<'_>,
+        intermediates: &[rustls::pki_types::CertificateDer<'_>],
+        server_name: &rustls::pki_types::ServerName<'_>,
+        ocsp_response: &[u8],
+        now: rustls::pki_types::UnixTime,
+    ) -> std::result::Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+        match self.standard.verify_server_cert(
+            end_entity,
+            intermediates,
+            server_name,
+            ocsp_response,
+            now,
+        ) {
+            Ok(verified) => Ok(verified),
+            Err(error) => {
+                let exact_pin = self
+                    .legacy_ca_certificates
+                    .iter()
+                    .any(|certificate| certificate.as_slice() == end_entity.as_ref());
+                let is_ca_as_end_entity = error.to_string().contains("CaUsedAsEndEntity")
+                    || format!("{error:?}").contains("CaUsedAsEndEntity");
+                if exact_pin && is_ca_as_end_entity {
+                    tracing::warn!(
+                        "HTTP/3 server uses a legacy pinned CA certificate as its end-entity; "
+                            "replace the server certificate with a CA-signed leaf certificate"
+                    );
+                    Ok(rustls::client::danger::ServerCertVerified::assertion())
+                } else {
+                    Err(error)
+                }
+            }
+        }
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &rustls::pki_types::CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> std::result::Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &rustls::pki_types::CertificateDer<'_>,
+        dss: &rustls::DigitallySignedStruct,
+    ) -> std::result::Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        self.provider
+            .signature_verification_algorithms
+            .supported_schemes()
+    }
+}
+
 pub const CIPHER_LENGTH_PREFIX: usize = 4;
 
 pub fn encode_encrypted_frame(cipher: &Cipher, msg: &ProxyMessage) -> Result<Vec<u8>> {
@@ -168,20 +271,30 @@ impl OutboundConnection {
 
         let mut roots = rustls::RootCertStore::empty();
         roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+        let mut pinned_legacy_certificates = Vec::new();
         if !config.ca_pem.trim().is_empty() {
             let mut pem = config.ca_pem.as_bytes();
             for certificate in rustls_pemfile::certs(&mut pem) {
                 let certificate = certificate.map_err(|e| {
                     CoreError::Protocol(format!("HTTP/3 CA certificate parse failed: {e}"))
                 })?;
+                pinned_legacy_certificates.push(certificate.as_ref().to_vec());
                 roots.add(certificate).map_err(|e| {
                     CoreError::Protocol(format!("HTTP/3 CA certificate rejected: {e}"))
                 })?;
             }
         }
-        let mut tls_config = rustls::ClientConfig::builder()
-            .with_root_certificates(roots)
-            .with_no_client_auth();
+        let mut tls_config = if pinned_legacy_certificates.is_empty() {
+            rustls::ClientConfig::builder()
+                .with_root_certificates(roots)
+                .with_no_client_auth()
+        } else {
+            let verifier = PinnedServerCertVerifier::new(&roots, pinned_legacy_certificates)?;
+            rustls::ClientConfig::builder()
+                .dangerous()
+                .with_custom_certificate_verifier(verifier)
+                .with_no_client_auth()
+        };
         tls_config.alpn_protocols = vec![b"h3".to_vec()];
         let quic_crypto = quinn::crypto::rustls::QuicClientConfig::try_from(tls_config)
             .map_err(|e| CoreError::Protocol(format!("HTTP/3 TLS config failed: {e}")))?;
