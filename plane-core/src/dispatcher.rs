@@ -116,7 +116,11 @@ where
                     }
                 }
 
-                let outbound = conn.as_mut().expect("connection was restored");
+                let Some(outbound) = conn.as_mut() else {
+                    tracing::warn!("HTTP/3 connection unavailable after reconnect attempt");
+                    let _ = stream_tx.try_send(StreamCommand::Close);
+                    continue;
+                };
                 match outbound.open_proxy_stream(&domain, dst_port).await {
                     Ok(stream) => {
                         let local = SmolTcpStream::new(stream_tx, stream_rx, notify_tx.clone());
