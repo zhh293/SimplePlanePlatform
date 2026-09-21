@@ -7,6 +7,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.Handler
@@ -15,6 +19,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 
 /** Foreground VPN service with safe startup, explicit state reporting and clean teardown. */
 class PlaneVpnService : VpnService() {
@@ -23,6 +28,27 @@ class PlaneVpnService : VpnService() {
     private var nativeHandle: Long = 0L
     private var tunInterface: ParcelFileDescriptor? = null
     private var stopping = false
+    private var networkMonitorRegistered = false
+    private val monitoredNetworks = ConcurrentHashMap.newKeySet<Network>()
+    private val networkLossRunnable = Runnable {
+        if (nativeHandle != 0L && monitoredNetworks.isEmpty()) {
+            stopSelfSafely(STATE_NODE_DOWN, getString(R.string.network_unavailable))
+        }
+    }
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            monitoredNetworks += network
+            mainHandler.removeCallbacks(networkLossRunnable)
+        }
+
+        override fun onLost(network: Network) {
+            monitoredNetworks -= network
+            if (monitoredNetworks.isEmpty()) {
+                mainHandler.removeCallbacks(networkLossRunnable)
+                mainHandler.postDelayed(networkLossRunnable, NETWORK_LOSS_GRACE_MS)
+            }
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -46,6 +72,7 @@ class PlaneVpnService : VpnService() {
             return START_NOT_STICKY
         }
 
+        registerNetworkMonitor()
         publishStatus(STATE_CONNECTING, "正在连接 ${config.host}:${config.port}")
         if (!startDataPlane(config)) {
             stopSelfSafely(STATE_ERROR, "数据面启动失败，未建立 VPN")
@@ -137,6 +164,7 @@ class PlaneVpnService : VpnService() {
     private fun stopSelfSafely(finalState: String, detail: String) {
         if (stopping) return
         stopping = true
+        unregisterNetworkMonitor()
         if (nativeHandle != 0L) {
             runCatching { bridge.nativeStop(nativeHandle) }
                 .onFailure { Log.e(TAG, "nativeStop failed", it) }
@@ -148,6 +176,30 @@ class PlaneVpnService : VpnService() {
         publishStatus(finalState, detail)
         stopForegroundCompat()
         stopSelf()
+    }
+
+    /** Monitor only physical Internet-capable networks, never the VPN network itself. */
+    private fun registerNetworkMonitor() {
+        if (networkMonitorRegistered) return
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .build()
+        runCatching {
+            val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            manager.registerNetworkCallback(request, networkCallback)
+            networkMonitorRegistered = true
+        }.onFailure { Log.w(TAG, "underlying network monitor unavailable", it) }
+    }
+
+    private fun unregisterNetworkMonitor() {
+        mainHandler.removeCallbacks(networkLossRunnable)
+        monitoredNetworks.clear()
+        if (!networkMonitorRegistered) return
+        val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        runCatching { manager.unregisterNetworkCallback(networkCallback) }
+            .onFailure { Log.w(TAG, "underlying network monitor cleanup failed", it) }
+        networkMonitorRegistered = false
     }
 
     private fun publishStatus(state: String, detail: String) {
@@ -229,6 +281,7 @@ class PlaneVpnService : VpnService() {
         private const val TUN_ADDRESS_V6 = "fd00::2"
         private const val TUN_PREFIX_V6 = 128
         private const val FAKE_DNS_SERVER = "198.18.0.1"
+        private const val NETWORK_LOSS_GRACE_MS = 3_000L
 
         const val ACTION_STATUS = "com.proxy.android.STATUS"
         const val ACTION_STOP = "com.proxy.android.STOP"
