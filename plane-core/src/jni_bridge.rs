@@ -261,11 +261,28 @@ where
             tracing::error!(error = %e, "nativeStart 失败");
             0
         }
-        Err(_) => {
-            tracing::error!("nativeStart 捕获到 panic，已隔离，返回 0");
+        Err(panic) => {
+            tracing::error!(
+                panic = %panic_payload_message(panic.as_ref()),
+                "nativeStart 捕获到 panic，已隔离，返回 0"
+            );
             0
         }
     }
+}
+
+/// 将跨 unwind 边界传回的 panic payload 转成可读日志。
+///
+/// Android 上默认 panic hook 通常不会出现在应用筛选的 logcat 中；如果这里只记录
+/// “捕获到 panic”，就无法区分无效 fd、运行时初始化失败或 JNI 调用错误。
+fn panic_payload_message(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&'static str>() {
+        return (*message).to_string();
+    }
+    if let Some(message) = payload.downcast_ref::<String>() {
+        return message.clone();
+    }
+    "非字符串 panic payload".to_string()
 }
 
 /// 把可能 panic 的闭包执行结果归一为 `()`：失败/ panic 仅记录日志。
@@ -278,7 +295,10 @@ where
     match catch_unwind(AssertUnwindSafe(f)) {
         Ok(Ok(())) => {}
         Ok(Err(e)) => tracing::error!(error = %e, "JNI 调用失败"),
-        Err(_) => tracing::error!("JNI 调用捕获到 panic，已隔离"),
+        Err(panic) => tracing::error!(
+            panic = %panic_payload_message(panic.as_ref()),
+            "JNI 调用捕获到 panic，已隔离"
+        ),
     }
 }
 
