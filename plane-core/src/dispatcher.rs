@@ -99,7 +99,8 @@ where
             return Err(error);
         }
         Err(_) => {
-            let error = CoreError::Protocol("proxy-remote connection timed out after 8s".to_string());
+            let error =
+                CoreError::Protocol("proxy-remote connection timed out after 8s".to_string());
             tracing::error!(%error, "initial proxy-remote connection timed out");
             status.report("node_down");
             return Err(error);
@@ -245,13 +246,11 @@ fn resolve_server_addr(host: &str, port: u16) -> Result<std::net::SocketAddr> {
         return Ok(std::net::SocketAddr::from((ip, port)));
     }
     // 否则走系统解析（注意：此解析走系统 DNS，不经 FakeDNS）。
-    let mut addresses = (host, port)
-        .to_socket_addrs()
-        .map_err(|e| {
-            CoreError::Io(std::io::Error::other(format!(
-                "解析 proxy-remote 地址 {host}:{port} 失败: {e}"
-            )))
-        })?;
+    let mut addresses = (host, port).to_socket_addrs().map_err(|e| {
+        CoreError::Io(std::io::Error::other(format!(
+            "解析 proxy-remote 地址 {host}:{port} 失败: {e}"
+        )))
+    })?;
     addresses
         .find(|addr| addr.is_ipv4())
         .or_else(|| addresses.next())
