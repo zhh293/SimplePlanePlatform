@@ -60,12 +60,12 @@ struct PinnedServerCertVerifier {
 }
 
 impl PinnedServerCertVerifier {
-    fn new(legacy_ca_certificates: Vec<Vec<u8>>) -> Arc<Self> {
+    fn new(legacy_ca_certificates: Vec<Vec<u8>>) -> Self {
         let provider = Arc::new(rustls::crypto::ring::default_provider());
-        Arc::new(Self {
+        Self {
             legacy_ca_certificates,
             provider,
-        })
+        }
     }
 }
 
@@ -266,7 +266,7 @@ impl OutboundConnection {
                 .with_root_certificates(roots)
                 .with_no_client_auth()
         } else {
-            let verifier = PinnedServerCertVerifier::new(pinned_legacy_certificates);
+            let verifier = Arc::new(PinnedServerCertVerifier::new(pinned_legacy_certificates));
             rustls::ClientConfig::builder()
                 .dangerous()
                 .with_custom_certificate_verifier(verifier)
