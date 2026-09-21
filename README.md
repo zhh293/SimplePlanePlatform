@@ -1,5 +1,16 @@
 # SimplePlanePlatform
 
+## HTTP/3 / QUIC 传输
+
+项目支持基于 Netty QUIC 的 HTTP/3 传输模式。配置远程节点时将 `transport` 设置为 `http3`，即可使用 UDP/QUIC 建立加密隧道；每个逻辑 `streamId` 映射到独立的 HTTP/3 Stream，以避免 TCP 单连接级别的队头阻塞。
+
+需要注意：HTTP/3 Stream 解决的是跨 Stream 的有序交付阻塞，但同一条 QUIC 连接上的所有 Stream 仍共享连接级拥塞窗口、流量控制额度和发送缓冲区。因此丢包或大流量 Stream 仍可能影响其他 Stream 的吞吐，跨流公平调度目前列为后续优化项。
+
+相关设计文档：
+
+- [HTTP/3 / QUIC SPI 设计](docs/design/http3-quic-spi-v1-design.md)
+- [跨流公平性与连接级拥塞窗口待解决问题](docs/HTTP3-QUIC跨流公平性与连接级拥塞窗口待解决.md)
+
 基于 Dubbo 微内核思想设计的高性能加密隧道代理框架，支持 SOCKS5/HTTP CONNECT 代理模式和 TUN 全局透明代理模式，并提供基于系统 VpnService 的 Android 客户端。全链路 SPI 可插拔，集群容错、负载均衡、加密算法、传输层实现均可独立扩展替换。
 
 ## 项目定位
