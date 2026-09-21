@@ -65,6 +65,11 @@ public final class Http3Connection {
         if (isActive()) {
             return;
         }
+        // Netty's QUIC builder calls native setters immediately after creating
+        // its config. On affected Windows quiche builds, config allocation
+        // returns -1 and the next setter crashes the JVM in native code.
+        // Fail safely before entering that builder path.
+        io.netty.handler.codec.quic.QuicheNativePreflight.ensureConfigCanBeCreated();
         Bootstrap bootstrap = new Bootstrap();
         String serverName = url.getParameter("http3.serverName", url.getHost());
         bootstrap.group(eventLoop).channel(NioDatagramChannel.class)
