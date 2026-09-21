@@ -51,20 +51,27 @@ pub struct DispatcherConfig {
     pub tls: bool,
 }
 
+/// Small status hook kept independent from JNI so the dispatcher remains testable.
+pub trait StatusReporter: Send + Sync {
+    fn report(&self, state: &str);
+}
+
 /// 调度器主循环：消费 [`TcpEvent`]，为每个新连接接出站。
 ///
 /// `notify_tx` 与 stack_loop 共用，[`SmolTcpStream`] 写入后通知栈及时搬运。
 /// `shutdown_rx` 收到停止信号即退出（连带 spawn 的代理任务随 channel 关闭收敛）。
-pub async fn run_dispatcher<P>(
+pub async fn run_dispatcher<P, S>(
     mut event_rx: mpsc::Receiver<TcpEvent>,
     fake_dns: Arc<Mutex<FakeDnsEngine>>,
     config: DispatcherConfig,
     protector: Arc<P>,
     notify_tx: mpsc::Sender<()>,
     mut shutdown_rx: tokio::sync::watch::Receiver<bool>,
+    status: Arc<S>,
 ) -> Result<()>
 where
     P: SocketProtector + 'static,
+    S: StatusReporter + 'static,
 {
     tracing::info!(
         "调度器启动，目标 proxy-remote = {}:{} (tls={})",
@@ -73,8 +80,31 @@ where
         config.tls
     );
 
-    // 共享一条到 proxy-remote 的 HTTP/2 连接（懒建立 + 失败重建）。
-    let mut conn: Option<OutboundConnection> = None;
+    // 在允许 TUN 继续运行前先做一次真实的、已 protect 的远程握手。
+    // 节点不可达时立即反馈给 Android，而不是等浏览器发请求才暴露。
+    status.report("connecting");
+    let mut conn: Option<OutboundConnection> = match tokio::time::timeout(
+        std::time::Duration::from_secs(8),
+        establish_outbound(&config, protector.as_ref()),
+    )
+    .await
+    {
+        Ok(Ok(connection)) => {
+            status.report("connected");
+            Some(connection)
+        }
+        Ok(Err(error)) => {
+            tracing::error!(%error, "initial proxy-remote connection failed");
+            status.report("node_down");
+            return Err(error);
+        }
+        Err(_) => {
+            let error = CoreError::Protocol("proxy-remote connection timed out after 8s".to_string());
+            tracing::error!(%error, "initial proxy-remote connection timed out");
+            status.report("node_down");
+            return Err(error);
+        }
+    };
 
     loop {
         tokio::select! {
@@ -108,10 +138,15 @@ where
 
                 // 确保到 proxy-remote 的 h2 连接可用（懒建立 / 断线重建）。
                 if conn.is_none() {
+                    status.report("connecting");
                     match establish_outbound(&config, protector.as_ref()).await {
-                        Ok(c) => conn = Some(c),
+                        Ok(c) => {
+                            conn = Some(c);
+                            status.report("connected");
+                        }
                         Err(e) => {
                             tracing::error!("建立到 proxy-remote 的连接失败: {}，丢弃本次连接", e);
+                            status.report("node_down");
                             // 通知栈关闭该 app 连接。
                             let _ = stream_tx.try_send(StreamCommand::Close);
                             continue;
@@ -133,6 +168,7 @@ where
                     }
                     Err(e) => {
                         tracing::error!("打开代理 stream 失败: {}（域名 {}），连接将重建", e, domain);
+                        status.report("node_down");
                         let _ = stream_tx.try_send(StreamCommand::Close);
                         // h2 连接可能已坏，丢弃以便下次重建。
                         conn = None;

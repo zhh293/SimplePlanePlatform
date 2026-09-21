@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 基于 Material 3 的应用主题 -->
-    <style name="Theme.SimplePlane" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.SimplePlane" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/plane_background</item>
+        <item name="android:navigationBarColor">@color/plane_background</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="colorAccent">@color/plane_cyan</item>
+        <item name="android:windowBackground">@color/plane_background</item>
+    </style>
 </resources>

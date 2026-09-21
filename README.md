@@ -405,7 +405,9 @@ route delete 198.18.0.0
 
 ## 使用方式三：Android 客户端
 
-> ⚠️ **暂未开放**：Android 客户端仍在内部调试中，当前阶段请勿使用，请使用上面的代理模式或 TUN 模式。以下内容仅作开发记录。
+> ✅ **Beta**：Android 客户端已支持可配置节点、VPN 授权、连接状态反馈和安全断开。当前 native 数据面使用 HTTP/2 h2c（不启用 TLS/HTTP3），请先确保服务端使用相同共享密钥并通过 TCP 暴露节点端口。
+
+首次使用时，在应用中填写远程节点地址、端口和共享密钥；客户端与 `docker/remote.yml` 中的 `cipherKey` 必须完全一致。节点握手失败时客户端会自动撤销 TUN，避免手机网络被黑洞吞掉。
 
 Android 客户端把整套加密隧道带到手机端：基于系统 `VpnService` 建立 TUN，应用全部流量经虚拟网卡进入用户态栈，由 Rust 数据面（`plane-core`，编译为 `libplane_core.so`）完成 FakeDNS 解析、域名路由判断与 ChaCha20 加密，再通过 HTTP/2 隧道转发到 proxy-remote。与桌面端共用同一套 ProxyMessage 协议与 ChaCha20-Poly1305 加密格式，两端完全互通。
 

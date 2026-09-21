@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#1565C0</color>
+    <color name="ic_launcher_background">#07131F</color>
+    <color name="plane_ink">#E8F3F7</color>
+    <color name="plane_muted">#91A8B3</color>
+    <color name="plane_background">#07131F</color>
+    <color name="plane_surface">#0D202D</color>
+    <color name="plane_surface_high">#153344</color>
+    <color name="plane_cyan">#55E6D1</color>
+    <color name="plane_lime">#C7F36B</color>
+    <color name="plane_warning">#FFCA70</color>
+    <color name="plane_error">#FF8E88</color>
 </resources>

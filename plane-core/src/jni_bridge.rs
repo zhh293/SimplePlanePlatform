@@ -27,6 +27,7 @@
 //! （传入 tun_fd），这与 A2 验收「spy 计数 ≥ 1」对齐；A3 起改由真实出站路径触发。
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use jni::objects::{GlobalRef, JObject, JString, JValue};
 use jni::sys::{jint, jlong, jstring};
@@ -34,7 +35,7 @@ use jni::{JNIEnv, JavaVM};
 use serde::Deserialize;
 
 use crate::android_tun::AndroidTun;
-use crate::dispatcher::{run_dispatcher, DispatcherConfig};
+use crate::dispatcher::{run_dispatcher, DispatcherConfig, StatusReporter};
 use crate::error::{CoreError, Result};
 use crate::net_probe::FakeDnsEngine;
 use crate::outbound::SocketProtector;
@@ -155,6 +156,43 @@ impl CallbackCtx {
     }
 }
 
+/// JNI-backed status reporter. It also gives nativeStats a race-free state value.
+struct JniStatus {
+    cb: std::sync::Arc<CallbackCtx>,
+    state: std::sync::Arc<AtomicU8>,
+}
+
+impl StatusReporter for JniStatus {
+    fn report(&self, state: &str) {
+        self.state.store(status_code(state), Ordering::Release);
+        if let Err(error) = self.cb.on_status(state) {
+            tracing::debug!(%error, "status callback failed");
+        }
+    }
+}
+
+fn status_code(state: &str) -> u8 {
+    match state {
+        "starting" => 1,
+        "connecting" => 2,
+        "connected" => 3,
+        "node_down" => 4,
+        "error" => 5,
+        _ => 0,
+    }
+}
+
+fn status_name(code: u8) -> &'static str {
+    match code {
+        1 => "starting",
+        2 => "connecting",
+        3 => "connected",
+        4 => "node_down",
+        5 => "error",
+        _ => "stopped",
+    }
+}
+
 /// 把 [`CallbackCtx`] 适配为 [`SocketProtector`]：出站 socket 的 protect 经 JNI
 /// 回调到 Kotlin 侧 `VpnService.protect(fd)`（protect 铁律 0.3-1）。
 ///
@@ -181,8 +219,6 @@ impl SocketProtector for JniProtector {
 /// 由 `nativeStart` 创建并 `Box::into_raw` 交给 Kotlin 持有（以 i64 handle 形式），
 /// `nativeStop` 时 `Box::from_raw` 回收。Drop 时关闭 tokio 运行时并发出 shutdown 信号。
 pub struct CoreHandle {
-    /// 跨线程回调上下文（protect / onStatus），可 clone 进 spawn 闭包。
-    cb: std::sync::Arc<CallbackCtx>,
     /// 数据面 tokio 运行时（A2 用于在 worker 线程验证 protect 回调，A3+ 跑栈与出站）。
     rt: tokio::runtime::Runtime,
     /// 关停信号发送端，`nativeStop`/Drop 时置 true 通知数据面任务退出。
@@ -190,22 +226,8 @@ pub struct CoreHandle {
     /// 解析后的配置（A3+ 使用）。
     #[allow(dead_code)]
     config: AndroidConfig,
-}
-
-impl CoreHandle {
-    /// 在 tokio worker 线程（非 JNI 主线程）上触发一次 protect 回调。
-    ///
-    /// 用于 A2 闭环验证「Rust 任意线程 → 回调 Kotlin protect」。回调结果仅记录日志，
-    /// 不阻断启动流程。
-    fn spawn_initial_protect(&self, fd: i32) {
-        let cb = std::sync::Arc::clone(&self.cb);
-        self.rt.spawn(async move {
-            match cb.protect(fd) {
-                Ok(ok) => tracing::info!(fd, ok, "worker 线程 protect 回调完成"),
-                Err(e) => tracing::warn!(error = %e, "worker 线程 protect 回调失败"),
-            }
-        });
-    }
+    /// Last native data-plane state, exposed through nativeStats.
+    state: std::sync::Arc<AtomicU8>,
 }
 
 impl Drop for CoreHandle {
@@ -271,6 +293,11 @@ fn native_start_impl(
 
     let json: String = env.get_string(config_json)?.into();
     let config = AndroidConfig::from_json(&json)?;
+    if !config.outbound_ready() {
+        return Err(CoreError::InvalidArgument(
+            "remote_host、remote_port、remote_key 必须完整配置".to_string(),
+        ));
+    }
 
     let vm = env.get_java_vm()?;
     let bridge = env.new_global_ref(this)?;
@@ -284,29 +311,18 @@ fn native_start_impl(
     let (shutdown, _rx) = tokio::sync::watch::channel(false);
 
     let cb = std::sync::Arc::new(CallbackCtx { vm, bridge });
+    let state = std::sync::Arc::new(AtomicU8::new(status_code("starting")));
 
     let handle = Box::new(CoreHandle {
-        cb: std::sync::Arc::clone(&cb),
         rt,
         shutdown,
         config: config.clone(),
+        state: std::sync::Arc::clone(&state),
     });
 
-    if config.outbound_ready() {
-        // A6 完整数据面：TUN → 用户态 TCP 栈 → 调度器 → 加密出站 → proxy-remote。
-        spawn_data_plane(&handle, &cb, tun_fd, &config)?;
-        let _ = cb.on_status("connected");
-    } else {
-        // 配置不足以出站（A2/A3 占位场景）：仅做一次 protect 回调自检，证明回调闭环可用。
-        tracing::warn!(
-            "remote_host/remote_port/remote_key 不全（host='{}', port={}, key_set={}），\
-             仅启动 protect 自检，不建立出站数据面",
-            config.remote_host,
-            config.remote_port,
-            !config.remote_key.is_empty()
-        );
-        handle.spawn_initial_protect(tun_fd);
-    }
+    // A6 完整数据面：TUN → 用户态 TCP 栈 → 调度器 → 加密出站 → proxy-remote。
+    spawn_data_plane(&handle, &cb, &state, tun_fd, &config)?;
+    let _ = cb.on_status("starting");
 
     Ok(Box::into_raw(handle) as jlong)
 }
@@ -320,6 +336,7 @@ fn native_start_impl(
 fn spawn_data_plane(
     handle: &CoreHandle,
     cb: &std::sync::Arc<CallbackCtx>,
+    state: &std::sync::Arc<AtomicU8>,
     tun_fd: jint,
     config: &AndroidConfig,
 ) -> Result<()> {
@@ -345,12 +362,16 @@ fn spawn_data_plane(
     let protector = std::sync::Arc::new(JniProtector {
         cb: std::sync::Arc::clone(cb),
     });
+    let status = std::sync::Arc::new(JniStatus {
+        cb: std::sync::Arc::clone(cb),
+        state: std::sync::Arc::clone(state),
+    });
 
     // 栈循环：notify_tx 同时给栈与 SmolTcpStream 使用（调度器侧 clone）。
     let stack_fake_dns = std::sync::Arc::clone(&fake_dns);
     let stack_notify_tx = notify_tx.clone();
     let stack_shutdown_rx = handle.shutdown.subscribe();
-    let stack_cb = std::sync::Arc::clone(cb);
+    let stack_status = std::sync::Arc::clone(&status);
     handle.rt.spawn(async move {
         let res = stack_loop(
             tun_reader,
@@ -366,13 +387,14 @@ fn spawn_data_plane(
             Ok(()) => tracing::info!("用户态 TCP 栈已退出"),
             Err(e) => {
                 tracing::error!(error = %e, "用户态 TCP 栈异常退出");
-                let _ = stack_cb.on_status("error");
+                stack_status.report("error");
             }
         }
     });
 
     // 调度器循环：消费 TcpEvent，接出站。
     let disp_shutdown_rx = handle.shutdown.subscribe();
+    let disp_status = std::sync::Arc::clone(&status);
     handle.rt.spawn(async move {
         let res = run_dispatcher(
             tcp_event_rx,
@@ -381,6 +403,7 @@ fn spawn_data_plane(
             protector,
             notify_tx,
             disp_shutdown_rx,
+            std::sync::Arc::clone(&disp_status),
         )
         .await;
         match res {
@@ -442,7 +465,7 @@ pub extern "C" fn Java_com_proxy_android_NativeBridge_nativeStop(
     });
 }
 
-/// Kotlin → Rust：返回会话统计 JSON。A2 阶段固定返回 `"{}"`（B7 填充真实统计）。
+/// Kotlin → Rust：返回当前会话状态 JSON。
 ///
 /// # Safety
 ///
@@ -451,10 +474,17 @@ pub extern "C" fn Java_com_proxy_android_NativeBridge_nativeStop(
 pub extern "C" fn Java_com_proxy_android_NativeBridge_nativeStats(
     env: JNIEnv,
     _this: JObject,
-    _handle: jlong,
+    handle: jlong,
 ) -> jstring {
-    // 注意：new_string 失败时返回 null，不 panic 跨 FFI。
-    match env.new_string("{}") {
+    let state = if handle == 0 {
+        "stopped"
+    } else {
+        // SAFETY: handle is owned by Kotlin and remains valid during this read.
+        let core = unsafe { &*(handle as *const CoreHandle) };
+        status_name(core.state.load(Ordering::Acquire))
+    };
+    let json = format!(r#"{{"state":"{state}"}}"#);
+    match env.new_string(json) {
         Ok(s) => s.into_raw(),
         Err(_) => std::ptr::null_mut(),
     }

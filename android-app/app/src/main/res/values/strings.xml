@@ -1,8 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SimplePlane</string>
-    <string name="toggle_vpn">连接 / 断开 VPN</string>
-    <string name="native_version_label">native 版本: %1$s</string>
+    <string name="toggle_vpn">连接隧道</string>
+    <string name="disconnect_vpn">断开隧道</string>
+    <string name="native_version_label">数据面 %1$s</string>
     <string name="vpn_status_idle">未连接</string>
-    <string name="notification_channel_name">VPN 状态</string>
+    <string name="vpn_status_starting">正在启动</string>
+    <string name="vpn_status_connecting">正在连接节点</string>
+    <string name="vpn_status_connected">隧道已连接</string>
+    <string name="vpn_status_error">连接失败</string>
+    <string name="vpn_status_stopped">已断开</string>
+    <string name="notification_channel_name">SimplePlane 隧道</string>
+    <string name="notification_stop">断开 VPN</string>
+    <string name="remote_section_title">节点配置</string>
+    <string name="remote_host_label">服务器地址</string>
+    <string name="remote_port_label">端口</string>
+    <string name="remote_key_label">共享密钥</string>
+    <string name="remote_key_hint">与 proxy-remote 的 cipherKey 完全一致</string>
+    <string name="protocol_label">传输协议</string>
+    <string name="protocol_value">HTTP/2 · h2c</string>
+    <string name="save_config">保存配置</string>
+    <string name="security_note">所有流量会进入隧道。连接失败时不会建立 VPN，避免手机断网。</string>
+    <string name="diagnostic_note">Android 端当前使用 HTTP/2，服务端需要开启 TCP 监听并匹配 chacha20 密钥。</string>
+    <string name="invalid_host">请输入服务器地址</string>
+    <string name="invalid_port">端口必须是 1–65535</string>
+    <string name="invalid_key">请输入共享密钥</string>
+    <string name="tls_not_supported">当前 Android 数据面暂不支持 TLS，请使用 HTTP/2 h2c</string>
 </resources>

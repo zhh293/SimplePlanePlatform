@@ -12,8 +12,8 @@ remoteServers:
     port: 9090
     ssl: false
     # 加密算法与密钥：必须与 proxy-remote 端完全一致
-    cipher: "aes-gcm"
-    cipherKey: "change-me-to-a-strong-shared-key"
+    cipher: "chacha20"
+    cipherKey: "your-cipher-key"
 
 cluster: "failover"
 loadBalance: "roundrobin"
