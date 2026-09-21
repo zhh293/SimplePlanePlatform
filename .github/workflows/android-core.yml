@@ -106,6 +106,10 @@ jobs:
 
       - name: 安装 Android SDK / 命令行工具
         uses: android-actions/setup-android@v3
+        with:
+          # setup-android v3 默认还会安装已废弃的 tools 包；当前命令行工具
+          # 仓库已移除该包，显式列出构建所需组件避免 CI 在 SDK 初始化阶段失败。
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
       - name: 安装 Android NDK r26（cargo-ndk 交叉编译需要）
         run: |

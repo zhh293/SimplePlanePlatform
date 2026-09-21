@@ -245,6 +245,11 @@ fn resolve_server_addr(host: &str, port: u16) -> Result<std::net::SocketAddr> {
     if let Ok(ip) = host.parse::<Ipv4Addr>() {
         return Ok(std::net::SocketAddr::from((ip, port)));
     }
+    if let Ok(ip) = host.parse::<std::net::Ipv6Addr>() {
+        return Ok(std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
+            ip, port, 0, 0,
+        )));
+    }
     // 否则走系统解析（注意：此解析走系统 DNS，不经 FakeDNS）。
     let mut addresses = (host, port).to_socket_addrs().map_err(|e| {
         CoreError::Io(std::io::Error::other(format!(
