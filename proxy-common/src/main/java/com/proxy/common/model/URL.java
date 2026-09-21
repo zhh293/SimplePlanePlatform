@@ -87,6 +87,11 @@ public class URL {
         return this;
     }
 
+    public URL addParameter(String key, long value) {
+        parameters.put(key, String.valueOf(value));
+        return this;
+    }
+
     // ==================== Getters & Setters ====================
 
     public String getProtocol() {

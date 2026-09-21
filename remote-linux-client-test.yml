@@ -1,0 +1,33 @@
+localPort: 11081
+remoteServers:
+  - host: 127.0.0.1
+    port: 9090
+    transport: http3
+    http3:
+      serverName: 54.172.101.190
+      caFile: /etc/roto-kb/tls/fullchain.pem
+      handshakeTimeoutMs: 10000
+      idleTimeoutMs: 60000
+      maxStreams: 1000
+      initialConnectionWindow: 16777216
+      initialStreamWindow: 1048576
+      maxProxyMessageBytes: 8388608
+      streamPendingHardLimit: 4194304
+      connectionPendingHardLimit: 67108864
+      writeBufferLowWaterMark: 262144
+      writeBufferHighWaterMark: 1048576
+    cipher: chacha20
+    cipherKey: your-cipher-key
+    ssl: false
+cluster: failover
+loadBalance: roundrobin
+timeoutMs: 8000
+connectionsPerNode: 1
+httpProxyEnabled: true
+route:
+  defaultRoute: proxy
+  proxyList:
+    - "*"
+  directList: []
+systemProxy:
+  enabled: false

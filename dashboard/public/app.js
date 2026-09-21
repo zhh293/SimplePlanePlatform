@@ -177,6 +177,11 @@ const App = (function () {
     const labels = { running: '运行中', 'running (external)': '运行中(外部)', starting: '启动中', stopped: '已停止' };
     label.textContent = labels[info.status] || info.status;
     card.className = 'service-card ' + (info.status.includes('running') ? 'card-running' : info.status === 'starting' ? 'card-starting' : '');
+    if (name === 'proxy-local') {
+      const transport = localConfig?.remoteServers?.[0]?.transport || 'http2';
+      const transportEl = $('#transport-proxy-local');
+      if (transportEl) transportEl.textContent = `transport: ${transport}`;
+    }
 
     const uptimeEl = $(`#uptime-${name}`);
     if (uptimeEl) uptimeEl.textContent = info.uptime > 0 ? `运行: ${formatUptime(info.uptime)}` : '';
@@ -416,6 +421,12 @@ const App = (function () {
       <div class="server-fields">
         <div class="server-field"><label>Host</label><input class="input" value="${escAttr(srv.host || '')}" data-key="host"></div>
         <div class="server-field"><label>Port</label><input class="input" type="number" value="${srv.port || 9090}" data-key="port"></div>
+        <div class="server-field"><label>Transport</label>
+          <select class="select" data-key="transport">
+            <option value="http3" ${srv.transport === 'http3' ? 'selected' : ''}>HTTP/3 QUIC</option>
+            <option value="http2" ${(!srv.transport || srv.transport === 'http2') ? 'selected' : ''}>HTTP/2</option>
+          </select>
+        </div>
         <div class="server-field"><label>Cipher</label>
           <select class="select" data-key="cipher">
             <option value="none" ${srv.cipher === 'none' ? 'selected' : ''}>none</option>
@@ -537,10 +548,13 @@ const App = (function () {
 
   function collectServers() {
     const servers = [];
-    $$('.server-card', $('#remoteServers')).forEach(card => {
+    $$('.server-card', $('#remoteServers')).forEach((card, index) => {
+      const previous = localConfig.remoteServers?.[index] || {};
       servers.push({
+        ...previous,
         host: val($('[data-key="host"]', card)),
         port: parseInt(val($('[data-key="port"]', card))) || 9090,
+        transport: val($('[data-key="transport"]', card)) || 'http2',
         cipher: val($('[data-key="cipher"]', card)),
         cipherKey: val($('[data-key="cipherKey"]', card)),
         ssl: $('[data-key="ssl"]', card).checked,
@@ -574,7 +588,7 @@ const App = (function () {
     $('#btnSave').addEventListener('click', saveAll);
     $('#btnAddServer').addEventListener('click', () => {
       const idx = $$('.server-card', $('#remoteServers')).length;
-      $('#remoteServers').appendChild(createServerCard({ host: '', port: 9090, cipher: 'none', cipherKey: '', ssl: false }, idx));
+      $('#remoteServers').appendChild(createServerCard({ host: '', port: 9090, transport: 'http3', cipher: 'none', cipherKey: '', ssl: false }, idx));
       markChanged();
     });
     $('#sidebarToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));

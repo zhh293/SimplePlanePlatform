@@ -73,6 +73,7 @@ const App = (function () {
       $('#info-http-port').textContent = st.http_port;
       $('#info-mode').textContent = st.proxy_mode === 'tun' ? 'TUN 模式' : '系统代理';
       $('#info-port-status').textContent = st.proxy_port_listening ? '监听中' : '未监听';
+      $('#info-transport').textContent = (localConfig?.remote?.transport || 'http3').toLowerCase();
 
       // 系统代理状态
       const proxyRunning = st.proxy_status === 'running';
@@ -279,10 +280,12 @@ const App = (function () {
     if (cards.length > 0) {
       const card = cards[0];
       localConfig.remote = {
+        ...localConfig.remote,
         host: val($('[data-key="host"]', card)),
         port: parseInt(val($('[data-key="port"]', card))) || 9090,
         cipher: val($('[data-key="cipher"]', card)),
         key: val($('[data-key="key"]', card)),
+        transport: val($('[data-key="transport"]', card)) || 'http3',
       };
     }
 
@@ -329,6 +332,12 @@ const App = (function () {
       <div class="server-fields">
         <div class="server-field"><label>Host</label><input class="input" value="${escAttr(srv.host || '')}" data-key="host"></div>
         <div class="server-field"><label>Port</label><input class="input" type="number" value="${srv.port || 9090}" data-key="port"></div>
+        <div class="server-field"><label>Transport</label>
+          <select class="select" data-key="transport">
+            <option value="http3" ${(!srv.transport || srv.transport === 'http3') ? 'selected' : ''}>HTTP/3 QUIC</option>
+            <option value="http2" ${srv.transport === 'http2' ? 'selected' : ''}>HTTP/2</option>
+          </select>
+        </div>
         <div class="server-field"><label>Cipher</label>
           <select class="select" data-key="cipher">
             <option value="none" ${srv.cipher === 'none' ? 'selected' : ''}>none</option>
@@ -659,7 +668,7 @@ const App = (function () {
     $('#btnSave')?.addEventListener('click', saveAll);
     $('#btnAddServer')?.addEventListener('click', () => {
       const idx = $$('.server-card', $('#remoteServers')).length;
-      $('#remoteServers').appendChild(createServerCard({ host: '', port: 9090, cipher: 'chacha20', key: '' }, idx));
+      $('#remoteServers').appendChild(createServerCard({ host: '', port: 9090, transport: 'http3', cipher: 'chacha20', key: '' }, idx));
       markChanged();
     });
 

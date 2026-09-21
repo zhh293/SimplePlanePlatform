@@ -108,6 +108,10 @@ public class ProxyLocalServer {
                 url.addParameter("ssl", String.valueOf(server.isSsl()));
                 url.addParameter("cipher", server.getCipher());
                 url.addParameter("cipherKey", server.getCipherKey());
+                url.addParameter("transport", server.getTransport());
+                if (server.getHttp3() != null) {
+                    server.getHttp3().toUrlParameters(url);
+                }
 
                 // Exchanger.connect() → 内部创建 Transporter 连接 → 包装为 ExchangeClient
                 ExchangeClient exchangeClient = exchanger.connect(url);

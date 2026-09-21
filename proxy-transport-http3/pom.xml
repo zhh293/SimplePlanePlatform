@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.proxy</groupId>
+        <artifactId>netty-proxy</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>proxy-transport-http3</artifactId>
+    <name>Proxy Transport HTTP/3</name>
+    <description>HTTP/3 over QUIC transport for ProxyMessage</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.proxy</groupId>
+            <artifactId>proxy-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.proxy</groupId>
+            <artifactId>proxy-crypto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.proxy</groupId>
+            <artifactId>proxy-transport-netty</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-native-quic</artifactId>
+            <classifier>${quic.native.classifier}</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>${bouncycastle.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.proxy</groupId>
+            <artifactId>proxy-exchange</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile><id>windows-quic</id><activation><os><family>Windows</family></os></activation>
+            <properties><quic.native.classifier>windows-x86_64</quic.native.classifier></properties>
+        </profile>
+        <profile><id>linux-quic</id><activation><os><family>unix</family></os></activation>
+            <properties><quic.native.classifier>linux-x86_64</quic.native.classifier></properties>
+        </profile>
+        <profile><id>macos-quic</id><activation><os><family>mac</family></os></activation>
+            <properties><quic.native.classifier>osx-aarch_64</quic.native.classifier></properties>
+        </profile>
+    </profiles>
+</project>

@@ -22,8 +22,9 @@ services:
     restart: unless-stopped
     # 9090 默认不映射到宿主机，仅供 compose 内网通信；
     # 如需从外部直连服务端（两端分开部署），取消下面注释。
-    # ports:
-    #   - "9090:9090"
+    ports:
+      - "9090:9090/tcp"
+      - "9090:9090/udp"
     expose:
       - "9090"
     volumes:

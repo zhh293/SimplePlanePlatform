@@ -12,6 +12,8 @@ import com.proxy.remote.outbound.OutboundConnector;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -161,16 +163,26 @@ class BaiduProxyTest {
     // ==================== 辅助方法 ====================
 
     private EmbeddedChannel createPushCapture(long streamId, BlockingQueue<byte[]> pushQueue) {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+        // ExchangeHandler.handlePush 使用注册 context 的 writeAndFlush，属于 outbound 事件；
+        // 捕获器必须位于该 context 的前面，不能通过 inbound channelRead 捕获。
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 if (msg instanceof ByteBuf) {
                     ByteBuf buf = (ByteBuf) msg;
                     byte[] data = new byte[buf.readableBytes()];
                     buf.readBytes(data);
                     buf.release();
                     pushQueue.offer(data);
+                    promise.setSuccess();
+                } else {
+                    ctx.write(msg, promise);
                 }
+            }
+        }, new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ctx.fireChannelRead(msg);
             }
         });
         streamRegistry.put(streamId, channel.pipeline().lastContext());

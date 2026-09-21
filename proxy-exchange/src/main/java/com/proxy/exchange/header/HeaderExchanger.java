@@ -48,7 +48,7 @@ public class HeaderExchanger implements Exchanger {
         ExchangeHandler handler = new ExchangeHandler();
 
         // 2. 通过 SPI 加载 Transporter，建连时把 handler 塞进去
-        Transporter transporter = ExtensionLoader.getLoader(Transporter.class).getDefaultExtension();
+        Transporter transporter = getTransporter(url);
         Client client = transporter.connect(url, handler);
 
         // 3. 包装成 ExchangeClient 返回（传入 handler，以支持数据面推送回调注册）
@@ -64,12 +64,17 @@ public class HeaderExchanger implements Exchanger {
         ExchangeHandler handler = new ExchangeHandler(invoker);
 
         // 2. 通过 SPI 加载 Transporter，绑定端口
-        Transporter transporter = ExtensionLoader.getLoader(Transporter.class).getDefaultExtension();
+        Transporter transporter = getTransporter(url);
         Server server = transporter.bind(url, handler);
 
         // 3. 包装成 HeaderExchangeServer 返回
         HeaderExchangeServer exchangeServer = new HeaderExchangeServer(server);
         log.info("HeaderExchanger bound ExchangeServer on {}:{}", url.getHost(), url.getPort());
         return exchangeServer;
+    }
+
+    private Transporter getTransporter(URL url) {
+        String name = url != null ? url.getParameter("transport", "http2") : "http2";
+        return ExtensionLoader.getLoader(Transporter.class).getExtension(name);
     }
 }

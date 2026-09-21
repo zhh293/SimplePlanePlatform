@@ -1,0 +1,30 @@
+host: 127.0.0.1
+port: 19090
+transport: http3
+bizThreads: 200
+workerThreads: 0
+bossThreads: 1
+cipher: chacha20
+cipherKey: your-cipher-key
+maxStreams: 1000
+http3:
+  certificateFile: /etc/roto-kb/tls/fullchain.pem
+  privateKeyFile: /etc/roto-kb/tls/privkey.pem
+  idleTimeoutMs: 60000
+  maxStreamsPerConnection: 1000
+  initialConnectionWindow: 16777216
+  initialStreamWindow: 1048576
+  maxProxyMessageBytes: 8388608
+  streamPendingHardLimit: 4194304
+  connectionPendingHardLimit: 67108864
+  writeBufferLowWaterMark: 262144
+  writeBufferHighWaterMark: 1048576
+readIdleTimeout: 60
+backlog: 1024
+backpressure: false
+backpressurePermits: 64
+outbound:
+  connectTimeoutMs: 5000
+  activeWaitTimeoutMs: 5000
+  keepAlive: true
+  tcpNoDelay: true

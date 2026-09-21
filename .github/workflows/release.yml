@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - feat/desktop-client
+      - feature/http3-desktop-platform-sync
   pull_request:
     branches:
       - main
@@ -158,6 +159,17 @@ jobs:
         run: |
           cd desktop
           cargo tauri build --target ${{ matrix.target }}
+
+      - name: Upload Desktop App artifacts
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimplePlane_${{ matrix.artifact_name }}
+          path: |
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**
+            desktop/src-tauri/target/release/bundle/**
+          if-no-files-found: error
+          retention-days: 14
 
       # Step 5b: Build + Release (tag push only)
       - name: Build & Release Tauri Desktop App
