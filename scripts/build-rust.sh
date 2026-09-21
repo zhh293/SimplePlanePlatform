@@ -29,6 +29,18 @@ OUT_DIR="${REPO_ROOT}/android-app/app/src/main/jniLibs"
 #   x86_64       -> x86_64-linux-android       （模拟器）
 ABIS=("arm64-v8a" "armeabi-v7a" "x86_64")
 
+# Some native Rust dependencies (notably ring, used by QUIC TLS) discover the
+# C compiler through CC_<target>. cargo-ndk configures the linker, but older
+# cargo-ndk releases do not always export these variables for build scripts.
+# Export the NDK r26 clang wrappers explicitly so all ABI builds use the same
+# compiler that cargo-ndk selected.
+if [[ -n "${ANDROID_NDK_HOME:-}" && -d "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin" ]]; then
+    NDK_LLVM_BIN="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+    export CC_aarch64_linux_android="${NDK_LLVM_BIN}/aarch64-linux-android24-clang"
+    export CC_armv7_linux_androideabi="${NDK_LLVM_BIN}/armv7a-linux-androideabi24-clang"
+    export CC_x86_64_linux_android="${NDK_LLVM_BIN}/x86_64-linux-android24-clang"
+fi
+
 if ! command -v cargo-ndk >/dev/null 2>&1; then
     echo "[build-rust] ERROR: 未找到 cargo-ndk。请先执行：cargo install cargo-ndk" >&2
     exit 1
