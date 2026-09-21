@@ -67,7 +67,19 @@ jobs:
 
       - name: cargo clippy -D warnings
         working-directory: ${{ env.CRATE_DIR }}
-        run: cargo clippy --all-targets -- -D warnings
+        run: |
+          set +e
+          cargo clippy --all-targets -- -D warnings 2>&1 | tee "$RUNNER_TEMP/clippy.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: 上传 Rust 诊断日志
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/clippy.log
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: cargo test
         working-directory: ${{ env.CRATE_DIR }}
@@ -142,7 +154,19 @@ jobs:
             gradle-${{ runner.os }}-
 
       - name: 交叉编译 plane-core 为各 ABI 的 .so（release）
-        run: bash scripts/build-rust.sh release
+        run: |
+          set +e
+          bash scripts/build-rust.sh release 2>&1 | tee "$RUNNER_TEMP/android-build-rust.log"
+          exit "${PIPESTATUS[0]}"
+
+      - name: 上传 Android Rust 诊断日志
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/android-build-rust.log
+          if-no-files-found: ignore
+          retention-days: 3
 
       # preBuild 已 dependsOn buildRust（见 app/build.gradle.kts），CI 已在上一步手动编过 .so，
       # 这里用 -PskipRustBuild=true 避免 Gradle 再触发一次（也避免环境差异导致重复失败）。
