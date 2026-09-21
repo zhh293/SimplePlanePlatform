@@ -10,7 +10,15 @@ remoteServers:
   # 若两端不在同一 compose 网络，请改成远程服务器的真实 IP/域名
   - host: "proxy-remote"
     port: 9090
-    ssl: false
+    transport: http3
+    http3:
+      serverName: proxy-remote
+      caFile: ""
+      certificatePin: ""
+      handshakeTimeoutMs: 5000
+      idleTimeoutMs: 60000
+      maxStreams: 1000
+    ssl: true
     # 加密算法与密钥：必须与 proxy-remote 端完全一致
     cipher: "chacha20"
     cipherKey: "your-cipher-key"

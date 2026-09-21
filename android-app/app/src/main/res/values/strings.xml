@@ -14,18 +14,18 @@
     <string name="notification_stop">断开 VPN</string>
     <string name="remote_section_title">节点配置</string>
     <string name="remote_host_label">服务器地址</string>
-    <string name="remote_port_label">端口</string>
+    <string name="remote_port_label">HTTP/3 UDP 端口</string>
     <string name="remote_key_label">共享密钥</string>
-    <string name="remote_key_hint">与 proxy-remote 的 cipherKey 完全一致</string>
+    <string name="remote_key_hint">必须与 proxy-remote 的 cipherKey 完全一致</string>
     <string name="protocol_label">传输协议</string>
-    <string name="protocol_value">HTTP/2 · h2c</string>
+    <string name="protocol_value">HTTP/3 · QUIC</string>
     <string name="save_config">保存配置</string>
-    <string name="security_note">所有流量会进入隧道。连接失败时不会建立 VPN，避免手机断网。</string>
-    <string name="diagnostic_note">Android 端当前使用 HTTP/2，服务端需要开启 TCP 监听并匹配 chacha20 密钥。</string>
+    <string name="security_note">所有流量会进入 QUIC 隧道。握手失败时不会建立 VPN，避免手机断网。</string>
+    <string name="diagnostic_note">Android 使用 HTTP/3/QUIC；服务端必须监听 UDP、配置 TLS 证书，并匹配 chacha20 密钥。</string>
     <string name="invalid_host">请输入服务器地址</string>
     <string name="invalid_port">端口必须是 1–65535</string>
     <string name="invalid_key">请输入共享密钥</string>
-    <string name="tls_not_supported">当前 Android 数据面暂不支持 TLS，请使用 HTTP/2 h2c</string>
+    <string name="tls_not_supported">HTTP/3 TLS 配置无效，请检查服务端证书和 SNI</string>
     <string name="network_unavailable">手机当前没有可用的物理网络，VPN 已安全断开</string>
     <string name="node_resolution_failed">节点地址解析失败，未建立 VPN；请检查网络或服务器地址</string>
 </resources>

@@ -18,6 +18,7 @@ object AppPreferences {
         val port: Int,
         val key: String,
         val tls: Boolean,
+        val serverName: String = host,
     )
 
     fun load(context: Context): Config {

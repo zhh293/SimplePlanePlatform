@@ -182,7 +182,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateEndpoint(config: AppPreferences.Config) {
         endpointSummary.text = if (AppPreferences.isUsable(config)) {
-            "当前节点  ·  ${config.host}:${config.port}  ·  HTTP/2 h2c"
+            "当前节点  ·  ${config.host}:${config.port}  ·  HTTP/3 QUIC"
         } else {
             "节点未配置完整，连接前请填写共享密钥"
         }

@@ -19,7 +19,6 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import org.json.JSONObject
-import java.net.Inet4Address
 import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -73,12 +72,6 @@ class PlaneVpnService : VpnService() {
             stopSelfSafely(STATE_ERROR, "节点配置不完整，未建立 VPN")
             return START_NOT_STICKY
         }
-        if (config.tls) {
-            publishStatus(STATE_ERROR, getString(R.string.tls_not_supported))
-            stopSelfSafely(STATE_ERROR, getString(R.string.tls_not_supported))
-            return START_NOT_STICKY
-        }
-
         registerNetworkMonitor()
         launchInProgress = true
         publishStatus(STATE_CONNECTING, "正在连接 ${config.host}:${config.port}")
@@ -102,9 +95,13 @@ class PlaneVpnService : VpnService() {
     /** Resolve before TUN establishment so the system resolver cannot return a FakeDNS address. */
     private fun resolveNodeConfig(config: AppPreferences.Config): AppPreferences.Config {
         val addresses = InetAddress.getAllByName(config.host)
-        val address = addresses.firstOrNull { it is Inet4Address } ?: addresses.firstOrNull()
+        val address = addresses.firstOrNull { it.hostAddress?.contains(':') == false }
+            ?: addresses.firstOrNull()
             ?: throw IllegalArgumentException("节点地址没有可用解析结果")
-        return config.copy(host = address.hostAddress ?: config.host)
+        return config.copy(
+            host = address.hostAddress ?: config.host,
+            serverName = config.serverName.ifBlank { config.host },
+        )
     }
 
     private fun readConfig(intent: Intent?): AppPreferences.Config {
@@ -157,8 +154,15 @@ class PlaneVpnService : VpnService() {
         .put("remote_host", config.host)
         .put("remote_port", config.port)
         .put("remote_key", config.key)
-        .put("tls", config.tls)
+        .put("transport", "http3")
+        .put("server_name", config.serverName.ifBlank { config.host })
+        .put("ca_pem", loadHttp3CaPem())
+        .put("tls", true)
         .toString()
+
+    private fun loadHttp3CaPem(): String = runCatching {
+        assets.open("http3-remote-ca.crt").bufferedReader().use { it.readText() }
+    }.getOrDefault("")
 
     /** Rust callback. Errors stop the VPN so a dead tunnel can never black-hole the phone. */
     fun onNativeStatus(state: String) {

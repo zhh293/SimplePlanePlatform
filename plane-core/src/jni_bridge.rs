@@ -22,7 +22,7 @@
 //! - **回调机制**：保存 [`jni::JavaVM`] 与 `NativeBridge` 实例的 [`GlobalRef`]，
 //!   任意线程回调时 `attach_current_thread` 拿到 `JNIEnv` 再 `call_method`。
 //!
-//! 当前实现已把 TUN、用户态 TCP/FakeDNS 栈、JNI protect 回调和加密 HTTP/2 出站
+//! 当前实现已把 TUN、用户态 TCP/FakeDNS 栈、JNI protect 回调和加密 HTTP/3 出站
 //! 连接串成完整数据面；启动时会先验证节点配置，真实出站 socket 建立前再执行 protect。
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -67,6 +67,14 @@ pub struct AndroidConfig {
     #[serde(default)]
     pub remote_port: u16,
 
+    /// Optional HTTP/3 TLS SNI name; defaults to the remote host.
+    #[serde(default)]
+    pub server_name: String,
+
+    /// Optional PEM CA for the HTTP/3 server certificate.
+    #[serde(default)]
+    pub ca_pem: String,
+
     /// A6：与 proxy-remote 共享的密钥（构造 ChaCha20-Poly1305 Cipher）。
     /// 非 32 字节会按 Java 规则 SHA-256 派生。缺省为空串时 nativeStart 会拒绝启动。
     #[serde(default)]
@@ -76,7 +84,7 @@ pub struct AndroidConfig {
     #[serde(default = "default_cipher")]
     pub cipher: String,
 
-    /// A6：是否启用 TLS 出站，默认 false（MVP 仅支持 h2c）。
+    /// 兼容旧配置字段；HTTP/3 出站始终启用 TLS。
     #[serde(default)]
     pub tls: bool,
 }
@@ -100,6 +108,8 @@ impl AndroidConfig {
                 mtu: default_mtu(),
                 remote_host: String::new(),
                 remote_port: 0,
+                server_name: String::new(),
+                ca_pem: String::new(),
                 remote_key: String::new(),
                 cipher: default_cipher(),
                 tls: false,
@@ -217,7 +227,7 @@ impl SocketProtector for JniProtector {
 /// 由 `nativeStart` 创建并 `Box::into_raw` 交给 Kotlin 持有（以 i64 handle 形式），
 /// `nativeStop` 时 `Box::from_raw` 回收。Drop 时关闭 tokio 运行时并发出 shutdown 信号。
 pub struct CoreHandle {
-    /// 数据面 tokio 运行时，负责用户态 TCP 栈与加密 HTTP/2 出站调度。
+    /// 数据面 tokio 运行时，负责用户态 TCP 栈与加密 HTTP/3 出站调度。
     rt: tokio::runtime::Runtime,
     /// 关停信号发送端，`nativeStop`/Drop 时置 true 通知数据面任务退出。
     shutdown: tokio::sync::watch::Sender<bool>,
@@ -354,6 +364,8 @@ fn spawn_data_plane(
     let dispatcher_cfg = DispatcherConfig {
         server_host: config.remote_host.clone(),
         server_port: config.remote_port,
+        server_name: config.server_name.clone(),
+        ca_pem: config.ca_pem.clone(),
         key: config.remote_key.clone().into_bytes(),
         tls: config.tls,
     };

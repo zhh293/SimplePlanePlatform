@@ -1,6 +1,6 @@
 host: 127.0.0.1
 port: 19090
-transport: http2
+transport: http3
 bizThreads: 200
 workerThreads: 0
 bossThreads: 1

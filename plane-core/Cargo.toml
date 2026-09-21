@@ -44,7 +44,13 @@ poly1305 = "0.8"  # 裸 Poly1305 MAC（仅对密文计算，无 AAD/无 padding/
 sha2 = "0.10"     # key.len()!=32 时 SHA-256 派生 32 字节密钥（对齐 Java）
 rand = "0.8"      # 随机 nonce 生成
 # HTTP/2 出站（h2 客户端）+ 字节缓冲 + 头部类型
-h2 = "0.4"
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
+quinn = { version = "0.11.12", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rustls = "0.23"
+rustls-pemfile = "2"
+webpki-roots = "0.26"
+futures-util = "0.3"
 bytes = "1"
 http = "1"
 
