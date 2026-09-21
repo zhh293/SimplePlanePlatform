@@ -84,8 +84,7 @@ impl rustls::client::danger::ServerCertVerifier for PinnedServerCertVerifier {
             .any(|certificate| certificate.as_slice() == end_entity.as_ref());
         if exact_pin {
             tracing::warn!(
-                "HTTP/3 server uses a legacy pinned CA certificate as its end-entity; "
-                    "replace the server certificate with a CA-signed leaf certificate"
+                "HTTP/3 server uses a legacy pinned CA certificate as its end-entity; replace the server certificate with a CA-signed leaf certificate"
             );
             Ok(rustls::client::danger::ServerCertVerified::assertion())
         } else {
