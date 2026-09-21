@@ -205,8 +205,11 @@ where
     // （不引入 socket2：tokio::net::TcpSocket 原生提供「先建后连」能力。）
     use std::os::unix::io::AsRawFd;
 
-    let socket = TcpSocket::new_v4()
-        .map_err(|e| CoreError::Io(std::io::Error::other(format!("创建出站 socket 失败: {e}"))))?;
+    let socket = match addr {
+        std::net::SocketAddr::V4(_) => TcpSocket::new_v4(),
+        std::net::SocketAddr::V6(_) => TcpSocket::new_v6(),
+    }
+    .map_err(|e| CoreError::Io(std::io::Error::other(format!("创建出站 socket 失败: {e}"))))?;
 
     let fd = socket.as_raw_fd();
     if !protector.protect(fd) {
@@ -242,14 +245,16 @@ fn resolve_server_addr(host: &str, port: u16) -> Result<std::net::SocketAddr> {
         return Ok(std::net::SocketAddr::from((ip, port)));
     }
     // 否则走系统解析（注意：此解析走系统 DNS，不经 FakeDNS）。
-    (host, port)
+    let mut addresses = (host, port)
         .to_socket_addrs()
         .map_err(|e| {
             CoreError::Io(std::io::Error::other(format!(
                 "解析 proxy-remote 地址 {host}:{port} 失败: {e}"
             )))
-        })?
-        .next()
+        })?;
+    addresses
+        .find(|addr| addr.is_ipv4())
+        .or_else(|| addresses.next())
         .ok_or_else(|| CoreError::Internal(format!("proxy-remote 地址 {host}:{port} 无解析结果")))
 }
 
@@ -261,6 +266,13 @@ mod tests {
     fn resolve_ip_literal() {
         let addr = resolve_server_addr("1.2.3.4", 8443).unwrap();
         assert_eq!(addr.to_string(), "1.2.3.4:8443");
+    }
+
+    #[test]
+    fn resolve_ipv6_literal() {
+        let addr = resolve_server_addr("::1", 8443).unwrap();
+        assert!(addr.is_ipv6());
+        assert_eq!(addr.port(), 8443);
     }
 
     #[test]

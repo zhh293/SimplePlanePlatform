@@ -27,4 +27,5 @@
     <string name="invalid_key">请输入共享密钥</string>
     <string name="tls_not_supported">当前 Android 数据面暂不支持 TLS，请使用 HTTP/2 h2c</string>
     <string name="network_unavailable">手机当前没有可用的物理网络，VPN 已安全断开</string>
+    <string name="node_resolution_failed">节点地址解析失败，未建立 VPN；请检查网络或服务器地址</string>
 </resources>

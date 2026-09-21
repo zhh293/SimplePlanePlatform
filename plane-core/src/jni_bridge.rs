@@ -6,7 +6,7 @@
 //! Kotlin → Rust:
 //!   nativeStart(tunFd: Int, configJson: String): Long   // 返回 handle（0=失败）
 //!   nativeStop(handle: Long)
-//!   nativeStats(handle: Long): String                    // A2 先返回 "{}"
+//!   nativeStats(handle: Long): String                    // 返回当前状态 JSON
 //! Rust → Kotlin（回调）:
 //!   protect(fd: Int): Boolean
 //!   onStatus(state: String)
@@ -22,9 +22,8 @@
 //! - **回调机制**：保存 [`jni::JavaVM`] 与 `NativeBridge` 实例的 [`GlobalRef`]，
 //!   任意线程回调时 `attach_current_thread` 拿到 `JNIEnv` 再 `call_method`。
 //!
-//! A2 仅打通桥接与回调闭环，**不含任何数据面逻辑**（TUN/栈/出站在 A3+ 接入）。
-//! 为证明 protect 回调真实生效，`nativeStart` 在建立句柄后会立即触发一次 protect 回调
-//! （传入 tun_fd），这与 A2 验收「spy 计数 ≥ 1」对齐；A3 起改由真实出站路径触发。
+//! 当前实现已把 TUN、用户态 TCP/FakeDNS 栈、JNI protect 回调和加密 HTTP/2 出站
+//! 连接串成完整数据面；启动时会先验证节点配置，真实出站 socket 建立前再执行 protect。
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -60,16 +59,16 @@ pub struct AndroidConfig {
     #[serde(default = "default_mtu")]
     pub mtu: usize,
 
-    /// remote 节点地址（A5 起使用；A2 允许缺省）。
+    /// remote 节点地址；nativeStart 要求与端口、密钥同时存在。
     #[serde(default)]
     pub remote_host: String,
 
-    /// remote 节点端口（A5 起使用；A2 允许缺省）。
+    /// remote 节点端口；nativeStart 要求与地址、密钥同时存在。
     #[serde(default)]
     pub remote_port: u16,
 
     /// A6：与 proxy-remote 共享的密钥（构造 ChaCha20-Poly1305 Cipher）。
-    /// 非 32 字节会按 Java 规则 SHA-256 派生。缺省为空串（无法真正出站，仅供占位/测试）。
+    /// 非 32 字节会按 Java 规则 SHA-256 派生。缺省为空串时 nativeStart 会拒绝启动。
     #[serde(default)]
     pub remote_key: String,
 
@@ -111,8 +110,7 @@ impl AndroidConfig {
 
     /// 是否具备真正出站所需的最小配置（节点地址 + 端口 + 密钥齐全）。
     ///
-    /// 不齐全时 [`native_start_impl`] 仅建 TUN/栈但不启用出站（避免无效连接刷错误日志），
-    /// 用于 A2/A3 阶段或占位场景。
+    /// 节点配置不齐全时 [`native_start_impl`] 会直接拒绝，避免建立一个必然黑洞的 VPN。
     pub fn outbound_ready(&self) -> bool {
         !self.remote_host.is_empty() && self.remote_port != 0 && !self.remote_key.is_empty()
     }
@@ -219,7 +217,7 @@ impl SocketProtector for JniProtector {
 /// 由 `nativeStart` 创建并 `Box::into_raw` 交给 Kotlin 持有（以 i64 handle 形式），
 /// `nativeStop` 时 `Box::from_raw` 回收。Drop 时关闭 tokio 运行时并发出 shutdown 信号。
 pub struct CoreHandle {
-    /// 数据面 tokio 运行时（A2 用于在 worker 线程验证 protect 回调，A3+ 跑栈与出站）。
+    /// 数据面 tokio 运行时，负责用户态 TCP 栈与加密 HTTP/2 出站调度。
     rt: tokio::runtime::Runtime,
     /// 关停信号发送端，`nativeStop`/Drop 时置 true 通知数据面任务退出。
     shutdown: tokio::sync::watch::Sender<bool>,

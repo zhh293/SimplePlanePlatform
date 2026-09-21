@@ -36,8 +36,8 @@ class NativeBridge(private val vpn: PlaneVpnService? = null) {
     /**
      * 启动一次数据面会话。
      *
-     * @param tunFd `VpnService.establish().detachFd()` 得到的 TUN 文件描述符
-     *   （A2 阶段可传入任意有效 fd 用于打通闭环；真实 TUN 在 A3 接入）。
+     * @param tunFd `VpnService.establish().detachFd()` 得到的 TUN 文件描述符，
+     *   所有权在调用成功后移交给 native 数据面。
      * @param configJson 节点与运行时配置（JSON）；空串表示全部使用默认值。
      * @return 运行时 handle（i64），**0 表示启动失败**。后续 [nativeStop] / [nativeStats]
      *   需带上此 handle。
@@ -52,7 +52,7 @@ class NativeBridge(private val vpn: PlaneVpnService? = null) {
     external fun nativeStop(handle: Long)
 
     /**
-     * 返回会话统计 JSON。A2 阶段固定返回 `"{}"`，真实统计在 B7 填充。
+     * 返回当前 native 会话状态 JSON，例如 `{"state":"connected"}`。
      */
     external fun nativeStats(handle: Long): String
 
@@ -77,7 +77,7 @@ class NativeBridge(private val vpn: PlaneVpnService? = null) {
     /**
      * **被 Rust 回调**：上报数据面状态（如 "connected" / "error" / "node_down"）。
      *
-     * A2 阶段仅记录日志；B5/B7 会把状态投递到 UI 与通知栏。
+     * 状态会被 VPN 服务转发到 UI 与通知栏。
      */
     fun onStatus(state: String) {
         Log.i(TAG, "onStatus: $state")

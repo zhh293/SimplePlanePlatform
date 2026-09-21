@@ -19,7 +19,10 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import org.json.JSONObject
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 
 /** Foreground VPN service with safe startup, explicit state reporting and clean teardown. */
 class PlaneVpnService : VpnService() {
@@ -28,6 +31,10 @@ class PlaneVpnService : VpnService() {
     private var nativeHandle: Long = 0L
     private var tunInterface: ParcelFileDescriptor? = null
     private var stopping = false
+    private var launchInProgress = false
+    private val resolverExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "simpleplane-node-resolver").apply { isDaemon = true }
+    }
     private var networkMonitorRegistered = false
     private val monitoredNetworks = ConcurrentHashMap.newKeySet<Network>()
     private val networkLossRunnable = Runnable {
@@ -58,7 +65,7 @@ class PlaneVpnService : VpnService() {
 
         ensureNotificationChannel()
         startForegroundCompat(STATE_STARTING)
-        if (nativeHandle != 0L) return START_STICKY
+        if (nativeHandle != 0L || launchInProgress) return START_STICKY
 
         val config = readConfig(intent)
         if (!AppPreferences.isUsable(config)) {
@@ -73,12 +80,31 @@ class PlaneVpnService : VpnService() {
         }
 
         registerNetworkMonitor()
+        launchInProgress = true
         publishStatus(STATE_CONNECTING, "正在连接 ${config.host}:${config.port}")
-        if (!startDataPlane(config)) {
-            stopSelfSafely(STATE_ERROR, "数据面启动失败，未建立 VPN")
-            return START_NOT_STICKY
+        resolverExecutor.execute {
+            val resolved = runCatching { resolveNodeConfig(config) }
+                .onFailure { Log.w(TAG, "node address resolution failed", it) }
+                .getOrNull()
+            mainHandler.post {
+                launchInProgress = false
+                if (stopping) return@post
+                if (resolved == null) {
+                    stopSelfSafely(STATE_ERROR, getString(R.string.node_resolution_failed))
+                } else if (!startDataPlane(resolved)) {
+                    stopSelfSafely(STATE_ERROR, "数据面启动失败，未建立 VPN")
+                }
+            }
         }
         return START_STICKY
+    }
+
+    /** Resolve before TUN establishment so the system resolver cannot return a FakeDNS address. */
+    private fun resolveNodeConfig(config: AppPreferences.Config): AppPreferences.Config {
+        val addresses = InetAddress.getAllByName(config.host)
+        val address = addresses.firstOrNull { it is Inet4Address } ?: addresses.firstOrNull()
+            ?: throw IllegalArgumentException("节点地址没有可用解析结果")
+        return config.copy(host = address.hostAddress ?: config.host)
     }
 
     private fun readConfig(intent: Intent?): AppPreferences.Config {
@@ -158,12 +184,14 @@ class PlaneVpnService : VpnService() {
 
     override fun onDestroy() {
         stopSelfSafely(STATE_STOPPED, "VPN 已断开")
+        resolverExecutor.shutdownNow()
         super.onDestroy()
     }
 
     private fun stopSelfSafely(finalState: String, detail: String) {
         if (stopping) return
         stopping = true
+        launchInProgress = false
         unregisterNetworkMonitor()
         if (nativeHandle != 0L) {
             runCatching { bridge.nativeStop(nativeHandle) }
@@ -281,7 +309,7 @@ class PlaneVpnService : VpnService() {
         private const val TUN_ADDRESS_V6 = "fd00::2"
         private const val TUN_PREFIX_V6 = 128
         private const val FAKE_DNS_SERVER = "198.18.0.1"
-        private const val NETWORK_LOSS_GRACE_MS = 3_000L
+    private const val NETWORK_LOSS_GRACE_MS = 3_000L
 
         const val ACTION_STATUS = "com.proxy.android.STATUS"
         const val ACTION_STOP = "com.proxy.android.STOP"
