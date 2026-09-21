@@ -349,7 +349,15 @@ fn native_start_impl(
     });
 
     // A6 完整数据面：TUN → 用户态 TCP 栈 → 调度器 → 加密出站 → proxy-remote。
-    spawn_data_plane(&handle, &cb, &state, tun_fd, &config)?;
+    //
+    // AndroidTun::from_raw_fd() 注册 Tokio AsyncFd，需要当前线程已经处于 Tokio
+    // runtime/reactor 上下文。nativeStart 是由 Android 主线程直接调用的，不能在
+    // 这里裸调用 spawn_data_plane，否则会触发 “there is no reactor running”。
+    // 用刚创建的 runtime 执行一次初始化 future，随后数据面任务继续由 runtime
+    // 后台 worker 线程运行。
+    handle
+        .rt
+        .block_on(async { spawn_data_plane(&handle, &cb, &state, tun_fd, &config) })?;
     let _ = cb.on_status("starting");
 
     Ok(Box::into_raw(handle) as jlong)
