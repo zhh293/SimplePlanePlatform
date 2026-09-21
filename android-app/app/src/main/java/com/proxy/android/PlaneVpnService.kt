@@ -141,10 +141,9 @@ class PlaneVpnService : VpnService() {
             .setMtu(TUN_MTU)
             .addAddress(TUN_ADDRESS, TUN_PREFIX)
             .addRoute("0.0.0.0", 0)
-            // The native MVP only supports IPv4. Capturing IPv6 prevents silent bypass;
-            // applications that support Happy Eyeballs can fall back to IPv4.
-            .addAddress(TUN_ADDRESS_V6, TUN_PREFIX_V6)
-            .addRoute("::", 0)
+            // The native data plane currently supports IPv4 only. Do not capture IPv6
+            // until the native stack can forward it; an IPv6 default route here would
+            // black-hole browsers that prefer IPv6 instead of allowing IPv4 fallback.
             .addDnsServer(FAKE_DNS_SERVER)
             .establish()
     }.onFailure { Log.e(TAG, "establish failed", it) }.getOrNull()
@@ -311,8 +310,6 @@ class PlaneVpnService : VpnService() {
         private const val TUN_MTU = 1500
         private const val TUN_ADDRESS = "198.19.255.254"
         private const val TUN_PREFIX = 15
-        private const val TUN_ADDRESS_V6 = "fd00::2"
-        private const val TUN_PREFIX_V6 = 128
         private const val FAKE_DNS_SERVER = "198.18.0.1"
     private const val NETWORK_LOSS_GRACE_MS = 3_000L
 
