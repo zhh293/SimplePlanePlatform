@@ -330,8 +330,11 @@ fn native_start_impl(
     let vm = env.get_java_vm()?;
     let bridge = env.new_global_ref(this)?;
 
+    let worker_threads = std::thread::available_parallelism()
+        .map(|parallelism| parallelism.get().clamp(2, 4))
+        .unwrap_or(2);
     let rt = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(2)
+        .worker_threads(worker_threads)
         .enable_all()
         .build()?;
     // shutdown 广播：stack_loop / dispatcher 各 subscribe 一份 receiver，

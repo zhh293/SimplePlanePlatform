@@ -42,6 +42,8 @@ use crate::android_tun::{TunReader, TunWriter};
 use crate::error::CoreError;
 use crate::net_probe::FakeDnsEngine;
 
+const TCP_SOCKET_BUFFER_SIZE: usize = 256 * 1024;
+
 /// TCP 事件：新连接建立通知（上报给 [`crate::dispatcher`]）。
 #[derive(Debug)]
 pub enum TcpEvent {
@@ -141,8 +143,8 @@ pub async fn stack_loop(
                         pkt_count += 1;
                         let packet_data = &read_buf[..n];
 
-                        if pkt_count % 200 == 1 || last_stats.elapsed() > std::time::Duration::from_secs(10) {
-                            tracing::info!(
+                        if last_stats.elapsed() >= std::time::Duration::from_secs(5) {
+                            tracing::debug!(
                                 "栈统计: pkts={}, listening={}, pending={}, active={}, accepted={}",
                                 pkt_count, listening_ports.len(), pending_handles.len(),
                                 active_connections.len(), accepted_connections.len()
@@ -167,8 +169,8 @@ pub async fn stack_loop(
                                         }
                                     };
                                     if need_new {
-                                        let rx_buf = tcp::SocketBuffer::new(vec![0u8; 65536]);
-                                        let tx_buf = tcp::SocketBuffer::new(vec![0u8; 65536]);
+                                        let rx_buf = tcp::SocketBuffer::new(vec![0u8; TCP_SOCKET_BUFFER_SIZE]);
+                                        let tx_buf = tcp::SocketBuffer::new(vec![0u8; TCP_SOCKET_BUFFER_SIZE]);
                                         let mut sock = TcpSocket::new(rx_buf, tx_buf);
                                         let listen_ep = IpListenEndpoint { addr: None, port: dst_port };
                                         if sock.listen(listen_ep).is_ok() {

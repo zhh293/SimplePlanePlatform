@@ -130,6 +130,8 @@ impl rustls::client::danger::ServerCertVerifier for PinnedServerCertVerifier {
 }
 
 pub const CIPHER_LENGTH_PREFIX: usize = 4;
+const QUIC_STREAM_RECEIVE_WINDOW: u32 = 4 * 1024 * 1024;
+const QUIC_SEND_WINDOW: u32 = 16 * 1024 * 1024;
 
 pub fn encode_encrypted_frame(cipher: &Cipher, msg: &ProxyMessage) -> Result<Vec<u8>> {
     let plaintext = msg.encode();
@@ -276,6 +278,9 @@ impl OutboundConnection {
             .map_err(|e| CoreError::Protocol(format!("HTTP/3 TLS config failed: {e}")))?;
         let mut client_config = quinn::ClientConfig::new(Arc::new(quic_crypto));
         let mut transport = quinn::TransportConfig::default();
+        transport
+            .stream_receive_window(quinn::VarInt::from_u32(QUIC_STREAM_RECEIVE_WINDOW))
+            .send_window(QUIC_SEND_WINDOW as u64);
         transport.keep_alive_interval(Some(Duration::from_secs(15)));
         client_config.transport_config(Arc::new(transport));
 
