@@ -13,6 +13,7 @@ use std::time::Duration;
 use bytes::{Buf, Bytes};
 use futures_util::future;
 use h3_quinn::quinn;
+use rustls::client::danger::ServerCertVerifier;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::crypto::Cipher;
