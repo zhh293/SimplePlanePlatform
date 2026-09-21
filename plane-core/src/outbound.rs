@@ -190,7 +190,7 @@ impl OutboundConnection {
         transport.keep_alive_interval(Some(Duration::from_secs(15)));
         client_config.transport_config(Arc::new(transport));
 
-        let endpoint = quinn::Endpoint::new(
+        let mut endpoint = quinn::Endpoint::new(
             quinn::EndpointConfig::default(),
             None,
             socket,

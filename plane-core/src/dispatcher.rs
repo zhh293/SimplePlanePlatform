@@ -87,7 +87,7 @@ where
                 }
             }
             event = event_rx.recv() => {
-                let Some(TcpEvent::NewConnection { src_ip, dst_ip, dst_port, stream_tx, stream_rx }) = event else {
+                let Some(TcpEvent::NewConnection { src_ip: _, dst_ip, dst_port, stream_tx, stream_rx }) = event else {
                     return Ok(());
                 };
 
