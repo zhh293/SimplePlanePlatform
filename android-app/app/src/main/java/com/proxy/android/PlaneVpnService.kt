@@ -162,6 +162,7 @@ class PlaneVpnService : VpnService() {
 
     /** Rust callback. Errors stop the VPN so a dead tunnel can never black-hole the phone. */
     fun onNativeStatus(state: String) {
+        if (stopping) return
         Log.i(TAG, "native status: $state")
         when {
             state == STATE_CONNECTED -> publishStatus(STATE_CONNECTED, "所有支持的 IPv4 流量正在通过远端节点")
