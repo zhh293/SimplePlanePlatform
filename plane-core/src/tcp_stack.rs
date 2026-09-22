@@ -303,6 +303,7 @@ pub async fn stack_loop(
                 handle,
                 tx: app_tx,
                 rx: app_rx,
+                pending_write: VecDeque::new(),
                 conn_tuple,
                 notify: notify_tx.clone(),
             });
@@ -362,8 +363,7 @@ pub async fn stack_loop(
             while socket.can_send() {
                 match conn.rx.try_recv() {
                     Ok(StreamCommand::Data(data)) => {
-                        let _ = socket.send_slice(&data);
-                        had_data = true;
+                        conn.pending_write.push_back(data);
                     }
                     Ok(StreamCommand::Close) => {
                         socket.close();
@@ -376,6 +376,23 @@ pub async fn stack_loop(
                         return false;
                     }
                     Err(mpsc::error::TryRecvError::Empty) => break,
+                }
+            }
+            while socket.can_send() {
+                let Some(data) = conn.pending_write.front_mut() else {
+                    break;
+                };
+                match socket.send_slice(data) {
+                    Ok(0) => break,
+                    Ok(n) if n == data.len() => {
+                        conn.pending_write.pop_front();
+                        had_data = true;
+                    }
+                    Ok(n) => {
+                        data.drain(..n);
+                        had_data = true;
+                    }
+                    Err(_) => break,
                 }
             }
             true
@@ -550,6 +567,7 @@ struct ActiveConnection {
     handle: SocketHandle,
     tx: mpsc::Sender<StreamCommand>,
     rx: mpsc::Receiver<StreamCommand>,
+    pending_write: VecDeque<Vec<u8>>,
     conn_tuple: (Ipv4Addr, u16, Ipv4Addr, u16),
     #[allow(dead_code)]
     notify: mpsc::Sender<()>,
