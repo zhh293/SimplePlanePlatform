@@ -42,6 +42,8 @@ use crate::tcp_stack::{stack_loop, TcpEvent};
 
 /// FakeIP 地址池 CIDR（与 net_probe / 桌面一致）。
 const FAKE_IP_CIDR: &str = "198.18.0.0/15";
+const FAKE_DNS_IP: std::net::Ipv4Addr = std::net::Ipv4Addr::new(198, 18, 0, 1);
+const TUN_IP: std::net::Ipv4Addr = std::net::Ipv4Addr::new(198, 19, 255, 254);
 /// FakeDNS LRU 容量（与桌面默认对齐）。
 const FAKE_DNS_CAPACITY: usize = 4096;
 /// TcpEvent 通道缓冲（突发新连接的背压上限）。
@@ -383,10 +385,10 @@ fn spawn_data_plane(
     let tun = unsafe { AndroidTun::from_raw_fd(tun_fd, config.mtu) }?;
     let (tun_reader, tun_writer) = tun.split();
 
-    let fake_dns = std::sync::Arc::new(tokio::sync::Mutex::new(FakeDnsEngine::new(
-        FAKE_IP_CIDR,
-        FAKE_DNS_CAPACITY,
-    )));
+    let mut fake_dns_engine = FakeDnsEngine::new(FAKE_IP_CIDR, FAKE_DNS_CAPACITY);
+    fake_dns_engine.reserve_ip(FAKE_DNS_IP);
+    fake_dns_engine.reserve_ip(TUN_IP);
+    let fake_dns = std::sync::Arc::new(tokio::sync::Mutex::new(fake_dns_engine));
 
     let (tcp_event_tx, tcp_event_rx) =
         tokio::sync::mpsc::channel::<TcpEvent>(TCP_EVENT_CHANNEL_CAP);

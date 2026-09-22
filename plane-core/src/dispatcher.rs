@@ -91,13 +91,25 @@ where
                     return Ok(());
                 };
 
-                let domain = {
+                // FakeDNS is the preferred path because it preserves the original
+                // hostname.  Some Android apps/browsers still open TCP directly to
+                // a cached, DoH-resolved, or hard-coded IPv4 address.  Dropping
+                // those connections makes the VPN look connected while every page
+                // that bypasses the system DNS hangs forever.  The TCP payload
+                // still carries HTTP Host/TLS SNI, so forwarding the literal IPv4
+                // address is a valid and useful fallback.
+                let target_host = {
                     let engine = fake_dns.lock().await;
-                    engine.lookup_domain(&dst_ip).map(ToString::to_string)
-                };
-                let Some(domain) = domain else {
-                    tracing::warn!("no FakeDNS mapping for {}:{}", dst_ip, dst_port);
-                    continue;
+                    engine
+                        .lookup_domain(&dst_ip)
+                        .map(ToString::to_string)
+                        .unwrap_or_else(|| {
+                            tracing::info!(
+                                "no FakeDNS mapping for {}; forwarding direct IPv4 target",
+                                dst_ip
+                            );
+                            dst_ip.to_string()
+                        })
                 };
 
                 if conn.is_none() {
@@ -121,7 +133,7 @@ where
                     let _ = stream_tx.try_send(StreamCommand::Close);
                     continue;
                 };
-                match outbound.open_proxy_stream(&domain, dst_port).await {
+                match outbound.open_proxy_stream(&target_host, dst_port).await {
                     Ok(stream) => {
                         let local = SmolTcpStream::new(stream_tx, stream_rx, notify_tx.clone());
                         tokio::spawn(async move {
@@ -131,10 +143,20 @@ where
                         });
                     }
                     Err(error) => {
-                        tracing::error!(%error, "failed to open HTTP/3 proxy stream");
-                        status.report("node_down");
+                        tracing::warn!(
+                            %error,
+                            target = %target_host,
+                            port = dst_port,
+                            "failed to open HTTP/3 proxy stream"
+                        );
                         let _ = stream_tx.try_send(StreamCommand::Close);
-                        conn = None;
+                        // A target refusal (for example a blocked or offline
+                        // website) is a stream-local error.  Keep the shared
+                        // HTTP/3 connection alive; only reconnect when QUIC
+                        // itself has gone away.
+                        if !outbound.is_alive() {
+                            conn = None;
+                        }
                     }
                 }
             }
@@ -204,5 +226,16 @@ mod tests {
     fn resolve_localhost() {
         let addr = resolve_server_addr("localhost", 80).unwrap();
         assert_eq!(addr.port(), 80);
+    }
+
+    #[test]
+    fn direct_ipv4_target_is_preserved_when_fake_dns_has_no_mapping() {
+        let engine = FakeDnsEngine::new("198.18.0.0/15", 16);
+        let ip = Ipv4Addr::new(120, 53, 64, 82);
+        let target = engine
+            .lookup_domain(&ip)
+            .map(ToString::to_string)
+            .unwrap_or_else(|| ip.to_string());
+        assert_eq!(target, "120.53.64.82");
     }
 }

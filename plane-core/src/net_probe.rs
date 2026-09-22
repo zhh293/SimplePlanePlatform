@@ -25,6 +25,7 @@
 
 #![cfg(unix)]
 
+use std::collections::HashSet;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::num::NonZeroUsize;
 
@@ -84,6 +85,7 @@ pub struct FakeDnsEngine {
     pool_end: u32,
     /// 下一个可分配的 IP（数值形式）。
     next_ip: u32,
+    reserved_ips: HashSet<Ipv4Addr>,
 }
 
 impl FakeDnsEngine {
@@ -111,6 +113,14 @@ impl FakeDnsEngine {
             pool_start: pool_start + 1, // 跳过网络地址 .0
             pool_end,
             next_ip: pool_start + 1,
+            reserved_ips: HashSet::new(),
+        }
+    }
+
+    /// Keep infrastructure addresses out of the domain-to-FakeIP pool.
+    pub fn reserve_ip(&mut self, ip: Ipv4Addr) {
+        if self.is_fake_ip(&ip) {
+            self.reserved_ips.insert(ip);
         }
     }
 
@@ -147,7 +157,7 @@ impl FakeDnsEngine {
             }
 
             let octets = ip.octets();
-            if octets[3] == 0 || octets[3] == 255 {
+            if octets[3] == 0 || octets[3] == 255 || self.reserved_ips.contains(&ip) {
                 continue;
             }
 
@@ -524,6 +534,16 @@ mod tests {
         let ip1 = engine.allocate_ip("www.google.com");
         let ip2 = engine.allocate_ip("www.google.com");
         assert_eq!(ip1, ip2);
+    }
+
+    #[test]
+    fn reserved_infrastructure_ip_is_not_allocated() {
+        let mut engine = FakeDnsEngine::new("198.18.0.0/15", 1024);
+        engine.reserve_ip(Ipv4Addr::new(198, 18, 0, 1));
+        assert_ne!(
+            engine.allocate_ip("www.google.com"),
+            Ipv4Addr::new(198, 18, 0, 1)
+        );
     }
 
     #[test]

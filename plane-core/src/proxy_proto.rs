@@ -85,11 +85,16 @@ pub struct ProxyMessage {
 impl ProxyMessage {
     /// 构造 CONNECT 消息（请求侧）。
     pub fn connect(request_id: i64, host: &str, port: u16) -> Self {
+        Self::connect_on_stream(request_id, 0, host, port)
+    }
+
+    /// CONNECT request carrying an explicit stream id.
+    pub fn connect_on_stream(request_id: i64, stream_id: i64, host: &str, port: u16) -> Self {
         Self {
             type_: MessageType::Connect,
             status: 0,
             request_id,
-            stream_id: 0,
+            stream_id,
             host: host.to_string(),
             port: port as i32,
             data: Vec::new(),
@@ -98,11 +103,16 @@ impl ProxyMessage {
 
     /// 构造 DATA 消息（请求侧）。
     pub fn data(request_id: i64, payload: &[u8]) -> Self {
+        Self::data_on_stream(request_id, 0, payload)
+    }
+
+    /// DATA request carrying an explicit stream id.
+    pub fn data_on_stream(request_id: i64, stream_id: i64, payload: &[u8]) -> Self {
         Self {
             type_: MessageType::Data,
             status: 0,
             request_id,
-            stream_id: 0,
+            stream_id,
             host: String::new(),
             port: 0,
             data: payload.to_vec(),
@@ -111,11 +121,16 @@ impl ProxyMessage {
 
     /// 构造 DISCONNECT 消息（请求侧）。
     pub fn disconnect(request_id: i64) -> Self {
+        Self::disconnect_on_stream(request_id, 0)
+    }
+
+    /// DISCONNECT request carrying an explicit stream id.
+    pub fn disconnect_on_stream(request_id: i64, stream_id: i64) -> Self {
         Self {
             type_: MessageType::Disconnect,
             status: 0,
             request_id,
-            stream_id: 0,
+            stream_id,
             host: String::new(),
             port: 0,
             data: Vec::new(),

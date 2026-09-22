@@ -132,6 +132,7 @@ impl rustls::client::danger::ServerCertVerifier for PinnedServerCertVerifier {
 pub const CIPHER_LENGTH_PREFIX: usize = 4;
 const QUIC_STREAM_RECEIVE_WINDOW: u32 = 4 * 1024 * 1024;
 const QUIC_SEND_WINDOW: u32 = 16 * 1024 * 1024;
+static NEXT_PROXY_STREAM_ID: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(1);
 
 pub fn encode_encrypted_frame(cipher: &Cipher, msg: &ProxyMessage) -> Result<Vec<u8>> {
     let plaintext = msg.encode();
@@ -341,7 +342,13 @@ impl OutboundConnection {
             .map_err(|e| CoreError::Protocol(format!("open HTTP/3 stream failed: {e:?}")))?;
 
         let request_id = self.req_id_gen.next_id();
-        let connect_msg = ProxyMessage::connect(request_id, host, port);
+        // The Java remote keeps outbound sessions in a process-wide map keyed
+        // by stream_id.  Using zero for every HTTP/3 request causes concurrent
+        // browser connections to replace one another.  A process-wide positive
+        // id remains unique across reconnects as well as within one QUIC
+        // connection.
+        let stream_id = NEXT_PROXY_STREAM_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let connect_msg = ProxyMessage::connect_on_stream(request_id, stream_id, host, port);
         let frame = encode_encrypted_frame(&self.cipher, &connect_msg)?;
         stream
             .send_data(Bytes::from(frame))
@@ -365,6 +372,7 @@ impl OutboundConnection {
 
         Ok(OutboundStream {
             request_id,
+            stream_id,
             cipher: self.cipher.clone(),
             stream,
             reassembler: InboundReassembler::new(self.cipher.clone()),
@@ -390,6 +398,7 @@ fn format_authority(host: &str, port: u16) -> String {
 
 pub struct OutboundStream {
     request_id: i64,
+    stream_id: i64,
     cipher: Cipher,
     stream: H3RequestStream,
     reassembler: InboundReassembler,
@@ -401,8 +410,10 @@ impl OutboundStream {
     }
 
     pub async fn send_payload(&mut self, payload: &[u8]) -> Result<()> {
-        let frame =
-            encode_encrypted_frame(&self.cipher, &ProxyMessage::data(self.request_id, payload))?;
+        let frame = encode_encrypted_frame(
+            &self.cipher,
+            &ProxyMessage::data_on_stream(self.request_id, self.stream_id, payload),
+        )?;
         self.stream
             .send_data(Bytes::from(frame))
             .await
@@ -410,8 +421,10 @@ impl OutboundStream {
     }
 
     pub async fn send_disconnect(&mut self) -> Result<()> {
-        let frame =
-            encode_encrypted_frame(&self.cipher, &ProxyMessage::disconnect(self.request_id))?;
+        let frame = encode_encrypted_frame(
+            &self.cipher,
+            &ProxyMessage::disconnect_on_stream(self.request_id, self.stream_id),
+        )?;
         self.stream
             .send_data(Bytes::from(frame))
             .await
@@ -427,7 +440,20 @@ impl OutboundStream {
             Ok(Some(mut chunk)) => {
                 let mut frame = vec![0u8; chunk.remaining()];
                 chunk.copy_to_slice(&mut frame);
-                self.reassembler.push_encrypted_frame(&frame).map(Some)
+                let messages = self.reassembler.push_encrypted_frame(&frame)?;
+                for message in &messages {
+                    if message.type_ == MessageType::ConnectResponse
+                        && message.request_id == self.request_id
+                        && message.status != 0
+                        && message.status != 200
+                    {
+                        return Err(CoreError::Protocol(format!(
+                            "remote CONNECT rejected target stream {} with status {}",
+                            self.stream_id, message.status
+                        )));
+                    }
+                }
+                Ok(Some(messages))
             }
             Ok(None) => Ok(None),
             Err(e) => Err(CoreError::Protocol(format!(
