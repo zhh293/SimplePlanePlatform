@@ -133,6 +133,11 @@ where
                     let _ = stream_tx.try_send(StreamCommand::Close);
                     continue;
                 };
+                tracing::debug!(
+                    target = %target_host,
+                    port = dst_port,
+                    "opening HTTP/3 proxy stream"
+                );
                 match outbound.open_proxy_stream(&target_host, dst_port).await {
                     Ok(stream) => {
                         let local = SmolTcpStream::new(stream_tx, stream_rx, notify_tx.clone());

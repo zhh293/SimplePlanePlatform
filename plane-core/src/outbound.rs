@@ -373,6 +373,8 @@ impl OutboundConnection {
         Ok(OutboundStream {
             request_id,
             stream_id,
+            target_host: host.to_string(),
+            target_port: port,
             cipher: self.cipher.clone(),
             stream,
             reassembler: InboundReassembler::new(self.cipher.clone()),
@@ -399,6 +401,8 @@ fn format_authority(host: &str, port: u16) -> String {
 pub struct OutboundStream {
     request_id: i64,
     stream_id: i64,
+    target_host: String,
+    target_port: u16,
     cipher: Cipher,
     stream: H3RequestStream,
     reassembler: InboundReassembler,
@@ -447,9 +451,18 @@ impl OutboundStream {
                         && message.status != 0
                         && message.status != 200
                     {
+                        let detail = if message.data.is_empty() {
+                            String::new()
+                        } else {
+                            format!(": {}", String::from_utf8_lossy(&message.data))
+                        };
                         return Err(CoreError::Protocol(format!(
-                            "remote CONNECT rejected target stream {} with status {}",
-                            self.stream_id, message.status
+                            "remote CONNECT rejected {}:{} stream {} with status {}{}",
+                            self.target_host,
+                            self.target_port,
+                            self.stream_id,
+                            message.status,
+                            detail
                         )));
                     }
                 }

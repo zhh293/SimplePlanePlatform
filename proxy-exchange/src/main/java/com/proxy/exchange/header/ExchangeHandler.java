@@ -14,6 +14,7 @@ import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -165,7 +166,14 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
                     .type(ProxyMessage.MessageType.CONNECT_RESPONSE)
                     .status(response.getStatus())
                     .message(response.getErrorMessage())
-                    .data(response.getData())
+                    // The wire format has a message field in the Java model but
+                    // does not serialize it. Preserve CONNECT failures in data
+                    // so non-Java clients can report the actual cause.
+                    .data(response.getData() != null
+                            ? response.getData()
+                            : response.getErrorMessage() != null
+                                    ? response.getErrorMessage().getBytes(StandardCharsets.UTF_8)
+                                    : null)
                     .build();
             if (ctx.channel().isActive()) {
                 ctx.writeAndFlush(reply);
@@ -350,6 +358,8 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
                     .type(ProxyMessage.MessageType.CONNECT_RESPONSE)
                     .status(Response.ERROR)
                     .message(errorMessage != null ? errorMessage : "Internal server error")
+                    .data((errorMessage != null ? errorMessage : "Internal server error")
+                            .getBytes(StandardCharsets.UTF_8))
                     .build();
             ctx.writeAndFlush(reply);
         }
