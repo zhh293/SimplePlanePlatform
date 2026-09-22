@@ -341,20 +341,10 @@ impl OutboundConnection {
             .await
             .map_err(|e| CoreError::Protocol(format!("open HTTP/3 stream failed: {e:?}")))?;
 
-        let request_id = self.req_id_gen.next_id();
-        // The Java remote keeps outbound sessions in a process-wide map keyed
-        // by stream_id.  Using zero for every HTTP/3 request causes concurrent
-        // browser connections to replace one another.  A process-wide positive
-        // id remains unique across reconnects as well as within one QUIC
-        // connection.
-        let stream_id = NEXT_PROXY_STREAM_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let connect_msg = ProxyMessage::connect_on_stream(request_id, stream_id, host, port);
-        let frame = encode_encrypted_frame(&self.cipher, &connect_msg)?;
-        stream
-            .send_data(Bytes::from(frame))
-            .await
-            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 CONNECT failed: {e:?}")))?;
-
+        // Netty's HTTP/3 transport sends the response headers as soon as the
+        // request headers are accepted.  Wait for those headers before writing
+        // the first proxy frame, matching the Java client and avoiding an
+        // early request-body/response-header race in the native QUIC stack.
         let response = stream
             .recv_response()
             .await
@@ -369,6 +359,20 @@ impl OutboundConnection {
                 response.status()
             )));
         }
+
+        let request_id = self.req_id_gen.next_id();
+        // The Java remote keeps outbound sessions in a process-wide map keyed
+        // by stream_id.  Using zero for every HTTP/3 request causes concurrent
+        // browser connections to replace one another.  A process-wide positive
+        // id remains unique across reconnects as well as within one QUIC
+        // connection.
+        let stream_id = NEXT_PROXY_STREAM_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let connect_msg = ProxyMessage::connect_on_stream(request_id, stream_id, host, port);
+        let frame = encode_encrypted_frame(&self.cipher, &connect_msg)?;
+        stream
+            .send_data(Bytes::from(frame))
+            .await
+            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 CONNECT failed: {e:?}")))?;
 
         Ok(OutboundStream {
             request_id,
