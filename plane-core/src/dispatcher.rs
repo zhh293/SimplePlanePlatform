@@ -2,6 +2,7 @@
 
 use std::net::Ipv4Addr;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use tokio::sync::{mpsc, Mutex};
 
@@ -12,6 +13,8 @@ use crate::outbound::{proxy_via_remote, OutboundConfig, OutboundConnection, Sock
 use crate::tcp_stack::{SmolTcpStream, StreamCommand, TcpEvent};
 
 const PROXY_READ_BUF: usize = 16 * 1024;
+const RECONNECT_RETRY_DELAY: Duration = Duration::from_secs(2);
+const CONNECTION_HEALTH_POLL: Duration = Duration::from_millis(500);
 
 #[derive(Clone)]
 pub struct DispatcherConfig {
@@ -56,34 +59,49 @@ where
     );
 
     status.report("connecting");
-    let mut conn = match tokio::time::timeout(
-        std::time::Duration::from_secs(12),
-        establish_outbound(&config, protector.as_ref()),
-    )
-    .await
-    {
-        Ok(Ok(connection)) => {
+    let mut conn = match establish_outbound_with_timeout(&config, protector.as_ref()).await {
+        Ok(connection) => {
             status.report("connected");
             Some(connection)
         }
-        Ok(Err(error)) => {
+        Err(error) => {
             tracing::error!(%error, "initial HTTP/3 proxy connection failed");
             status.report("node_down");
             return Err(error);
         }
-        Err(_) => {
-            let error = CoreError::Protocol("HTTP/3 QUIC handshake timed out after 12s".into());
-            tracing::error!(%error, "initial HTTP/3 proxy connection timed out");
-            status.report("node_down");
-            return Err(error);
-        }
     };
+
+    let mut health_tick = tokio::time::interval(CONNECTION_HEALTH_POLL);
+    let mut next_reconnect = Instant::now() + RECONNECT_RETRY_DELAY;
 
     loop {
         tokio::select! {
             changed = shutdown_rx.changed() => {
                 if changed.is_err() || *shutdown_rx.borrow() {
                     return Ok(());
+                }
+            }
+            _ = health_tick.tick() => {
+                if conn.as_ref().is_some_and(|connection| !connection.is_alive()) {
+                    tracing::warn!("HTTP/3 connection lost; closing all proxy streams and scheduling reconnect");
+                    conn = None;
+                    status.report("connecting");
+                    next_reconnect = Instant::now();
+                }
+
+                if conn.is_none() && Instant::now() >= next_reconnect {
+                    next_reconnect = Instant::now() + RECONNECT_RETRY_DELAY;
+                    match establish_outbound_with_timeout(&config, protector.as_ref()).await {
+                        Ok(connection) => {
+                            tracing::info!("HTTP/3 connection rebuilt");
+                            conn = Some(connection);
+                            status.report("connected");
+                        }
+                        Err(error) => {
+                            tracing::warn!(%error, "HTTP/3 automatic reconnect failed; will retry");
+                            status.report("connecting");
+                        }
+                    }
                 }
             }
             event = event_rx.recv() => {
@@ -114,14 +132,16 @@ where
 
                 if conn.is_none() {
                     status.report("connecting");
-                    match establish_outbound(&config, protector.as_ref()).await {
+                    match establish_outbound_with_timeout(&config, protector.as_ref()).await {
                         Ok(connection) => {
                             conn = Some(connection);
                             status.report("connected");
+                            next_reconnect = Instant::now() + RECONNECT_RETRY_DELAY;
                         }
                         Err(error) => {
-                            tracing::error!(%error, "HTTP/3 reconnect failed");
-                            status.report("node_down");
+                            tracing::warn!(%error, "HTTP/3 reconnect failed; will retry");
+                            status.report("connecting");
+                            next_reconnect = Instant::now() + RECONNECT_RETRY_DELAY;
                             let _ = stream_tx.try_send(StreamCommand::Close);
                             continue;
                         }
@@ -186,6 +206,26 @@ where
         tls: true,
     };
     OutboundConnection::connect(addr, protector, cipher, outbound_config).await
+}
+
+async fn establish_outbound_with_timeout<P>(
+    config: &DispatcherConfig,
+    protector: &P,
+) -> Result<OutboundConnection>
+where
+    P: SocketProtector,
+{
+    match tokio::time::timeout(
+        Duration::from_secs(12),
+        establish_outbound(config, protector),
+    )
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => Err(CoreError::Protocol(
+            "HTTP/3 QUIC handshake timed out after 12s".into(),
+        )),
+    }
 }
 
 fn resolve_server_addr(host: &str, port: u16) -> Result<std::net::SocketAddr> {

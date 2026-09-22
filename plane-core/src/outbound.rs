@@ -7,13 +7,17 @@
 
 use std::net::{SocketAddr, UdpSocket};
 use std::os::unix::io::AsRawFd;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::time::Duration;
 
 use bytes::{Buf, Bytes};
 use futures_util::future;
 use h3_quinn::quinn;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::sync::watch;
 
 use crate::crypto::Cipher;
 use crate::error::{CoreError, Result};
@@ -224,6 +228,41 @@ pub struct OutboundConnection {
     cipher: Cipher,
     req_id_gen: Arc<RequestIdGen>,
     config: OutboundConfig,
+    health: Arc<ConnectionHealth>,
+}
+
+/// Shared lifecycle state for one HTTP/3 connection.
+///
+/// Every proxy stream subscribes to this state. When the HTTP/3 driver exits,
+/// all streams are woken up immediately instead of waiting for their individual
+/// DATA reads to time out.
+struct ConnectionHealth {
+    alive: AtomicBool,
+    changed: watch::Sender<bool>,
+}
+
+impl ConnectionHealth {
+    fn new() -> Arc<Self> {
+        let (changed, _receiver) = watch::channel(true);
+        Arc::new(Self {
+            alive: AtomicBool::new(true),
+            changed,
+        })
+    }
+
+    fn subscribe(&self) -> watch::Receiver<bool> {
+        self.changed.subscribe()
+    }
+
+    fn is_alive(&self) -> bool {
+        self.alive.load(Ordering::Acquire)
+    }
+
+    fn mark_dead(&self) {
+        if self.alive.swap(false, Ordering::Release) {
+            let _ = self.changed.send(false);
+        }
+    }
 }
 
 impl OutboundConnection {
@@ -304,12 +343,16 @@ impl OutboundConnection {
             .await
             .map_err(|e| CoreError::Protocol(format!("HTTP/3 QUIC handshake failed: {e}")))?;
 
+        let health = ConnectionHealth::new();
+
         let quinn_connection = h3_quinn::Connection::new(connection);
         let (mut driver, send_request) = h3::client::new(quinn_connection)
             .await
             .map_err(|e| CoreError::Protocol(format!("HTTP/3 session setup failed: {e:?}")))?;
+        let driver_health = Arc::clone(&health);
         tokio::spawn(async move {
             let result = future::poll_fn(|cx| driver.poll_close(cx)).await;
+            driver_health.mark_dead();
             if !result.is_h3_no_error() {
                 tracing::warn!("HTTP/3 connection driver ended: {result:?}");
             }
@@ -321,6 +364,7 @@ impl OutboundConnection {
             cipher,
             req_id_gen: Arc::new(RequestIdGen::new()),
             config,
+            health,
         })
     }
 
@@ -339,16 +383,19 @@ impl OutboundConnection {
             .clone()
             .send_request(request)
             .await
-            .map_err(|e| CoreError::Protocol(format!("open HTTP/3 stream failed: {e:?}")))?;
+            .map_err(|e| {
+                self.health.mark_dead();
+                CoreError::Protocol(format!("open HTTP/3 stream failed: {e:?}"))
+            })?;
 
         // Netty's HTTP/3 transport sends the response headers as soon as the
         // request headers are accepted.  Wait for those headers before writing
         // the first proxy frame, matching the Java client and avoiding an
         // early request-body/response-header race in the native QUIC stack.
-        let response = stream
-            .recv_response()
-            .await
-            .map_err(|e| CoreError::Protocol(format!("receive HTTP/3 response failed: {e:?}")))?;
+        let response = stream.recv_response().await.map_err(|e| {
+            self.health.mark_dead();
+            CoreError::Protocol(format!("receive HTTP/3 response failed: {e:?}"))
+        })?;
         let protocol = response
             .headers()
             .get("x-plane-protocol")
@@ -369,10 +416,10 @@ impl OutboundConnection {
         let stream_id = NEXT_PROXY_STREAM_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let connect_msg = ProxyMessage::connect_on_stream(request_id, stream_id, host, port);
         let frame = encode_encrypted_frame(&self.cipher, &connect_msg)?;
-        stream
-            .send_data(Bytes::from(frame))
-            .await
-            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 CONNECT failed: {e:?}")))?;
+        stream.send_data(Bytes::from(frame)).await.map_err(|e| {
+            self.health.mark_dead();
+            CoreError::Protocol(format!("send HTTP/3 CONNECT failed: {e:?}"))
+        })?;
 
         Ok(OutboundStream {
             request_id,
@@ -382,6 +429,7 @@ impl OutboundConnection {
             cipher: self.cipher.clone(),
             stream,
             reassembler: InboundReassembler::new(self.cipher.clone()),
+            health: Arc::clone(&self.health),
         })
     }
 
@@ -390,7 +438,7 @@ impl OutboundConnection {
     }
 
     pub fn is_alive(&self) -> bool {
-        self.endpoint.open_connections() > 0
+        self.health.is_alive() && self.endpoint.open_connections() > 0
     }
 }
 
@@ -410,6 +458,7 @@ pub struct OutboundStream {
     cipher: Cipher,
     stream: H3RequestStream,
     reassembler: InboundReassembler,
+    health: Arc<ConnectionHealth>,
 }
 
 impl OutboundStream {
@@ -425,7 +474,10 @@ impl OutboundStream {
         self.stream
             .send_data(Bytes::from(frame))
             .await
-            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 DATA failed: {e:?}")))
+            .map_err(|e| {
+                self.health.mark_dead();
+                CoreError::Protocol(format!("send HTTP/3 DATA failed: {e:?}"))
+            })
     }
 
     pub async fn send_disconnect(&mut self) -> Result<()> {
@@ -436,11 +488,14 @@ impl OutboundStream {
         self.stream
             .send_data(Bytes::from(frame))
             .await
-            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 DISCONNECT failed: {e:?}")))?;
-        self.stream
-            .finish()
-            .await
-            .map_err(|e| CoreError::Protocol(format!("finish HTTP/3 stream failed: {e:?}")))
+            .map_err(|e| {
+                self.health.mark_dead();
+                CoreError::Protocol(format!("send HTTP/3 DISCONNECT failed: {e:?}"))
+            })?;
+        self.stream.finish().await.map_err(|e| {
+            self.health.mark_dead();
+            CoreError::Protocol(format!("finish HTTP/3 stream failed: {e:?}"))
+        })
     }
 
     pub async fn recv_messages(&mut self) -> Result<Option<Vec<ProxyMessage>>> {
@@ -473,9 +528,12 @@ impl OutboundStream {
                 Ok(Some(messages))
             }
             Ok(None) => Ok(None),
-            Err(e) => Err(CoreError::Protocol(format!(
-                "receive HTTP/3 DATA failed: {e:?}"
-            ))),
+            Err(e) => {
+                self.health.mark_dead();
+                Err(CoreError::Protocol(format!(
+                    "receive HTTP/3 DATA failed: {e:?}"
+                )))
+            }
         }
     }
 }
@@ -489,8 +547,15 @@ where
     L: AsyncRead + AsyncWrite + Unpin,
 {
     let mut buf = vec![0u8; read_buf_size.max(1)];
-    loop {
-        tokio::select! {
+    let mut health_receiver = stream.health.subscribe();
+    let result = async {
+        loop {
+            tokio::select! {
+                changed = health_receiver.changed() => {
+                if changed.is_err() || !*health_receiver.borrow() {
+                    return Err(CoreError::Protocol("HTTP/3 connection lost".into()));
+                }
+            }
             read = local.read(&mut buf) => {
                 let n = read.map_err(CoreError::Io)?;
                 if n == 0 {
@@ -512,8 +577,14 @@ where
                 }
             }
         }
-    }
-    Ok(())
+        }
+        Ok(())
+    }.await;
+
+    // Closing the local side is essential: otherwise the TCP stack keeps the
+    // old application flow alive after its QUIC stream has died.
+    let _ = local.shutdown().await;
+    result
 }
 
 pub fn spawn_proxy<L>(stream: OutboundStream, local: L, read_buf_size: usize)
