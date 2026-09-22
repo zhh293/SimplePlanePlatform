@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class DispatchInvoker implements Invoker {
 
     private static final Logger log = LoggerFactory.getLogger(DispatchInvoker.class);
+    private static final int CONNECT_ATTEMPTS = 2;
 
     private final ExecutorService bizExecutor;
     private final OutboundConnector connector;
@@ -156,17 +157,27 @@ public class DispatchInvoker implements Invoker {
         sessionManager.register(sessionKey, session);
 
         // 同步等待出站连接建立（在 bizExecutor 线程中阻塞，不影响 IO 线程）
-        try {
-            Channel channel = connector.connect(targetHost, targetPort, session)
-                    .get(activeWaitTimeoutMs, TimeUnit.MILLISECONDS);
-            session.setOutboundChannel(channel);
-            log.info("CONNECT success: target={}:{}, sessionKey={}", targetHost, targetPort, sessionKey);
-            return Response.ok();
-        } catch (Exception e) {
-            log.error("CONNECT failed: target={}:{}, sessionKey={}", targetHost, targetPort, sessionKey, e);
-            sessionManager.remove(sessionKey);
-            return Response.error("Connect to " + targetHost + ":" + targetPort + " failed: " + e.getMessage());
+        Exception lastError = null;
+        for (int attempt = 1; attempt <= CONNECT_ATTEMPTS; attempt++) {
+            try {
+                Channel channel = connector.connect(targetHost, targetPort, session, sessionManager)
+                        .get(activeWaitTimeoutMs, TimeUnit.MILLISECONDS);
+                session.setOutboundChannel(channel);
+                log.info("CONNECT success: target={}:{}, sessionKey={}, attempt={}",
+                        targetHost, targetPort, sessionKey, attempt);
+                return Response.ok();
+            } catch (Exception e) {
+                lastError = e;
+                log.warn("CONNECT attempt failed: target={}:{}, sessionKey={}, attempt={}/{}",
+                        targetHost, targetPort, sessionKey, attempt, CONNECT_ATTEMPTS, e);
+            }
         }
+
+        log.error("CONNECT failed after retries: target={}:{}, sessionKey={}",
+                targetHost, targetPort, sessionKey, lastError);
+        sessionManager.remove(sessionKey);
+        return Response.error("Connect to " + targetHost + ":" + targetPort
+                + " failed after retries: " + (lastError != null ? lastError.getMessage() : "unknown error"));
     }
 
     /**

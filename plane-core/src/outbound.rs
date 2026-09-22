@@ -5,17 +5,19 @@
 //! `x-plane-protocol: proxy-message-v1` header. Its body is the existing
 //! length-prefixed, ChaCha20-encrypted `ProxyMessage` byte stream.
 
+use std::collections::VecDeque;
 use std::net::{SocketAddr, UdpSocket};
 use std::os::unix::io::AsRawFd;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, OnceLock,
 };
 use std::time::Duration;
 
 use bytes::{Buf, Bytes};
 use futures_util::future;
 use h3_quinn::quinn;
+use rand::RngCore;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::watch;
 
@@ -136,7 +138,23 @@ impl rustls::client::danger::ServerCertVerifier for PinnedServerCertVerifier {
 pub const CIPHER_LENGTH_PREFIX: usize = 4;
 const QUIC_STREAM_RECEIVE_WINDOW: u32 = 4 * 1024 * 1024;
 const QUIC_SEND_WINDOW: u32 = 16 * 1024 * 1024;
-static NEXT_PROXY_STREAM_ID: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(1);
+static NEXT_PROXY_STREAM_ID: OnceLock<std::sync::atomic::AtomicI64> = OnceLock::new();
+
+/// Allocate stream IDs from a process-unique namespace.
+///
+/// The remote server keeps sessions in a process-wide map.  Starting at `1`
+/// after every Android VPN restart allowed delayed DATA/DISCONNECT frames from
+/// the previous process to collide with new sessions.  A random 15-bit client
+/// prefix keeps IDs positive on the Java side while the monotonically
+/// increasing low bits remain cheap and lock-free.
+fn next_proxy_stream_id() -> i64 {
+    let counter = NEXT_PROXY_STREAM_ID.get_or_init(|| {
+        let mut rng = rand::thread_rng();
+        let client_prefix = ((rng.next_u32() as u16) & 0x7fff).max(1) as i64;
+        std::sync::atomic::AtomicI64::new((client_prefix << 48) | 1)
+    });
+    counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
 
 pub fn encode_encrypted_frame(cipher: &Cipher, msg: &ProxyMessage) -> Result<Vec<u8>> {
     let plaintext = msg.encode();
@@ -409,11 +427,11 @@ impl OutboundConnection {
 
         let request_id = self.req_id_gen.next_id();
         // The Java remote keeps outbound sessions in a process-wide map keyed
-        // by stream_id.  Using zero for every HTTP/3 request causes concurrent
-        // browser connections to replace one another.  A process-wide positive
-        // id remains unique across reconnects as well as within one QUIC
-        // connection.
-        let stream_id = NEXT_PROXY_STREAM_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // by stream_id. Using a small sequential ID after every VPN restart
+        // lets delayed frames from the previous process collide with a new
+        // session. The process-unique positive namespace also remains stable
+        // across QUIC reconnects within this process.
+        let stream_id = next_proxy_stream_id();
         let connect_msg = ProxyMessage::connect_on_stream(request_id, stream_id, host, port);
         let frame = encode_encrypted_frame(&self.cipher, &connect_msg)?;
         stream.send_data(Bytes::from(frame)).await.map_err(|e| {
@@ -421,7 +439,7 @@ impl OutboundConnection {
             CoreError::Protocol(format!("send HTTP/3 CONNECT failed: {e:?}"))
         })?;
 
-        Ok(OutboundStream {
+        let mut outbound = OutboundStream {
             request_id,
             stream_id,
             target_host: host.to_string(),
@@ -430,7 +448,41 @@ impl OutboundConnection {
             stream,
             reassembler: InboundReassembler::new(self.cipher.clone()),
             health: Arc::clone(&self.health),
-        })
+            pending_messages: VecDeque::new(),
+        };
+
+        // Do not hand a stream to the TUN relay before the server has finished
+        // CONNECT.  Otherwise the first application DATA can race a failed
+        // outbound dial, and the local TCP flow is closed before the caller has
+        // a chance to retry the target connection.
+        loop {
+            match outbound.recv_messages().await? {
+                Some(messages) => {
+                    let request_id = outbound.request_id;
+                    let connected = messages.iter().any(|message| {
+                        message.type_ == MessageType::ConnectResponse
+                            && message.request_id == request_id
+                    });
+                    outbound
+                        .pending_messages
+                        .extend(messages.into_iter().filter(|message| {
+                            !(message.type_ == MessageType::ConnectResponse
+                                && message.request_id == request_id)
+                        }));
+                    if connected {
+                        break;
+                    }
+                }
+                None => {
+                    return Err(CoreError::Protocol(format!(
+                        "remote closed HTTP/3 proxy stream before CONNECT response for {}:{}",
+                        host, port
+                    )));
+                }
+            }
+        }
+
+        Ok(outbound)
     }
 
     pub fn config(&self) -> &OutboundConfig {
@@ -459,6 +511,7 @@ pub struct OutboundStream {
     stream: H3RequestStream,
     reassembler: InboundReassembler,
     health: Arc<ConnectionHealth>,
+    pending_messages: VecDeque<ProxyMessage>,
 }
 
 impl OutboundStream {
@@ -499,6 +552,9 @@ impl OutboundStream {
     }
 
     pub async fn recv_messages(&mut self) -> Result<Option<Vec<ProxyMessage>>> {
+        if !self.pending_messages.is_empty() {
+            return Ok(Some(self.pending_messages.drain(..).collect()));
+        }
         match self.stream.recv_data().await {
             Ok(Some(mut chunk)) => {
                 let mut frame = vec![0u8; chunk.remaining()];

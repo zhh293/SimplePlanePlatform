@@ -78,6 +78,21 @@ public class SessionManager {
     }
 
     /**
+     * Remove a session only if it is still the mapping registered for the key.
+     * This prevents an old outbound channel's inactive callback from deleting
+     * a newer session after a stream id has been reused by a reconnecting client.
+     */
+    public boolean removeIfSame(String streamId, OutboundSession expected) {
+        if (!sessions.remove(streamId, expected)) {
+            return false;
+        }
+        expected.close();
+        log.debug("Session removed after outbound channel closed: streamId={}, target={}:{}",
+                streamId, expected.getTargetHost(), expected.getTargetPort());
+        return true;
+    }
+
+    /**
      * 当前活跃会话数（监控用）
      */
     public int activeCount() {

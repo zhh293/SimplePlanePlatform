@@ -17,6 +17,8 @@ const RECONNECT_RETRY_DELAY: Duration = Duration::from_secs(2);
 const CONNECTION_HEALTH_POLL: Duration = Duration::from_millis(500);
 const TARGET_RECOVERY_TIMEOUT: Duration = Duration::from_millis(500);
 const TARGET_RECOVERY_MAX_BYTES: usize = 32 * 1024;
+const TARGET_CONNECT_RETRIES: usize = 2;
+const TARGET_CONNECT_RETRY_DELAY: Duration = Duration::from_millis(150);
 
 #[derive(Clone)]
 pub struct DispatcherConfig {
@@ -179,8 +181,34 @@ where
                     port = dst_port,
                     "opening HTTP/3 proxy stream"
                 );
-                match outbound.open_proxy_stream(&target_host, dst_port).await {
-                    Ok(stream) => {
+                let mut opened_stream = None;
+                let mut last_open_error = None;
+                for attempt in 0..=TARGET_CONNECT_RETRIES {
+                    match outbound.open_proxy_stream(&target_host, dst_port).await {
+                        Ok(stream) => {
+                            opened_stream = Some(stream);
+                            break;
+                        }
+                        Err(error) => {
+                            tracing::warn!(
+                                %error,
+                                target = %target_host,
+                                port = dst_port,
+                                attempt = attempt + 1,
+                                max_attempts = TARGET_CONNECT_RETRIES + 1,
+                                "HTTP/3 target CONNECT attempt failed"
+                            );
+                            last_open_error = Some(error);
+                            if !outbound.is_alive() || attempt == TARGET_CONNECT_RETRIES {
+                                break;
+                            }
+                            tokio::time::sleep(TARGET_CONNECT_RETRY_DELAY).await;
+                        }
+                    }
+                }
+
+                match opened_stream {
+                    Some(stream) => {
                         let local = SmolTcpStream::new_with_initial(
                             stream_tx,
                             stream_rx,
@@ -193,7 +221,10 @@ where
                             }
                         });
                     }
-                    Err(error) => {
+                    None => {
+                        let error = last_open_error.unwrap_or_else(|| {
+                            CoreError::Protocol("HTTP/3 target CONNECT failed".into())
+                        });
                         tracing::warn!(
                             %error,
                             target = %target_host,

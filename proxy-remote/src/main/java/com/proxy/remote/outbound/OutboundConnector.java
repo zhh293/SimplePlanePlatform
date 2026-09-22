@@ -42,6 +42,16 @@ public class OutboundConnector {
      * @return CompletableFuture，成功时返回 Channel，失败时异常完成
      */
     public CompletableFuture<Channel> connect(String host, int port, OutboundSession session) {
+        return connect(host, port, session, null);
+    }
+
+    /**
+     * Connect while giving the outbound handler a way to remove the session
+     * immediately when the target channel dies.  The old overload is retained
+     * for embedders that do not use a SessionManager.
+     */
+    public CompletableFuture<Channel> connect(
+            String host, int port, OutboundSession session, SessionManager sessionManager) {
         CompletableFuture<Channel> future = new CompletableFuture<>();
 
         Bootstrap bootstrap = new Bootstrap();
@@ -54,7 +64,8 @@ public class OutboundConnector {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         // 极简 Pipeline：仅挂载 OutboundHandler
-                        ch.pipeline().addLast("outboundHandler", new OutboundHandler(session));
+                        ch.pipeline().addLast(
+                                "outboundHandler", new OutboundHandler(session, sessionManager));
                     }
                 });
 
