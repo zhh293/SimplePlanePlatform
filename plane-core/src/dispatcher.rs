@@ -15,6 +15,8 @@ use crate::tcp_stack::{SmolTcpStream, StreamCommand, TcpEvent};
 const PROXY_READ_BUF: usize = 16 * 1024;
 const RECONNECT_RETRY_DELAY: Duration = Duration::from_secs(2);
 const CONNECTION_HEALTH_POLL: Duration = Duration::from_millis(500);
+const TARGET_RECOVERY_TIMEOUT: Duration = Duration::from_millis(500);
+const TARGET_RECOVERY_MAX_BYTES: usize = 32 * 1024;
 
 #[derive(Clone)]
 pub struct DispatcherConfig {
@@ -110,24 +112,43 @@ where
                 };
 
                 // FakeDNS is the preferred path because it preserves the original
-                // hostname.  Some Android apps/browsers still open TCP directly to
-                // a cached, DoH-resolved, or hard-coded IPv4 address.  Dropping
-                // those connections makes the VPN look connected while every page
-                // that bypasses the system DNS hangs forever.  The TCP payload
-                // still carries HTTP Host/TLS SNI, so forwarding the literal IPv4
-                // address is a valid and useful fallback.
-                let target_host = {
-                    let engine = fake_dns.lock().await;
-                    engine
-                        .lookup_domain(&dst_ip)
-                        .map(ToString::to_string)
-                        .unwrap_or_else(|| {
+                // hostname. A cached FakeIP can outlive the native process after a
+                // VPN restart, though, so recover the hostname from TLS SNI or an
+                // HTTP Host header before opening the remote stream. Never forward
+                // an unknown 198.18/15 address as if it were a real public IP.
+                let (mapped_host, is_fake_ip) = {
+                    let mut engine = fake_dns.lock().await;
+                    (engine.lookup_domain(&dst_ip), engine.is_fake_ip(&dst_ip))
+                };
+                let mut prefetched_payload = Vec::new();
+                let target_host = if let Some(host) = mapped_host {
+                    host
+                } else if is_fake_ip {
+                    match recover_target_from_initial_payload(&mut stream_rx).await {
+                        Some((host, payload)) => {
                             tracing::info!(
-                                "no FakeDNS mapping for {}; forwarding direct IPv4 target",
-                                dst_ip
+                                fake_ip = %dst_ip,
+                                recovered_host = %host,
+                                "recovered target from initial application payload"
                             );
-                            dst_ip.to_string()
-                        })
+                            prefetched_payload = payload;
+                            host
+                        }
+                        None => {
+                            tracing::warn!(
+                                fake_ip = %dst_ip,
+                                "dropping TCP stream with no FakeDNS mapping or recoverable host"
+                            );
+                            let _ = stream_tx.try_send(StreamCommand::Close);
+                            continue;
+                        }
+                    }
+                } else {
+                    tracing::debug!(
+                        target = %dst_ip,
+                        "no FakeDNS mapping; forwarding direct IPv4 target"
+                    );
+                    dst_ip.to_string()
                 };
 
                 if conn.is_none() {
@@ -160,7 +181,12 @@ where
                 );
                 match outbound.open_proxy_stream(&target_host, dst_port).await {
                     Ok(stream) => {
-                        let local = SmolTcpStream::new(stream_tx, stream_rx, notify_tx.clone());
+                        let local = SmolTcpStream::new_with_initial(
+                            stream_tx,
+                            stream_rx,
+                            notify_tx.clone(),
+                            prefetched_payload,
+                        );
                         tokio::spawn(async move {
                             if let Err(error) = proxy_via_remote(stream, local, PROXY_READ_BUF).await {
                                 tracing::warn!(%error, "HTTP/3 proxy stream ended");
@@ -250,6 +276,150 @@ fn resolve_server_addr(host: &str, port: u16) -> Result<std::net::SocketAddr> {
         .ok_or_else(|| CoreError::Internal(format!("proxy-remote {host}:{port} has no address")))
 }
 
+async fn recover_target_from_initial_payload(
+    stream_rx: &mut mpsc::Receiver<StreamCommand>,
+) -> Option<(String, Vec<u8>)> {
+    let deadline = Instant::now() + TARGET_RECOVERY_TIMEOUT;
+    let mut payload = Vec::new();
+
+    loop {
+        if let Some(host) = extract_target_host(&payload) {
+            return Some((host, payload));
+        }
+        if payload.len() >= TARGET_RECOVERY_MAX_BYTES {
+            return None;
+        }
+
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return None;
+        }
+        match tokio::time::timeout(remaining, stream_rx.recv())
+            .await
+            .ok()?
+        {
+            Some(StreamCommand::Data(data)) => payload.extend_from_slice(&data),
+            Some(StreamCommand::Close) | None => return None,
+        }
+    }
+}
+
+fn extract_target_host(payload: &[u8]) -> Option<String> {
+    extract_tls_sni(payload).or_else(|| extract_http_host(payload))
+}
+
+fn extract_http_host(payload: &[u8]) -> Option<String> {
+    let header_end = payload
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")?;
+    let headers = std::str::from_utf8(&payload[..header_end]).ok()?;
+    headers.lines().find_map(|line| {
+        let (name, value) = line.split_once(':')?;
+        if !name.trim().eq_ignore_ascii_case("host") {
+            return None;
+        }
+        normalize_target_host(value.trim())
+    })
+}
+
+fn extract_tls_sni(payload: &[u8]) -> Option<String> {
+    if payload.len() < 5 || payload[0] != 0x16 || payload[1] != 0x03 {
+        return None;
+    }
+    let record_len = u16::from_be_bytes([payload[3], payload[4]]) as usize;
+    if payload.len() < 5 + record_len {
+        return None;
+    }
+    let handshake = &payload[5..5 + record_len];
+    if handshake.len() < 4 || handshake[0] != 0x01 {
+        return None;
+    }
+    let hello_len =
+        ((handshake[1] as usize) << 16) | ((handshake[2] as usize) << 8) | handshake[3] as usize;
+    if handshake.len() < 4 + hello_len {
+        return None;
+    }
+    let hello = &handshake[4..4 + hello_len];
+    let mut offset = 2 + 32;
+    if hello.len() < offset + 1 {
+        return None;
+    }
+    let session_len = hello[offset] as usize;
+    offset += 1 + session_len;
+    if hello.len() < offset + 2 {
+        return None;
+    }
+    let cipher_len = u16::from_be_bytes([hello[offset], hello[offset + 1]]) as usize;
+    offset += 2 + cipher_len;
+    if hello.len() < offset + 1 {
+        return None;
+    }
+    offset += 1 + hello[offset] as usize;
+    if hello.len() < offset + 2 {
+        return None;
+    }
+    let extensions_len = u16::from_be_bytes([hello[offset], hello[offset + 1]]) as usize;
+    offset += 2;
+    if hello.len() < offset + extensions_len {
+        return None;
+    }
+    let extensions_end = offset + extensions_len;
+    while offset + 4 <= extensions_end {
+        let extension_type = u16::from_be_bytes([hello[offset], hello[offset + 1]]);
+        let extension_len = u16::from_be_bytes([hello[offset + 2], hello[offset + 3]]) as usize;
+        offset += 4;
+        if offset + extension_len > extensions_end {
+            return None;
+        }
+        if extension_type == 0x0000 {
+            let names = &hello[offset..offset + extension_len];
+            if names.len() < 5 {
+                return None;
+            }
+            let mut name_offset = 2;
+            if names.len() < name_offset + 3 || names[name_offset] != 0 {
+                return None;
+            }
+            name_offset += 1;
+            let name_len =
+                u16::from_be_bytes([names[name_offset], names[name_offset + 1]]) as usize;
+            name_offset += 2;
+            if names.len() < name_offset + name_len {
+                return None;
+            }
+            let name = std::str::from_utf8(&names[name_offset..name_offset + name_len]).ok()?;
+            return normalize_target_host(name);
+        }
+        offset += extension_len;
+    }
+    None
+}
+
+fn normalize_target_host(raw: &str) -> Option<String> {
+    let host = raw.trim().trim_end_matches('.');
+    if host.is_empty()
+        || host
+            .bytes()
+            .any(|byte| byte.is_ascii_control() || byte.is_ascii_whitespace())
+    {
+        return None;
+    }
+    if host.starts_with('[') {
+        return host
+            .strip_prefix('[')
+            .and_then(|value| value.split_once(']'))
+            .map(|(value, _)| value.to_string());
+    }
+    if host.matches(':').count() == 1 {
+        if let Some((name, port)) = host.rsplit_once(':') {
+            if port.parse::<u16>().is_ok() && !name.is_empty() {
+                return Some(name.to_string());
+            }
+        }
+    }
+    Some(host.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -282,5 +452,19 @@ mod tests {
             .map(ToString::to_string)
             .unwrap_or_else(|| ip.to_string());
         assert_eq!(target, "120.53.64.82");
+    }
+
+    #[test]
+    fn recovers_http_host_from_initial_payload() {
+        let payload = b"GET / HTTP/1.1\r\nHost: example.com:443\r\n\r\n";
+        assert_eq!(extract_target_host(payload).as_deref(), Some("example.com"));
+    }
+
+    #[test]
+    fn unknown_fake_ip_has_no_direct_target_fallback() {
+        let engine = FakeDnsEngine::new("198.18.0.0/15", 16);
+        let ip = Ipv4Addr::new(198, 18, 0, 55);
+        assert!(engine.is_fake_ip(&ip));
+        assert_eq!(engine.lookup_domain(&ip), None);
     }
 }

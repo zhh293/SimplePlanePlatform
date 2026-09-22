@@ -658,10 +658,21 @@ impl SmolTcpStream {
         rx: mpsc::Receiver<StreamCommand>,
         notify: mpsc::Sender<()>,
     ) -> Self {
+        Self::new_with_initial(tx, rx, notify, Vec::new())
+    }
+
+    /// Construct a stream with bytes that the dispatcher had to read while
+    /// recovering a hostname from a stale FakeIP's TLS SNI/HTTP Host header.
+    pub fn new_with_initial(
+        tx: mpsc::Sender<StreamCommand>,
+        rx: mpsc::Receiver<StreamCommand>,
+        notify: mpsc::Sender<()>,
+        initial_data: Vec<u8>,
+    ) -> Self {
         Self {
             tx,
             rx,
-            read_buf: Vec::new(),
+            read_buf: initial_data,
             pending_reserve: None,
             notify,
         }

@@ -45,7 +45,10 @@ const FAKE_IP_CIDR: &str = "198.18.0.0/15";
 const FAKE_DNS_IP: std::net::Ipv4Addr = std::net::Ipv4Addr::new(198, 18, 0, 1);
 const TUN_IP: std::net::Ipv4Addr = std::net::Ipv4Addr::new(198, 19, 255, 254);
 /// FakeDNS LRU 容量（与桌面默认对齐）。
-const FAKE_DNS_CAPACITY: usize = 4096;
+// Mobile browsers can issue thousands of DNS queries while restoring a tab.
+// Keep enough mappings to survive that burst and avoid handing a cached
+// FakeIP to the dispatcher after its reverse entry has been evicted.
+const FAKE_DNS_CAPACITY: usize = 65_536;
 /// TcpEvent 通道缓冲（突发新连接的背压上限）。
 const TCP_EVENT_CHANNEL_CAP: usize = 256;
 /// notify 通道缓冲（栈与流之间的就绪通知）。

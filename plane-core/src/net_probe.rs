@@ -126,20 +126,36 @@ impl FakeDnsEngine {
 
     /// 为域名分配一个 FakeIP（已分配则返回已有的）。
     pub fn allocate_ip(&mut self, domain: &str) -> Ipv4Addr {
-        if let Some(&ip) = self.domain_to_ip.get(domain) {
-            return ip;
+        let domain_owned = domain.to_lowercase();
+        if let Some(&ip) = self.domain_to_ip.get(&domain_owned) {
+            // Keep the two indexes consistent. A previous implementation had
+            // two independent LRU caches, so the domain->IP entry could outlive
+            // the IP->domain entry and hand out an unresolvable FakeIP.
+            if self.ip_to_domain.peek(&ip) == Some(&domain_owned) {
+                self.ip_to_domain.get(&ip);
+                return ip;
+            }
+            self.domain_to_ip.pop(&domain_owned);
         }
 
         let ip = self.next_available_ip();
-        let domain_owned = domain.to_lowercase();
 
         // 若该 IP 之前被其他域名使用，清理旧映射。
         if let Some(old_domain) = self.ip_to_domain.pop(&ip) {
             self.domain_to_ip.pop(&old_domain);
         }
 
-        self.ip_to_domain.put(ip, domain_owned.clone());
-        self.domain_to_ip.put(domain_owned, ip);
+        if let Some((evicted_ip, evicted_domain)) = self.ip_to_domain.push(ip, domain_owned.clone())
+        {
+            if self.domain_to_ip.peek(&evicted_domain) == Some(&evicted_ip) {
+                self.domain_to_ip.pop(&evicted_domain);
+            }
+        }
+        if let Some((evicted_domain, evicted_ip)) = self.domain_to_ip.push(domain_owned, ip) {
+            if self.ip_to_domain.peek(&evicted_ip) == Some(&evicted_domain) {
+                self.ip_to_domain.pop(&evicted_ip);
+            }
+        }
 
         tracing::debug!("FakeDNS: allocated {} -> {}", domain, ip);
         ip
@@ -217,8 +233,8 @@ impl FakeDnsEngine {
     }
 
     /// 根据假 IP 反查域名。
-    pub fn lookup_domain(&self, fake_ip: &Ipv4Addr) -> Option<&str> {
-        self.ip_to_domain.peek(fake_ip).map(|s| s.as_str())
+    pub fn lookup_domain(&mut self, fake_ip: &Ipv4Addr) -> Option<String> {
+        self.ip_to_domain.get(fake_ip).cloned()
     }
 
     /// 判断一个 IP 是否在 FakeIP 池范围内。
@@ -558,7 +574,7 @@ mod tests {
     fn test_lookup_domain() {
         let mut engine = FakeDnsEngine::new("198.18.0.0/15", 1024);
         let ip = engine.allocate_ip("www.google.com");
-        assert_eq!(engine.lookup_domain(&ip), Some("www.google.com"));
+        assert_eq!(engine.lookup_domain(&ip).as_deref(), Some("www.google.com"));
     }
 
     #[test]
