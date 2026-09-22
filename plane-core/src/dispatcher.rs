@@ -107,7 +107,7 @@ where
                 }
             }
             event = event_rx.recv() => {
-                let Some(TcpEvent::NewConnection { src_ip: _, dst_ip, dst_port, stream_tx, stream_rx }) = event else {
+                let Some(TcpEvent::NewConnection { src_ip: _, dst_ip, dst_port, stream_tx, mut stream_rx }) = event else {
                     return Ok(());
                 };
 
@@ -445,11 +445,11 @@ mod tests {
 
     #[test]
     fn direct_ipv4_target_is_preserved_when_fake_dns_has_no_mapping() {
-        let engine = FakeDnsEngine::new("198.18.0.0/15", 16);
+        let mut engine = FakeDnsEngine::new("198.18.0.0/15", 16);
         let ip = Ipv4Addr::new(120, 53, 64, 82);
         let target = engine
             .lookup_domain(&ip)
-            .map(ToString::to_string)
+            .map(|domain| domain.to_string())
             .unwrap_or_else(|| ip.to_string());
         assert_eq!(target, "120.53.64.82");
     }
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn unknown_fake_ip_has_no_direct_target_fallback() {
-        let engine = FakeDnsEngine::new("198.18.0.0/15", 16);
+        let mut engine = FakeDnsEngine::new("198.18.0.0/15", 16);
         let ip = Ipv4Addr::new(198, 18, 0, 55);
         assert!(engine.is_fake_ip(&ip));
         assert_eq!(engine.lookup_domain(&ip), None);
