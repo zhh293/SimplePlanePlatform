@@ -5,7 +5,6 @@
 //! `x-plane-protocol: proxy-message-v1` header. Its body is the existing
 //! length-prefixed, ChaCha20-encrypted `ProxyMessage` byte stream.
 
-use std::collections::VecDeque;
 use std::net::{SocketAddr, UdpSocket};
 use std::os::unix::io::AsRawFd;
 use std::sync::{
@@ -439,7 +438,7 @@ impl OutboundConnection {
             CoreError::Protocol(format!("send HTTP/3 CONNECT failed: {e:?}"))
         })?;
 
-        let mut outbound = OutboundStream {
+        Ok(OutboundStream {
             request_id,
             stream_id,
             target_host: host.to_string(),
@@ -448,41 +447,7 @@ impl OutboundConnection {
             stream,
             reassembler: InboundReassembler::new(self.cipher.clone()),
             health: Arc::clone(&self.health),
-            pending_messages: VecDeque::new(),
-        };
-
-        // Do not hand a stream to the TUN relay before the server has finished
-        // CONNECT.  Otherwise the first application DATA can race a failed
-        // outbound dial, and the local TCP flow is closed before the caller has
-        // a chance to retry the target connection.
-        loop {
-            match outbound.recv_messages().await? {
-                Some(messages) => {
-                    let request_id = outbound.request_id;
-                    let connected = messages.iter().any(|message| {
-                        message.type_ == MessageType::ConnectResponse
-                            && message.request_id == request_id
-                    });
-                    outbound
-                        .pending_messages
-                        .extend(messages.into_iter().filter(|message| {
-                            !(message.type_ == MessageType::ConnectResponse
-                                && message.request_id == request_id)
-                        }));
-                    if connected {
-                        break;
-                    }
-                }
-                None => {
-                    return Err(CoreError::Protocol(format!(
-                        "remote closed HTTP/3 proxy stream before CONNECT response for {}:{}",
-                        host, port
-                    )));
-                }
-            }
-        }
-
-        Ok(outbound)
+        })
     }
 
     pub fn config(&self) -> &OutboundConfig {
@@ -511,7 +476,6 @@ pub struct OutboundStream {
     stream: H3RequestStream,
     reassembler: InboundReassembler,
     health: Arc<ConnectionHealth>,
-    pending_messages: VecDeque<ProxyMessage>,
 }
 
 impl OutboundStream {
@@ -552,9 +516,6 @@ impl OutboundStream {
     }
 
     pub async fn recv_messages(&mut self) -> Result<Option<Vec<ProxyMessage>>> {
-        if !self.pending_messages.is_empty() {
-            return Ok(Some(self.pending_messages.drain(..).collect()));
-        }
         match self.stream.recv_data().await {
             Ok(Some(mut chunk)) => {
                 let mut frame = vec![0u8; chunk.remaining()];
