@@ -90,6 +90,21 @@ class RouteEngineTest {
     }
 
     @Test
+    void directProviderHasPriorityOverProxyProvider() {
+        ProxyConfig.RouteConfig config = new ProxyConfig.RouteConfig();
+        config.setDefaultRoute("proxy");
+        config.setDirectProviders(Arrays.asList("classpath:routing/providers/direct-list.txt"));
+        config.setProxyProviders(Arrays.asList("classpath:routing/providers/proxy-list.txt"));
+
+        RouteEngine engine = new RouteEngine(config);
+
+        assertEquals(RouteAction.DIRECT, engine.route(new RouteContext(
+                "www.baidu.com", null, 443, RouteContext.Protocol.TCP)).getAction());
+        assertEquals(RouteAction.PROXY, engine.route(new RouteContext(
+                "www.github.com", null, 443, RouteContext.Protocol.TCP)).getAction());
+    }
+
+    @Test
     void bundledProxyConfigLoadsProviderWithoutChangingLegacyLists() {
         ProxyConfig config = ProxyConfig.loadFromClasspath("proxy.yml");
         RouteRule rule = new RouteRule(config.getRoute(),

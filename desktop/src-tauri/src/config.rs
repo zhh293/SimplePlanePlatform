@@ -93,7 +93,9 @@ pub struct RouteConfig {
     pub proxy_list: Vec<String>,
     #[serde(default)]
     pub direct_list: Vec<String>,
-    #[serde(default)]
+    #[serde(default = "default_direct_providers")]
+    pub direct_providers: Vec<String>,
+    #[serde(default = "default_proxy_providers")]
     pub proxy_providers: Vec<String>,
     #[serde(default)]
     pub system_direct_list: Vec<String>,
@@ -119,6 +121,12 @@ fn default_http_port() -> u16 { 1080 }
 fn default_cipher() -> String { "chacha20".to_string() }
 pub fn default_cipher_key() -> String { "your-cipher-key".to_string() }
 fn default_route_mode() -> String { "proxy".to_string() }
+fn default_direct_providers() -> Vec<String> {
+    vec!["classpath:routing/providers/direct-list.txt".to_string()]
+}
+fn default_proxy_providers() -> Vec<String> {
+    vec!["classpath:routing/providers/proxy-list.txt".to_string()]
+}
 fn default_transport() -> String { "http3".to_string() }
 fn default_http3_server_name() -> String { "54.172.101.190".to_string() }
 fn default_http3_ca_file() -> String { "http3-remote-ca.crt".to_string() }
@@ -381,9 +389,8 @@ fn get_default_proxy_config() -> ProxyConfig {
                 "apple.com".to_string(),
                 "localhost".to_string(),
             ],
-            proxy_providers: vec![
-                "classpath:routing/providers/proxy-list.txt".to_string(),
-            ],
+            direct_providers: default_direct_providers(),
+            proxy_providers: default_proxy_providers(),
             system_direct_list: Vec::new(),
             rules: Vec::new(),
         },
@@ -689,6 +696,13 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
     if !config.route.direct_list.is_empty() {
         yaml.push_str("  directList:\n");
         for item in &config.route.direct_list {
+            yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.direct_providers.is_empty() {
+        yaml.push_str("  directProviders:\n");
+        for item in &config.route.direct_providers {
             yaml.push_str(&format!("    - \"{}\"\n", item));
         }
     }

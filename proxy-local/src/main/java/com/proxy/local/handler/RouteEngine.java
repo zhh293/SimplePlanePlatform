@@ -128,8 +128,12 @@ public final class RouteEngine {
             CompiledRule rule = compilePattern("legacy-direct-" + index++, pattern, RouteAction.DIRECT);
             if (rule != null) rules.add(rule);
         }
+        for (String provider : safeList(config.getDirectProviders())) {
+            CompiledRule rule = loadDomainProvider(provider, "direct-provider", RouteAction.DIRECT);
+            if (rule != null) rules.add(rule);
+        }
         for (String provider : safeList(config.getProxyProviders())) {
-            CompiledRule rule = loadProxyProvider(provider);
+            CompiledRule rule = loadDomainProvider(provider, "proxy-provider", RouteAction.PROXY);
             if (rule != null) rules.add(rule);
         }
         for (String pattern : safeList(config.getProxyList())) {
@@ -170,9 +174,10 @@ public final class RouteEngine {
      * 加载本地代理域名 provider。provider 只在启动编译阶段读取，匹配阶段不做磁盘或网络 I/O。
      * 每行一个域名，按域名后缀语义匹配自身及所有子域名。
      */
-    private CompiledRule loadProxyProvider(String source) {
+    private CompiledRule loadDomainProvider(String source, String providerType, RouteAction action) {
         if (source == null || source.trim().isEmpty()) return null;
         Set<String> suffixes = new HashSet<>();
+        Set<String> exactDomains = new HashSet<>();
         try (InputStream input = openProvider(source);
              BufferedReader reader = new BufferedReader(new InputStreamReader(input, "UTF-8"))) {
             String line;
@@ -181,20 +186,26 @@ public final class RouteEngine {
                 if (domain.isEmpty() || domain.startsWith("#") || domain.startsWith(";")) continue;
                 int comment = domain.indexOf('#');
                 if (comment >= 0) domain = domain.substring(0, comment).trim();
+                boolean exact = false;
+                if (domain.startsWith("full:")) {
+                    exact = true;
+                    domain = domain.substring("full:".length());
+                }
                 if (domain.startsWith("*.")) domain = domain.substring(2);
                 if (domain.startsWith("+.")) domain = domain.substring(2);
                 if (domain.startsWith("domain:")) domain = domain.substring("domain:".length());
                 if (domain.startsWith("domain_suffix:")) domain = domain.substring("domain_suffix:".length());
                 domain = normalize(domain);
-                if (domain != null && domain.indexOf('.') > 0 && parseIp(domain) == null) {
-                    suffixes.add(domain);
+                if (domain != null && parseIp(domain) == null) {
+                    if (exact) exactDomains.add(domain);
+                    else suffixes.add(domain);
                 }
             }
         } catch (IOException e) {
             throw new IllegalArgumentException("Failed to load route provider: " + source, e);
         }
-        if (suffixes.isEmpty()) return null;
-        return new CompiledRule("provider-" + source, suffixes, RouteAction.PROXY);
+        if (suffixes.isEmpty() && exactDomains.isEmpty()) return null;
+        return new CompiledRule(providerType + "-" + source, suffixes, exactDomains, action);
     }
 
     private InputStream openProvider(String source) throws IOException {
@@ -227,6 +238,8 @@ public final class RouteEngine {
                 return domain != null && (domain.equals(rule.value) || domain.endsWith("." + rule.value));
             case DOMAIN_SUFFIX_SET:
                 return matchesDomainSuffixSet(domain, rule.values);
+            case DOMAIN_PROVIDER_SET:
+                return matchesDomainProviderSet(domain, rule.values, rule.exactValues);
             case DOMAIN_KEYWORD:
                 return domain != null && domain.contains(rule.value);
             case IP_CIDR:
@@ -257,6 +270,12 @@ public final class RouteEngine {
             candidate = dot < 0 ? null : candidate.substring(dot + 1);
         }
         return false;
+    }
+
+    private boolean matchesDomainProviderSet(String domain, Set<String> suffixes, Set<String> exactDomains) {
+        if (domain == null) return false;
+        if (exactDomains.contains(domain)) return true;
+        return matchesDomainSuffixSet(domain, suffixes);
     }
 
     private boolean isLoopback(RouteContext context) {
@@ -360,7 +379,7 @@ public final class RouteEngine {
     }
 
     private enum MatchType {
-        DOMAIN_FULL, DOMAIN_SUFFIX, DOMAIN_SUFFIX_SET, DOMAIN_KEYWORD, IP_CIDR, IP, PORT, PROTOCOL,
+        DOMAIN_FULL, DOMAIN_SUFFIX, DOMAIN_SUFFIX_SET, DOMAIN_PROVIDER_SET, DOMAIN_KEYWORD, IP_CIDR, IP, PORT, PROTOCOL,
         MATCH, SYSTEM_LOCAL, SYSTEM_PRIVATE
     }
 
@@ -370,6 +389,7 @@ public final class RouteEngine {
         private final String value;
         private final RouteAction action;
         private final Set<String> values;
+        private final Set<String> exactValues;
         private final Cidr cidr;
         private final int portStart;
         private final int portEnd;
@@ -380,6 +400,7 @@ public final class RouteEngine {
             this.value = value;
             this.action = action;
             this.values = null;
+            this.exactValues = null;
             this.cidr = type == MatchType.IP_CIDR ? parseCidr(value, id) : null;
             if (type == MatchType.PORT) {
                 int[] range = parsePortRange(value, id);
@@ -391,12 +412,13 @@ public final class RouteEngine {
             }
         }
 
-        private CompiledRule(String id, Set<String> values, RouteAction action) {
+        private CompiledRule(String id, Set<String> values, Set<String> exactValues, RouteAction action) {
             this.id = id;
-            this.type = MatchType.DOMAIN_SUFFIX_SET;
+            this.type = MatchType.DOMAIN_PROVIDER_SET;
             this.value = null;
             this.action = action;
             this.values = Collections.unmodifiableSet(values);
+            this.exactValues = Collections.unmodifiableSet(exactValues);
             this.cidr = null;
             this.portStart = 0;
             this.portEnd = 0;

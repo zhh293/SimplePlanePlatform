@@ -119,6 +119,8 @@ route:
     - "*.xuexitong.com"
     - 127.0.0.1
     - localhost
+  directProviders:
+    - classpath:routing/providers/direct-list.txt
   proxyProviders:
     - classpath:routing/providers/proxy-list.txt
 systemProxy:

@@ -98,6 +98,7 @@ public class ProxyConfig {
         private String defaultRoute = "direct";
         private List<String> proxyList = new ArrayList<>();
         private List<String> directList = new ArrayList<>();
+        private List<String> directProviders = new ArrayList<>();
         private List<String> proxyProviders = new ArrayList<>();
         private List<RouteEntry> rules = new ArrayList<>();
         private List<String> systemDirectList = new ArrayList<>();
@@ -145,6 +146,9 @@ public class ProxyConfig {
         public void setDirectList(List<String> directList) {
             this.directList = directList;
         }
+
+        public List<String> getDirectProviders() { return directProviders; }
+        public void setDirectProviders(List<String> directProviders) { this.directProviders = directProviders; }
 
         public List<String> getProxyProviders() { return proxyProviders; }
         public void setProxyProviders(List<String> proxyProviders) { this.proxyProviders = proxyProviders; }
