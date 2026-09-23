@@ -93,6 +93,26 @@ pub struct RouteConfig {
     pub proxy_list: Vec<String>,
     #[serde(default)]
     pub direct_list: Vec<String>,
+    #[serde(default = "default_direct_providers")]
+    pub direct_providers: Vec<String>,
+    #[serde(default = "default_proxy_providers")]
+    pub proxy_providers: Vec<String>,
+    #[serde(default)]
+    pub system_direct_list: Vec<String>,
+    #[serde(default)]
+    pub rules: Vec<RouteRuleConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RouteRuleConfig {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(rename = "type")]
+    pub rule_type: String,
+    pub value: String,
+    pub action: String,
+    #[serde(default)]
+    pub priority: i32,
 }
 
 fn default_socks_port() -> u16 { 1080 }
@@ -101,6 +121,12 @@ fn default_http_port() -> u16 { 1080 }
 fn default_cipher() -> String { "chacha20".to_string() }
 pub fn default_cipher_key() -> String { "your-cipher-key".to_string() }
 fn default_route_mode() -> String { "proxy".to_string() }
+fn default_direct_providers() -> Vec<String> {
+    vec!["classpath:routing/providers/direct-list.txt".to_string()]
+}
+fn default_proxy_providers() -> Vec<String> {
+    vec!["classpath:routing/providers/proxy-list.txt".to_string()]
+}
 fn default_transport() -> String { "http3".to_string() }
 fn default_http3_server_name() -> String { "54.172.101.190".to_string() }
 fn default_http3_ca_file() -> String { "http3-remote-ca.crt".to_string() }
@@ -363,6 +389,10 @@ fn get_default_proxy_config() -> ProxyConfig {
                 "apple.com".to_string(),
                 "localhost".to_string(),
             ],
+            direct_providers: default_direct_providers(),
+            proxy_providers: default_proxy_providers(),
+            system_direct_list: Vec::new(),
+            rules: Vec::new(),
         },
     }
 }
@@ -667,6 +697,41 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
         yaml.push_str("  directList:\n");
         for item in &config.route.direct_list {
             yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.direct_providers.is_empty() {
+        yaml.push_str("  directProviders:\n");
+        for item in &config.route.direct_providers {
+            yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.proxy_providers.is_empty() {
+        yaml.push_str("  proxyProviders:\n");
+        for item in &config.route.proxy_providers {
+            yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.system_direct_list.is_empty() {
+        yaml.push_str("  systemDirectList:\n");
+        for item in &config.route.system_direct_list {
+            yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.rules.is_empty() {
+        yaml.push_str("  rules:\n");
+        for rule in &config.route.rules {
+            yaml.push_str("    -\n");
+            if let Some(id) = &rule.id {
+                yaml.push_str(&format!("      id: \"{}\"\n", id));
+            }
+            yaml.push_str(&format!("      type: \"{}\"\n", rule.rule_type));
+            yaml.push_str(&format!("      value: \"{}\"\n", rule.value));
+            yaml.push_str(&format!("      action: \"{}\"\n", rule.action));
+            yaml.push_str(&format!("      priority: {}\n", rule.priority));
         }
     }
 

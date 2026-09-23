@@ -1,86 +1,73 @@
 package com.proxy.local.handler;
 
 import com.proxy.local.config.ProxyConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 /**
- * 路由规则匹配器 —— 根据域名判断走代理还是直连
- * <p>
- * 匹配优先级：
- * 1. directList 强制直连（最高优先级）
- * 2. proxyList 走代理
- * 3. defaultRoute 决定默认行为
- * </p>
+ * 旧路由接口的兼容适配器。
+ *
+ * <p>新代码应使用 {@link RouteEngine} 的结构化 {@link RouteDecision}；保留
+ * {@link #shouldProxy(String)} 是为了不破坏现有调用方和配置迁移。</p>
  */
 public class RouteRule {
 
-    private static final Logger log = LoggerFactory.getLogger(RouteRule.class);
-
-    private final String defaultRoute;
-    private final List<String> proxyPatterns;
-    private final List<String> directPatterns;
+    private final RouteEngine engine;
 
     public RouteRule(ProxyConfig.RouteConfig config) {
-        this.defaultRoute = config.getDefaultRoute();
-        this.proxyPatterns = new ArrayList<>(config.getProxyList());
-        this.directPatterns = new ArrayList<>(config.getDirectList());
-        log.info("RouteRule initialized: default={}, proxyRules={}, directRules={}",
-                defaultRoute, proxyPatterns.size(), directPatterns.size());
+        this(config, null);
+    }
+
+    public RouteRule(ProxyConfig.RouteConfig config, Collection<String> proxyRemoteHosts) {
+        this.engine = new RouteEngine(config, proxyRemoteHosts);
+    }
+
+    public RouteDecision decide(String host, int port) {
+        return decide(host, port, RouteContext.Protocol.TCP);
+    }
+
+    public RouteDecision decide(String host, int port, RouteContext.Protocol protocol) {
+        String destination = isIpLiteral(host) ? host : null;
+        return engine.route(new RouteContext(host, destination, port, protocol));
+    }
+
+    public RouteDecision decide(RouteContext context) {
+        return engine.route(context);
     }
 
     /**
-     * 判断目标域名是否应该走代理
-     *
-     * @param host 目标域名
-     * @return true=走远程代理, false=直连
+     * 兼容旧调用方：只有 PROXY 返回 true。REJECT 由新 Handler 通过 decide() 处理。
      */
     public boolean shouldProxy(String host) {
-        if (host == null || host.isEmpty()) {
-            return "proxy".equals(defaultRoute);
-        }
-
-        String lowerHost = host.toLowerCase();
-
-        // 1. directList 优先级最高
-        for (String pattern : directPatterns) {
-            if (matchPattern(lowerHost, pattern.toLowerCase())) {
-                log.debug("Route DIRECT (directList match: {}): {}", pattern, host);
-                return false;
-            }
-        }
-
-        // 2. proxyList 次之
-        for (String pattern : proxyPatterns) {
-            if (matchPattern(lowerHost, pattern.toLowerCase())) {
-                log.debug("Route PROXY (proxyList match: {}): {}", pattern, host);
-                return true;
-            }
-        }
-
-        // 3. 默认路由
-        boolean useProxy = "proxy".equals(defaultRoute);
-        log.debug("Route {} (default): {}", useProxy ? "PROXY" : "DIRECT", host);
-        return useProxy;
+        return decide(host, 0).isProxy();
     }
 
-    /**
-     * 通配符匹配
-     * 支持:
-     *   *.google.com  → 匹配 www.google.com, mail.google.com 等
-     *   google.com    → 精确匹配 google.com
-     */
-    private boolean matchPattern(String host, String pattern) {
-        if (pattern.startsWith("*.")) {
-            // 通配符：匹配子域名或自身
-            String suffix = pattern.substring(1); // ".google.com"
-            return host.endsWith(suffix) || host.equals(pattern.substring(2));
-        } else {
-            // 精确匹配
-            return host.equals(pattern);
+    public boolean shouldProxy(String host, int port) {
+        return decide(host, port).isProxy();
+    }
+
+    public RouteDecision route(RouteContext context) {
+        return engine.route(context);
+    }
+
+    /** 避免为了判断 IP 而触发 DNS 查询。 */
+    private static boolean isIpLiteral(String value) {
+        if (value == null) return false;
+        String candidate = value;
+        if (candidate.startsWith("[") && candidate.endsWith("]")) {
+            candidate = candidate.substring(1, candidate.length() - 1);
         }
+        if (candidate.matches("[0-9]{1,3}(\\.[0-9]{1,3}){3}")) {
+            String[] parts = candidate.split("\\.");
+            for (String part : parts) {
+                try {
+                    if (Integer.parseInt(part) > 255) return false;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return candidate.indexOf(':') >= 0 && candidate.matches("[0-9a-fA-F:.%]+");
     }
 }
