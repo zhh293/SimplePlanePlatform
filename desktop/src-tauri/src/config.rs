@@ -93,6 +93,24 @@ pub struct RouteConfig {
     pub proxy_list: Vec<String>,
     #[serde(default)]
     pub direct_list: Vec<String>,
+    #[serde(default)]
+    pub proxy_providers: Vec<String>,
+    #[serde(default)]
+    pub system_direct_list: Vec<String>,
+    #[serde(default)]
+    pub rules: Vec<RouteRuleConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RouteRuleConfig {
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(rename = "type")]
+    pub rule_type: String,
+    pub value: String,
+    pub action: String,
+    #[serde(default)]
+    pub priority: i32,
 }
 
 fn default_socks_port() -> u16 { 1080 }
@@ -363,6 +381,11 @@ fn get_default_proxy_config() -> ProxyConfig {
                 "apple.com".to_string(),
                 "localhost".to_string(),
             ],
+            proxy_providers: vec![
+                "classpath:routing/providers/proxy-list.txt".to_string(),
+            ],
+            system_direct_list: Vec::new(),
+            rules: Vec::new(),
         },
     }
 }
@@ -667,6 +690,34 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
         yaml.push_str("  directList:\n");
         for item in &config.route.direct_list {
             yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.proxy_providers.is_empty() {
+        yaml.push_str("  proxyProviders:\n");
+        for item in &config.route.proxy_providers {
+            yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.system_direct_list.is_empty() {
+        yaml.push_str("  systemDirectList:\n");
+        for item in &config.route.system_direct_list {
+            yaml.push_str(&format!("    - \"{}\"\n", item));
+        }
+    }
+
+    if !config.route.rules.is_empty() {
+        yaml.push_str("  rules:\n");
+        for rule in &config.route.rules {
+            yaml.push_str("    -\n");
+            if let Some(id) = &rule.id {
+                yaml.push_str(&format!("      id: \"{}\"\n", id));
+            }
+            yaml.push_str(&format!("      type: \"{}\"\n", rule.rule_type));
+            yaml.push_str(&format!("      value: \"{}\"\n", rule.value));
+            yaml.push_str(&format!("      action: \"{}\"\n", rule.action));
+            yaml.push_str(&format!("      priority: {}\n", rule.priority));
         }
     }
 
