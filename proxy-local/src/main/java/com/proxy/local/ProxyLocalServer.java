@@ -71,7 +71,11 @@ public class ProxyLocalServer {
         }
 
         // 初始化路由规则
-        this.routeRule = new RouteRule(config.getRoute());
+        List<String> proxyRemoteHosts = new ArrayList<>();
+        for (ProxyConfig.RemoteServer server : config.getRemoteServers()) {
+            proxyRemoteHosts.add(server.getHost());
+        }
+        this.routeRule = new RouteRule(config.getRoute(), proxyRemoteHosts);
 
         // 组装调用链
         this.clusterInvoker = buildInvokerChain();

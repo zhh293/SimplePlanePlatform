@@ -133,10 +133,21 @@ public class Socks5ConnectHandler extends ChannelInboundHandlerAdapter {
             final String host = targetHost;
             final int port = targetPort;
 
-            // 路由判断：走代理还是直连
-            if (routeRule != null && !routeRule.shouldProxy(host)) {
+            // 路由判断：系统规则优先，随后是用户规则，最后使用默认动作。
+            RouteDecision decision = routeRule == null
+                    ? new RouteDecision(RouteAction.PROXY, "legacy-default", 0, RouteDecision.Reason.DEFAULT)
+                    : routeRule.decide(host, port);
+
+            if (decision.isReject()) {
+                log.info("Route REJECT (rule={}): {}:{}", decision.getRuleId(), host, port);
+                sendReply(ctx, REP_HOST_UNREACHABLE);
+                ctx.close();
+                return;
+            }
+
+            if (decision.isDirect()) {
                 // === 直连模式 ===
-                log.info("Route DIRECT (SOCKS5): {}:{}", host, port);
+                log.info("Route DIRECT (SOCKS5, rule={}): {}:{}", decision.getRuleId(), host, port);
                 DirectRelayHandler directHandler = new DirectRelayHandler(host, port);
                 directHandler.connect(ctx).addListener(future -> {
                     if (future.isSuccess()) {

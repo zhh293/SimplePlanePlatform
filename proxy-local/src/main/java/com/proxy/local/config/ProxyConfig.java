@@ -98,6 +98,29 @@ public class ProxyConfig {
         private String defaultRoute = "direct";
         private List<String> proxyList = new ArrayList<>();
         private List<String> directList = new ArrayList<>();
+        private List<String> proxyProviders = new ArrayList<>();
+        private List<RouteEntry> rules = new ArrayList<>();
+        private List<String> systemDirectList = new ArrayList<>();
+
+        /** 新版 first-match-wins 路由规则。旧列表继续保留用于兼容已有 proxy.yml。 */
+        public static class RouteEntry {
+            private String id;
+            private String type;
+            private String value;
+            private String action;
+            private int priority;
+
+            public String getId() { return id; }
+            public void setId(String id) { this.id = id; }
+            public String getType() { return type; }
+            public void setType(String type) { this.type = type; }
+            public String getValue() { return value; }
+            public void setValue(String value) { this.value = value; }
+            public String getAction() { return action; }
+            public void setAction(String action) { this.action = action; }
+            public int getPriority() { return priority; }
+            public void setPriority(int priority) { this.priority = priority; }
+        }
 
         public String getDefaultRoute() {
             return defaultRoute;
@@ -122,6 +145,14 @@ public class ProxyConfig {
         public void setDirectList(List<String> directList) {
             this.directList = directList;
         }
+
+        public List<String> getProxyProviders() { return proxyProviders; }
+        public void setProxyProviders(List<String> proxyProviders) { this.proxyProviders = proxyProviders; }
+
+        public List<RouteEntry> getRules() { return rules; }
+        public void setRules(List<RouteEntry> rules) { this.rules = rules; }
+        public List<String> getSystemDirectList() { return systemDirectList; }
+        public void setSystemDirectList(List<String> systemDirectList) { this.systemDirectList = systemDirectList; }
     }
 
     /**

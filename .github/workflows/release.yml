@@ -8,6 +8,7 @@ on:
       - main
       - feat/desktop-client
       - feature/http3-desktop-platform-sync
+      - feature/proxy-route-provider
   pull_request:
     branches:
       - main
