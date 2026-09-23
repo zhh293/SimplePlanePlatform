@@ -418,6 +418,7 @@ fn get_builtin_presets() -> Vec<Preset> {
                         "cloudflare.com".to_string(),
                     ],
                     direct_list: vec![],
+                    ..config::RouteConfig::default()
                 },
             },
         },
@@ -449,6 +450,7 @@ fn get_builtin_presets() -> Vec<Preset> {
                         "172.16.0.0/12".to_string(),
                         "192.168.0.0/16".to_string(),
                     ],
+                    ..config::RouteConfig::default()
                 },
             },
         },
@@ -492,6 +494,7 @@ fn get_builtin_presets() -> Vec<Preset> {
                         "stackoverflow.com".to_string(),
                     ],
                     direct_list: vec![],
+                    ..config::RouteConfig::default()
                 },
             },
         },
