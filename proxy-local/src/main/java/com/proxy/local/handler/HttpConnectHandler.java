@@ -57,6 +57,7 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
     private final Invoker invoker;
     private final RouteRule routeRule;
     private final StreamChannelRegistry streamRegistry = StreamChannelRegistry.getInstance();
+    private boolean plainHttpPending;
 
     public HttpConnectHandler(Invoker invoker, RouteRule routeRule) {
         this.invoker = invoker;
@@ -65,27 +66,25 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        // 防止过大的 HTTP 头消耗内存
-        if (in.readableBytes() > MAX_HEADER_SIZE) {
-            log.warn("HTTP header too large ({} bytes), closing connection from {}",
-                    in.readableBytes(), ctx.channel().remoteAddress());
-            in.skipBytes(in.readableBytes());
-            ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_REQUEST, StandardCharsets.UTF_8));
-            ctx.close();
-            return;
-        }
-
+        if (plainHttpPending) return;
         // 检查是否收到完整的 HTTP 请求头（以 \r\n\r\n 结尾）
         int readableBytes = in.readableBytes();
         // 从可读区域搜索 \r\n\r\n
         int headerEndIndex = findHeaderEnd(in);
         if (headerEndIndex < 0) {
+            if (in.readableBytes() > MAX_HEADER_SIZE) {
+                rejectOversizedHeader(ctx, in);
+            }
             // 还没收完，等待更多数据（ByteToMessageDecoder 会自动累积）
             return;
         }
 
         // 读取完整的请求头内容
         int headerLength = headerEndIndex - in.readerIndex() + 4; // 包含 \r\n\r\n
+        if (headerLength > MAX_HEADER_SIZE) {
+            rejectOversizedHeader(ctx, in);
+            return;
+        }
         byte[] headerBytes = new byte[headerLength];
         in.readBytes(headerBytes);
         String data = new String(headerBytes, StandardCharsets.UTF_8);
@@ -94,11 +93,16 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
         String requestLine = data.substring(0, data.indexOf("\r\n"));
         String[] parts = requestLine.split(" ");
 
-        if (parts.length < 3 || !"CONNECT".equalsIgnoreCase(parts[0])) {
-            // 不是 CONNECT 方法，暂不支持普通 HTTP 代理
-            log.warn("Non-CONNECT HTTP request not supported: {}", requestLine);
+        if (parts.length < 3) {
+            log.warn("Malformed HTTP request line: {}", requestLine);
             ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_REQUEST, StandardCharsets.UTF_8));
             ctx.close();
+            return;
+        }
+
+        if (!"CONNECT".equalsIgnoreCase(parts[0])) {
+            plainHttpPending = true;
+            handlePlainHttpProxy(ctx, headerBytes);
             return;
         }
 
@@ -216,6 +220,84 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
             }
         }
         return -1;
+    }
+
+    private void rejectOversizedHeader(ChannelHandlerContext ctx, ByteBuf in) {
+        log.warn("HTTP header too large ({} bytes), closing connection from {}",
+                in.readableBytes(), ctx.channel().remoteAddress());
+        in.skipBytes(in.readableBytes());
+        ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_REQUEST, StandardCharsets.UTF_8));
+        ctx.close();
+    }
+
+    private void handlePlainHttpProxy(ChannelHandlerContext ctx, byte[] rawRequest) {
+        final HttpRequestParser.ParseResult parsed;
+        try {
+            parsed = HttpRequestParser.parse(rawRequest);
+        } catch (IllegalArgumentException e) {
+            log.warn("Failed to parse plain HTTP proxy request: {}", e.getMessage());
+            ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_REQUEST, StandardCharsets.UTF_8));
+            ctx.close();
+            return;
+        }
+
+        String host = parsed.getHost();
+        int port = parsed.getPort();
+        byte[] rewrittenRequest = parsed.getRewritten();
+        RouteDecision decision = routeRule == null
+                ? new RouteDecision(RouteAction.PROXY, "legacy-default", 0, RouteDecision.Reason.DEFAULT)
+                : routeRule.decide(host, port);
+
+        if (decision.isReject()) {
+            log.info("Plain HTTP route REJECT (rule={}): {}:{}", decision.getRuleId(), host, port);
+            ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
+            ctx.close();
+            return;
+        }
+
+        if (decision.isDirect()) {
+            log.info("Plain HTTP route DIRECT (rule={}): {}:{}", decision.getRuleId(), host, port);
+            DirectRelayHandler direct = new DirectRelayHandler(host, port);
+            direct.connect(ctx).addListener(future -> {
+                if (future.isSuccess()) {
+                    ctx.pipeline().addLast("direct-relay", direct);
+                    try {
+                        direct.channelRead(ctx.pipeline().context(direct),
+                                Unpooled.wrappedBuffer(rewrittenRequest));
+                    } catch (Exception e) {
+                        log.warn("Failed to forward initial plain HTTP request to {}:{}", host, port, e);
+                        ctx.close();
+                        return;
+                    }
+                    ctx.pipeline().remove(HttpConnectHandler.this);
+                    log.info("Plain HTTP direct connection established: {}:{}", host, port);
+                } else {
+                    ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
+                    ctx.close();
+                }
+            });
+            return;
+        }
+
+        final long streamId = streamRegistry.nextStreamId();
+        streamRegistry.register(streamId, ctx);
+        Invocation invocation = new Invocation(host, port, null, ProxyMessage.MessageType.CONNECT);
+        invocation.setAttachment("streamId", streamId);
+        invoker.invoke(invocation).whenComplete((response, throwable) -> {
+            if (throwable != null || response == null || !response.isSuccess()) {
+                String reason = throwable != null ? throwable.toString()
+                        : response == null ? "empty response" : response.getErrorMessage();
+                log.warn("Plain HTTP remote connect failed for {}:{}: {}", host, port, reason);
+                streamRegistry.unregister(streamId);
+                ctx.writeAndFlush(Unpooled.copiedBuffer(BAD_GATEWAY, StandardCharsets.UTF_8));
+                ctx.close();
+                return;
+            }
+            ctx.pipeline().addLast("http-proxy-relay",
+                    new HttpProxyRelayHandler(invoker, host, port, streamId, rewrittenRequest));
+            ctx.pipeline().remove(HttpConnectHandler.this);
+            log.info("Plain HTTP proxy connection established: {}:{}, streamId={}", host, port, streamId);
+        });
     }
 
     @Override
