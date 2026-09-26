@@ -29,6 +29,21 @@ OUT_DIR="${REPO_ROOT}/android-app/app/src/main/jniLibs"
 #   x86_64       -> x86_64-linux-android       （模拟器）
 ABIS=("arm64-v8a" "armeabi-v7a" "x86_64")
 
+# 确保 cargo-ndk 在 PATH 中。优先用 HOME 定位（MSYS2 下 HOME = /c/Users/...）。
+_cargo_bin=""
+for _dir in "${HOME}/.cargo/bin" "${CARGO_HOME:-}/bin"; do
+    if [ -n "${_dir}" ] && [ -x "${_dir}/cargo" ] && [ -x "${_dir}/cargo-ndk" ]; then
+        _cargo_bin="${_dir}"
+        break
+    fi
+done
+if [ -n "${_cargo_bin}" ]; then
+    export PATH="${_cargo_bin}:${PATH}"
+fi
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "[build-rust] ERROR: 未找到 cargo。请先安装 Rust: https://rustup.rs" >&2
+    exit 1
+fi
 if ! command -v cargo-ndk >/dev/null 2>&1; then
     echo "[build-rust] ERROR: 未找到 cargo-ndk。请先执行：cargo install cargo-ndk" >&2
     exit 1

@@ -228,6 +228,46 @@ impl RequestIdGen {
     }
 }
 
+/// 全局唯一的 stream_id 生成器。
+///
+/// 服务端 `SessionManager` 以 `streamId` 为 session key，如果所有代理连接都用
+/// `streamId=0`，会导致 session 不断被覆盖（“Replacing existing session”），
+/// 并发代理全部失败。每个 stream 必须分配独立的 stream_id。
+///
+/// 生成的值采用较大的起始值加递增，避免与 Java 客户端的 stream_id 冲突。
+#[derive(Debug)]
+pub struct StreamIdGen {
+    next: AtomicI64,
+}
+
+impl Default for StreamIdGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl StreamIdGen {
+    /// 构造，从一个基于时间戳的唯一基数开始，避免各实例/各连接冲突。
+    pub fn new() -> Self {
+        // 用当前时间戳（毫秒）左移 20 位作为基数，高位表示时间，低位递增。
+        // 这与 Java 客户端的大数值 stream_id 类似，且不会重复。
+        let base = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+        // 左移 20 位给足约 100万个递增空间，单次会话足够用。
+        let start = (base << 20) | 1;
+        Self {
+            next: AtomicI64::new(start),
+        }
+    }
+
+    /// 取下一个全局唯一的 stream_id。
+    pub fn next_id(&self) -> i64 {
+        self.next.fetch_add(1, Ordering::Relaxed)
+    }
+}
+
 /// 出站连接 —— 一条到 proxy-remote 的 HTTP/2 连接，承载多路 stream。
 ///
 /// 通过 [`OutboundConnection::handshake`] 在「已 protect 并 connect」的 IO 流上完成 h2 握手。
@@ -236,6 +276,8 @@ pub struct OutboundConnection {
     send_request: h2::client::SendRequest<Bytes>,
     cipher: Cipher,
     req_id_gen: Arc<RequestIdGen>,
+    /// 全局唯一的 stream_id 生成器，服务端以 stream_id 为 session key。
+    stream_id_gen: Arc<StreamIdGen>,
     config: OutboundConfig,
 }
 
@@ -269,6 +311,7 @@ impl OutboundConnection {
             send_request,
             cipher,
             req_id_gen: Arc::new(RequestIdGen::new()),
+            stream_id_gen: Arc::new(StreamIdGen::new()),
             config,
         })
     }
@@ -300,7 +343,8 @@ impl OutboundConnection {
 
         // 首个 CONNECT 消息（加密 DATA 帧）。
         let request_id = self.req_id_gen.next_id();
-        let connect_msg = ProxyMessage::connect(request_id, host, port);
+        let stream_id = self.stream_id_gen.next_id();
+        let connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
         let frame = encode_encrypted_frame(&self.cipher, &connect_msg)?;
         send_stream
             .send_data(Bytes::from(frame), false)
@@ -314,10 +358,12 @@ impl OutboundConnection {
 
         Ok(OutboundStream {
             request_id,
+            stream_id,
             cipher: self.cipher.clone(),
             send_stream,
             recv_stream,
             reassembler: InboundReassembler::new(self.cipher.clone()),
+            pending: Vec::new(),
         })
     }
 
@@ -333,10 +379,15 @@ impl OutboundConnection {
 /// 接收：h2 DATA 帧 → 解密 → 切包 → DATA `ProxyMessage` → 取出业务负载。
 pub struct OutboundStream {
     request_id: i64,
+    /// 本 stream 的唯一 stream_id，服务端以此为 session key。
+    stream_id: i64,
     cipher: Cipher,
     send_stream: h2::SendStream<Bytes>,
     recv_stream: h2::RecvStream,
     reassembler: InboundReassembler,
+    /// 已解密但尚未消费的消息（由 wait_for_connect_response 存入，
+    /// recv_messages 先出队这里再读网络，避免 CONNECT_RESPONSE 之外的 DATA 丢失）。
+    pending: Vec<ProxyMessage>,
 }
 
 impl OutboundStream {
@@ -347,7 +398,7 @@ impl OutboundStream {
 
     /// 发送一段业务数据（包成 DATA 类型 ProxyMessage，加密为一个 h2 DATA 帧）。
     pub fn send_payload(&mut self, payload: &[u8]) -> Result<()> {
-        let msg = ProxyMessage::data(self.request_id, payload);
+        let msg = ProxyMessage::data(self.request_id, self.stream_id, payload);
         let frame = encode_encrypted_frame(&self.cipher, &msg)?;
         self.send_stream
             .send_data(Bytes::from(frame), false)
@@ -357,7 +408,7 @@ impl OutboundStream {
 
     /// 发送 DISCONNECT 并以 end_stream 关闭发送侧。
     pub fn send_disconnect(&mut self) -> Result<()> {
-        let msg = ProxyMessage::disconnect(self.request_id);
+        let msg = ProxyMessage::disconnect(self.request_id, self.stream_id);
         let frame = encode_encrypted_frame(&self.cipher, &msg)?;
         self.send_stream
             .send_data(Bytes::from(frame), true)
@@ -367,30 +418,110 @@ impl OutboundStream {
 
     /// 读取下一批入站 [`ProxyMessage`]（驱动一个 h2 DATA 帧 → 解密 → 切包）。
     ///
-    /// 返回 `Ok(Some(msgs))`：本次帧切出的消息（可能为空，半条消息留缓冲）。
-    /// 返回 `Ok(None)`：对端已结束 stream（EOF）。
+    /// 先出队 [`self.pending`] 中由 CONNECT_RESPONSE 阶段预读的积压消息，
+    /// 为空时才从 h2 stream 拉新帧。返回 `Ok(None)` 表示流已关闭。
     pub async fn recv_messages(&mut self) -> Result<Option<Vec<ProxyMessage>>> {
+        if !self.pending.is_empty() {
+            return Ok(Some(std::mem::take(&mut self.pending)));
+        }
         match self.recv_stream.data().await {
             Some(Ok(chunk)) => {
-                // h2 流控：消费了多少要归还多少窗口，否则对端会被 stall。
                 let len = chunk.len();
                 let _ = self.recv_stream.flow_control().release_capacity(len);
                 let msgs = self.reassembler.push_encrypted_frame(&chunk)?;
                 Ok(Some(msgs))
             }
-            Some(Err(e)) => Err(CoreError::Protocol(format!("h2 recv error: {e}"))),
+            Some(Err(e)) => {
+                // RST_STREAM NO_ERROR = 服务端优雅关闭流（如 CONNECT 失败后），当作 EOF
+                let msg = e.to_string();
+                if msg.contains("stream no longer needed") || msg.contains("NO_ERROR") {
+                    tracing::debug!("h2 stream reset gracefully (NO_ERROR), treating as EOF");
+                    Ok(None)
+                } else {
+                    Err(CoreError::Protocol(format!("h2 recv error: {e}")))
+                }
+            }
             None => Ok(None),
+        }
+    }
+
+    /// 等待并接收 CONNECT_RESPONSE（加密链路的初始双向握手）。
+    ///
+    /// 服务端在收到 CONNECT 后会发送一个 CONNECT_RESPONSE（status=200=OK）。
+    /// 同一批帧中可能已携带目标服务器的 HTTP 响应 DATA——这些消息缓存到
+    /// `self.pending`，由后续 `recv_messages` 取出，确保零数据丢失。
+    ///
+    /// 返回 `Ok(())` 表示服务端成功连接目标，可以进入双向数据拷贝。
+    /// 返回 `Err(...)` 表示 CONNECT 失败或协议异常。
+    pub async fn wait_for_connect_response(&mut self) -> Result<()> {
+        loop {
+            // 先检查 pending（递归场景下不应出现，但安全处理）
+            let pending = std::mem::take(&mut self.pending);
+            let msgs = if !pending.is_empty() {
+                pending
+            } else {
+                match self.recv_messages().await? {
+                    Some(msgs) => msgs,
+                    None => {
+                        return Err(CoreError::Protocol(
+                            "CONNECT 响应阶段流被关闭（服务端可能未连通目标）".to_string(),
+                        ));
+                    }
+                }
+            };
+            let mut extra: Vec<ProxyMessage> = Vec::new();
+            let mut found = false;
+            for m in msgs {
+                match m.type_ {
+                    MessageType::ConnectResponse => {
+                        found = true;
+                        let ok = m.status == 200 || m.status == 0;
+                        if ok {
+                            tracing::info!(
+                                "CONNECT_RESPONSE OK: host={}, port={}, requestId={}",
+                                m.host,
+                                m.port,
+                                m.request_id
+                            );
+                        } else {
+                            let reason = match m.status {
+                                244 | 152 => "proxy-remote 无法连接目标（目标不可达/超时）",
+                                _ => "未知错误",
+                            };
+                            return Err(CoreError::Protocol(format!(
+                                "CONNECT {}:{} 失败: {} (status={})",
+                                m.host, m.port, reason, m.status
+                            )));
+                        }
+                    }
+                    MessageType::Disconnect => {
+                        return Err(CoreError::Protocol(format!(
+                            "CONNECT 阶段收到 DISCONNECT: host={}, port={}",
+                            m.host, m.port
+                        )));
+                    }
+                    _ => {
+                        extra.push(m);
+                    }
+                }
+            }
+            if found {
+                // 将 CONNECT_RESPONSE 之外的消息（如目标服务器的 DATA）存入 pending，
+                // 避免浏览器的 HTTP 响应被丢弃导致页面永远加载不出来。
+                self.pending = extra;
+                return Ok(());
+            }
+            // 未找到 CONNECT_RESPONSE，继续读取下一批帧
         }
     }
 }
 
-/// 在 [`OutboundStream`] 与本地业务连接间做双向拷贝（A5.4 `proxy_via_remote` 雏形）。
+/// 在 [`OutboundStream`] 与本地业务连接间做双向拷贝（A6 完整版）。
 ///
 /// 该函数把「本地 TCP（被代理的应用连接）」与「远端代理 stream」桥接：
+/// - **首先等待 CONNECT_RESPONSE**，如果服务端连接目标失败则立即返回错误；
 /// - 本地读到的字节 → `send_payload` 发往远端；
 /// - 远端 `recv_messages` 解出的 DATA 负载 → 写回本地。
-///
-/// 这里给出可独立编译/测试的最小骨架；与真实 TUN/TCP 栈的接线在 A6 完善。
 pub async fn proxy_via_remote<L>(
     mut stream: OutboundStream,
     mut local: L,
@@ -401,34 +532,86 @@ where
 {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+    // 先等待 CONNECT_RESPONSE：服务端可能建连失败（目标不可达 / 超时等），
+    // 若失败则将明确的错误原因抛给上层，由调度器决定重试或通知栈关断。
+    stream.wait_for_connect_response().await?;
+
     let mut buf = vec![0u8; read_buf_size.max(1)];
+    let mut total_up: u64 = 0;
+    let mut total_down: u64 = 0;
+    let mut down_pkts: u64 = 0;
+    let mut pending_up: Vec<u8> = Vec::new();
+    let start = std::time::Instant::now();
+    let mut last_log = std::time::Instant::now();
     loop {
         tokio::select! {
-            // 本地 → 远端
             read = local.read(&mut buf) => {
                 let n = read.map_err(CoreError::Io)?;
                 if n == 0 {
+                    // 发送残留在缓冲区的数据
+                    if !pending_up.is_empty() {
+                        stream.send_payload(&pending_up)?;
+                    }
                     stream.send_disconnect()?;
+                    tracing::info!(total_up, total_down, down_pkts, elapsed_ms = start.elapsed().as_millis(), "proxy 上行 EOF");
                     break;
                 }
-                stream.send_payload(&buf[..n])?;
+                total_up += n as u64;
+                pending_up.extend_from_slice(&buf[..n]);
+
+                // 若是 TLS ClientHello，可能跨越多个 TCP 段。将 TCP 段拼接成
+                // 完整 TLS 记录后再一起发出，避免服务器收到不完整 ClientHello
+                // 时立即返回 TLS Alert (unexpected_message)，导致后续段被丢弃。
+                let ready = if pending_up.len() >= 5 && pending_up[0] == 0x16 {
+                    let rec_len = u16::from_be_bytes([pending_up[3], pending_up[4]]) as usize;
+                    pending_up.len() >= 5 + rec_len
+                } else {
+                    true // 非 TLS 或短帧，立即发送
+                };
+
+                if ready {
+                    if total_up == pending_up.len() as u64 {
+                        let hex = pending_up.iter().take(16)
+                            .map(|b| format!("{b:02x}"))
+                            .collect::<Vec<_>>().join("");
+                        tracing::info!(len = pending_up.len(), first_hex = %hex, "proxy 上行(拼接后发出)");
+                    }
+                    stream.send_payload(&pending_up)?;
+                    pending_up.clear();
+                }
             }
-            // 远端 → 本地
             recv = stream.recv_messages() => {
                 match recv? {
                     Some(msgs) => {
                         for m in msgs {
                             match m.type_ {
                                 MessageType::Data => {
+                                    if total_down == 0 {
+                                        let hex = m.data.iter().take(16)
+                                            .map(|b| format!("{b:02x}"))
+                                            .collect::<Vec<_>>().join("");
+                                        tracing::info!(data_len = m.data.len(), first_hex = %hex, "proxy 首个下行");
+                                    }
+                                    total_down += m.data.len() as u64;
+                                    down_pkts += 1;
                                     local.write_all(&m.data).await.map_err(CoreError::Io)?;
                                 }
-                                MessageType::Disconnect => return Ok(()),
-                                // CONNECT_RESPONSE / 心跳等：此骨架暂忽略
+                                MessageType::Disconnect => {
+                                    tracing::info!(total_up, total_down, down_pkts, "proxy 远端 DISCONNECT，正常结束");
+                                    return Ok(());
+                                }
                                 _ => {}
                             }
                         }
+                        if last_log.elapsed() > std::time::Duration::from_secs(1) {
+                            tracing::info!(total_up, total_down, down_pkts, "proxy 数据流活跃");
+                            last_log = std::time::Instant::now();
+                        }
                     }
-                    None => break, // 远端 EOF
+                    None => {
+                        tracing::info!(total_up, total_down, down_pkts, elapsed_ms = start.elapsed().as_millis(), "proxy 远端 EOF");
+                        break;
+                    }
                 }
             }
         }
@@ -476,7 +659,7 @@ mod tests {
     #[test]
     fn encode_encrypted_frame_is_decryptable() {
         let cipher = test_cipher();
-        let msg = ProxyMessage::connect(42, "example.com", 443);
+        let msg = ProxyMessage::connect(42, 100, "example.com", 443);
         let frame = encode_encrypted_frame(&cipher, &msg).unwrap();
         // 加密帧 = 4字节长度前缀 + nonce(12) + ct + tag(16)，长度 = 明文 + 4 + 28。
         let plaintext = msg.encode();
@@ -500,7 +683,7 @@ mod tests {
     fn reassembler_single_frame_one_message() {
         let cipher = test_cipher();
         let mut re = InboundReassembler::new(cipher.clone());
-        let msg = ProxyMessage::data(1, b"hello world");
+        let msg = ProxyMessage::data(1, 1, b"hello world");
         let frame = encode_encrypted_frame(&cipher, &msg).unwrap();
         let got = re.push_encrypted_frame(&frame).unwrap();
         assert_eq!(got.len(), 1);
@@ -520,9 +703,9 @@ mod tests {
     fn reassembler_multiple_messages_in_one_frame() {
         // 同一加密块内含多条 ProxyMessage（明文拼接后整体加密）。
         let cipher = test_cipher();
-        let m1 = ProxyMessage::data(1, b"first");
-        let m2 = ProxyMessage::connect(1, "a.com", 80);
-        let m3 = ProxyMessage::disconnect(1);
+        let m1 = ProxyMessage::data(1, 10, b"first");
+        let m2 = ProxyMessage::connect(1, 10, "a.com", 80);
+        let m3 = ProxyMessage::disconnect(1, 10);
         let mut plaintext = Vec::new();
         plaintext.extend_from_slice(&m1.encode());
         plaintext.extend_from_slice(&m2.encode());
@@ -543,7 +726,7 @@ mod tests {
         // 重新切分成两个 DATA 帧。接收侧必须在密文层做字节级累积，
         // 集齐整块后再解密。这正是修复前会触发 Poly1305 tag 失败的场景。
         let cipher = test_cipher();
-        let msg = ProxyMessage::data(7, b"a-reasonably-long-payload-spanning-frames");
+        let msg = ProxyMessage::data(7, 7, b"a-reasonably-long-payload-spanning-frames");
         // 一条消息整体加密成一个密文块，加 4 字节长度前缀。
         let frame = frame_with_prefix(&cipher.encrypt(&msg.encode()).unwrap());
         let split = frame.len() / 2;
@@ -566,8 +749,8 @@ mod tests {
     fn reassembler_two_blocks_coalesced_in_one_frame() {
         // 两个独立密文块（各带长度前缀）在一个 DATA 帧里被合并送达。
         let cipher = test_cipher();
-        let m1 = ProxyMessage::data(1, b"alpha");
-        let m2 = ProxyMessage::data(2, b"bravo");
+        let m1 = ProxyMessage::data(1, 1, b"alpha");
+        let m2 = ProxyMessage::data(2, 2, b"bravo");
         let mut frame = encode_encrypted_frame(&cipher, &m1).unwrap();
         frame.extend_from_slice(&encode_encrypted_frame(&cipher, &m2).unwrap());
 
@@ -581,7 +764,7 @@ mod tests {
     #[test]
     fn reassembler_rejects_tampered_frame() {
         let cipher = test_cipher();
-        let msg = ProxyMessage::data(1, b"payload");
+        let msg = ProxyMessage::data(1, 1, b"payload");
         let mut frame = encode_encrypted_frame(&cipher, &msg).unwrap();
         // 篡改密文区（跳过 4 字节长度前缀）→ 解密时 Poly1305 tag 校验失败。
         let mid = CIPHER_LENGTH_PREFIX + (frame.len() - CIPHER_LENGTH_PREFIX) / 2;

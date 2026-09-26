@@ -1,0 +1,109 @@
+localPort: 1080
+remoteServers:
+  - host: 54.234.196.30
+    port: 9090
+    cipher: chacha20
+    cipherKey: your-cipher-key
+    ssl: false
+cluster: failover
+loadBalance: roundrobin
+timeoutMs: 8000
+connectionsPerNode: 1
+httpProxyEnabled: true
+route:
+  defaultRoute: proxy
+  proxyList:
+    - "*.google.com"
+    - "*.google.com.hk"
+    - "*.googleapis.com"
+    - "*.gstatic.com"
+    - "*.googleusercontent.com"
+    - "*.googleadservices.com"
+    - "*.googlesyndication.com"
+    - "*.googletagmanager.com"
+    - "*.googletagservices.com"
+    - "*.google-analytics.com"
+    - "*.ggpht.com"
+    - "*.github.com"
+    - github.com
+    - "*.githubusercontent.com"
+    - "*.ghcr.io"
+    - "*.stackoverflow.com"
+    - "*.stackexchange.com"
+    - "*.wikipedia.org"
+    - "*.wikimedia.org"
+    - "*.youtube.com"
+    - "*.ytimg.com"
+    - "*.googlevideo.com"
+    - "*.twitter.com"
+    - twitter.com
+    - "*.x.com"
+    - x.com
+    - "*.twimg.com"
+    - "*.openai.com"
+    - "*.chatgpt.com"
+    - "*.anthropic.com"
+    - "*.claude.ai"
+    - "*.reddit.com"
+    - "*.medium.com"
+    - "*.docker.io"
+    - "*.docker.com"
+    - "*.npmjs.org"
+    - "*.npmjs.com"
+    - "*.cloudflare.com"
+    - "*.amazonaws.com"
+  directList:
+    - "*.meituan.com"
+    - "*.sankuai.com"
+    - "*.dianping.com"
+    - "*.neixin.cn"
+    - "*.baidu.com"
+    - "*.qq.com"
+    - "*.weixin.qq.com"
+    - "*.wechat.com"
+    - "*.aliyun.com"
+    - "*.aliyuncs.com"
+    - "*.taobao.com"
+    - "*.tmall.com"
+    - "*.jd.com"
+    - "*.bilibili.com"
+    - "*.bilivideo.com"
+    - "*.hdslb.com"
+    - "*.zhihu.com"
+    - "*.163.com"
+    - "*.126.com"
+    - "*.chaoxing.com"
+    - "*.vocabgo.com"
+    - "*.apple.com"
+    - "*.icloud.com"
+    - "*.cdn-apple.com"
+    - "*.aaplimg.com"
+    - "*.tencent.com"
+    - "*.myqcloud.com"
+    - "*.gtimg.cn"
+    - "*.idqqimg.com"
+    - "*.csdn.net"
+    - "*.douyin.com"
+    - "*.bytedance.com"
+    - "*.pstatp.com"
+    - "*.snssdk.com"
+    - "*.sina.com"
+    - "*.sina.com.cn"
+    - "*.sinaimg.cn"
+    - "*.weibo.com"
+    - "*.sogou.com"
+    - "*.sogo.com"
+    - "*.360.cn"
+    - "*.so.com"
+    - "*.cnblogs.com"
+    - "*.jianshu.com"
+    - "*.gitee.com"
+    - "*.coding.net"
+    - "*.dingtalk.com"
+    - "*.feishu.cn"
+    - "*.xuexitong.com"
+    - 127.0.0.1
+    - localhost
+systemProxy:
+  enabled: false
+  host: 127.0.0.1

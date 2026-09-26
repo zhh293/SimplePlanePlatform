@@ -91,17 +91,12 @@ where
                     return Ok(());
                 };
 
-                // FakeIP → 真实域名（反查不到则丢弃该连接）。
+                // FakeIP → 真实域名，回退到 IP 字符串（应用直连 IP 也能走代理）。
                 let domain = {
                     let engine = fake_dns.lock().await;
-                    engine.lookup_domain(&dst_ip).map(|s| s.to_string())
-                };
-                let Some(domain) = domain else {
-                    tracing::warn!(
-                        "丢弃连接：FakeIP {} 反查不到域名（src={}, port={}）",
-                        dst_ip, src_ip, dst_port
-                    );
-                    continue;
+                    engine.lookup_domain(&dst_ip)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| dst_ip.to_string())
                 };
 
                 tracing::info!("代理新连接: {}:{} -> {} (FakeIP {})", src_ip, dst_port, domain, dst_ip);

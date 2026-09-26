@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.Exec
+import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -118,9 +119,42 @@ dependencies {
 val buildRust by tasks.registering(Exec::class) {
     group = "build"
     description = "Cross-compile plane-core (Rust) into jniLibs via cargo-ndk"
-    workingDir = rootProject.projectDir.parentFile // 仓库根目录（android-app 的上一级）
+    workingDir = File(rootProject.projectDir.parentFile, "plane-core")
     val profile = if (project.hasProperty("rustRelease")) "release" else "debug"
-    commandLine("bash", "scripts/build-rust.sh", profile)
+
+    // 用 cargo 和 cargo-ndk 的全路径，绕过 MSYS2 bash 的 HOME/PATH 问题。
+    // cargo 执行时本身会正确处理 Rust 工具链。
+    val cargoHome = (System.getenv("CARGO_HOME")
+        ?: "${System.getProperty("user.home")}\\.cargo").replace("\\", "/")
+    val cargoExe  = "$cargoHome/bin/cargo"
+    // 将 cargo/bin 加入 PATH（bash 的 MSYS2 转换会破坏 /mnt/c/... 路径，
+    // 但直接传给子进程的 PATH 条目若为 C:/... 格式，MSYS2 在 exec 时也会转换。
+    // 因此改为直接用 cargo 跑 ndk 子命令，不再依赖 bash 脚本做路径发现。）
+    val abis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+    val jniLibsDir = file("src/main/jniLibs")
+    val outDir = jniLibsDir.absolutePath.replace("\\", "/")
+    // 构建 cargo ndk 参数
+    val args = mutableListOf(cargoExe, "ndk")
+    for (abi in abis) { args.add("-t"); args.add(abi) }
+    args.add("-o"); args.add(outDir)
+    args.add("build")
+    if (profile == "release") { args.add("--release") }
+    commandLine(args)
+
+    // 传递 ANDROID_NDK_HOME
+    var ndkHome = System.getenv("ANDROID_NDK_HOME")
+        ?: System.getenv("ANDROID_SDK_ROOT")
+        ?: System.getenv("ANDROID_HOME")
+    if (ndkHome != null) {
+        val ndkDir = File(ndkHome, "ndk")
+        if (ndkDir.isDirectory) {
+            val versions = ndkDir.listFiles()?.filter { it.isDirectory }?.sortedByDescending { it.name }
+            if (!versions.isNullOrEmpty()) {
+                ndkHome = versions[0].absolutePath.replace("\\", "/")
+            }
+        }
+        environment("ANDROID_NDK_HOME", ndkHome)
+    }
 }
 
 tasks.named("preBuild") {

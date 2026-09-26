@@ -1,0 +1,114 @@
+# TUN Adapter 配置文件
+
+[tun]
+name = "utun9"
+address = "198.18.0.1"
+netmask = "255.254.0.0"
+mtu = 1500
+enabled = true
+
+[fakeip]
+range = "198.18.0.0/15"
+capacity = 65536
+
+[proxy]
+socks5_addr = "127.0.0.1:1080"
+health_check_interval = 5
+health_failure_threshold = 3
+
+[routing]
+default_action = "proxy"
+
+# --- 内网域名直连（最高优先级）---
+[[routing.rules]]
+type = "domain_suffix"
+value = "sankuai.com"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "meituan.com"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "sankuai.info"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "neixin.cn"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "dianping.com"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "meituan.net"
+action = "direct"
+
+# --- 通用直连规则 ---
+[[routing.rules]]
+type = "domain_suffix"
+value = "cn"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "local"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_keyword"
+value = "baidu"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_keyword"
+value = "aliyun"
+action = "direct"
+
+[[routing.rules]]
+type = "ip_cidr"
+value = "10.0.0.0/8"
+action = "direct"
+
+[[routing.rules]]
+type = "ip_cidr"
+value = "172.16.0.0/12"
+action = "direct"
+
+[[routing.rules]]
+type = "ip_cidr"
+value = "192.168.0.0/16"
+action = "direct"
+
+[[routing.rules]]
+type = "ip_cidr"
+value = "127.0.0.0/8"
+action = "direct"
+
+[log]
+level = "info,tun_adapter::socks5=debug"
+format = "pretty"
+
+[bypass]
+# proxy-remote 真实 IP，需要排除路由。
+# 必须与 proxy-local 的 proxy.yml 中 remoteServers[].host 保持一致，
+# 否则 proxy-local 连接 proxy-remote 的流量会被 utun9 劫持成环路，导致全网不通。
+proxy_remote_ips = ["54.234.196.30"]
+# 额外排除的网段（不进 TUN 的网段）
+extra_cidrs = ["10.0.0.0/8", "11.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+# DNS bypass：这些 DNS 服务器的流量不走 TUN（供 proxy-local 直连做真实 DNS 解析）
+# 注意：内网 DNS (11.11.11.11/12) 已通过 extra_cidrs 中的 11.0.0.0/8 覆盖
+# 注意：必须和 start-tun.sh 的 DNS_SERVERS/DNS_FALLBACK 保持一致（114 主、223 兜底）。
+dns_bypass_ips = ["114.114.114.114", "223.5.5.5"]
+
+[intranet_dns]
+# 内网 DNS 服务器（用于解析内网域名，流量走 bypass 不经过 TUN）
+servers = ["11.11.11.11", "11.11.11.12"]
+# 需要走内网 DNS 解析的域名后缀（会在 /etc/resolver/ 下创建分流规则）
+domains = ["sankuai.com", "meituan.com", "sankuai.info", "neixin.cn", "dianping.com", "meituan.net"]

@@ -155,6 +155,11 @@ pub async fn stack_loop(
                             if let Err(e) = tun_writer.write_all(&dns_response).await {
                                 tracing::warn!("写回 DNS 响应到 TUN 失败: {}", e);
                             }
+                        } else if is_non_dns_udp(packet_data) {
+                            // QUIC/HTTP3 等非 DNS UDP → ICMP Port Unreachable，促使浏览器立即回退 TCP。
+                            if let Some(icmp) = build_icmp_port_unreachable(packet_data) {
+                                let _ = tun_writer.write_all(&icmp).await;
+                            }
                         } else {
                             // TCP 包处理：过滤未知连接的非 SYN 包，避免 smoltcp 回 RST。
                             let should_feed = if is_tcp_packet(packet_data) {
@@ -541,6 +546,65 @@ fn extract_tcp_4tuple(packet: &[u8]) -> Option<(Ipv4Addr, u16, Ipv4Addr, u16)> {
 /// 是否为 IPv4 TCP 包。
 fn is_tcp_packet(packet: &[u8]) -> bool {
     packet.len() >= 20 && (packet[0] >> 4) & 0x0F == 4 && packet[9] == 6
+}
+
+/// 是否为非 DNS 的 IPv4 UDP 包（QUIC / HTTP3 等）。
+/// 端口 53 是 DNS，已由 FakeDNS 拦截，此处只匹配剩下的 UDP。
+fn is_non_dns_udp(packet: &[u8]) -> bool {
+    if packet.len() < 28 {
+        return false;
+    }
+    // IPv4 + UDP
+    if (packet[0] >> 4) != 4 {
+        return false;
+    }
+    if packet[9] != 17 {
+        return false;
+    }
+    // 排除 DNS (port 53)
+    let dst_port = u16::from_be_bytes([packet[22], packet[23]]);
+    dst_port != 53
+}
+
+/// 对非 DNS UDP 包构造 ICMP Destination Unreachable (Port Unreachable)，
+/// 告知发送方“UDP 端口不可达”，促使浏览器立即回退到 TCP（放弃 QUIC/HTTP3）。
+fn build_icmp_port_unreachable(original: &[u8]) -> Option<Vec<u8>> {
+    if original.len() < 28 {
+        return None;
+    }
+    // 原 IPv4 头
+    let src_ip = Ipv4Addr::new(original[12], original[13], original[14], original[15]);
+    let dst_ip = Ipv4Addr::new(original[16], original[17], original[18], original[19]);
+
+    // ICMP header (8) + IPv4 header (20) + up to 8 bytes of original payload
+    let quote_len = (original.len() - 20).min(8);
+    let icmp_len = 8 + 20 + quote_len;
+    let total = 20 + icmp_len;
+    let mut pkt = vec![0u8; total];
+
+    // --- IPv4 header ---
+    pkt[0] = 0x45;
+    pkt[2..4].copy_from_slice(&(total as u16).to_be_bytes());
+    pkt[8] = 64; // TTL
+    pkt[9] = 1; // ICMP protocol
+    pkt[12..16].copy_from_slice(&dst_ip.octets()); // src = 原 dst
+    pkt[16..20].copy_from_slice(&src_ip.octets()); // dst = 原 src
+    let ip_csum = crate::net_probe::checksum(&pkt[0..20]);
+    pkt[10..12].copy_from_slice(&ip_csum.to_be_bytes());
+
+    // --- ICMP header ---
+    pkt[20] = 3; // Type: Destination Unreachable
+    pkt[21] = 3; // Code: Port Unreachable
+                 // checksum at [22..24], compute after filling
+                 // unused [24..28]
+                 // Quote: original IP header + 8 bytes
+    pkt[28..28 + 20 + quote_len].copy_from_slice(&original[0..20 + quote_len]);
+
+    // ICMP checksum over bytes [20..]
+    let csum = crate::net_probe::checksum(&pkt[20..]);
+    pkt[22..24].copy_from_slice(&csum.to_be_bytes());
+
+    Some(pkt)
 }
 
 /// 活跃 TCP 连接追踪（移植自桌面 `stack.rs`）。
