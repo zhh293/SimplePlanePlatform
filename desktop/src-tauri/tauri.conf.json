@@ -41,7 +41,8 @@
       "resources/jre/**/*",
       "resources/web/**/*",
       "resources/config-templates/**/*",
-      "resources/tun-adapter*"
+      "resources/tun-adapter*",
+      "resources/wintun.dll"
     ],
     "macOS": {
       "minimumSystemVersion": "10.15"

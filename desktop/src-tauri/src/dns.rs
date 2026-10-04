@@ -221,6 +221,18 @@ pub fn diagnose_tun() -> Vec<String> {
     // 1. 检查 tun-adapter 二进制是否存在
     let tun_path = crate::process::get_tun_path_public();
     if tun_path.exists() {
+        #[cfg(target_os = "windows")]
+        {
+            let wintun_path = tun_path
+                .parent()
+                .unwrap_or(std::path::Path::new("."))
+                .join("wintun.dll");
+            if wintun_path.exists() {
+                results.push(format!("Wintun DLL exists: {:?}", wintun_path));
+            } else {
+                results.push(format!("Wintun DLL missing: {:?}", wintun_path));
+            }
+        }
         results.push(format!("✓ tun-adapter 存在: {:?}", tun_path));
     } else {
         results.push(format!("✗ tun-adapter 缺失: {:?}", tun_path));

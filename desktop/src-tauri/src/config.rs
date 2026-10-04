@@ -243,7 +243,17 @@ pub struct BypassSection {
     pub dns_bypass_ips: Vec<String>,
 }
 
-fn default_tun_name() -> String { "utun9".to_string() }
+fn default_tun_name() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        return "SimplePlane".to_string();
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        "utun9".to_string()
+    }
+}
 fn default_tun_address() -> String { "198.18.0.1".to_string() }
 fn default_tun_netmask() -> Option<String> { Some("255.254.0.0".to_string()) }
 fn default_tun_mtu() -> u16 { 1500 }
@@ -306,7 +316,18 @@ pub fn load_tun_config() -> Result<TunConfig, String> {
     let content =
         fs::read_to_string(&config_path).map_err(|e| format!("Failed to read tun config: {}", e))?;
 
-    toml::from_str(&content).map_err(|e| format!("Failed to parse tun config: {}", e))
+    let mut config: TunConfig = toml::from_str(&content)
+        .map_err(|e| format!("Failed to parse tun config: {}", e))?;
+
+    #[cfg(target_os = "windows")]
+    if config.tun.name == "utun9" {
+        config.tun.name = default_tun_name();
+        let migrated_content = content.replace("name = \"utun9\"", "name = \"SimplePlane\"");
+        fs::write(&config_path, migrated_content)
+            .map_err(|e| format!("Failed to migrate Windows tun config: {}", e))?;
+    }
+
+    Ok(config)
 }
 
 /// 保存 TUN 配置
@@ -401,7 +422,7 @@ fn get_default_proxy_config() -> ProxyConfig {
 fn get_default_tun_config() -> TunConfig {
     TunConfig {
         tun: TunSection {
-            name: "utun9".to_string(),
+            name: default_tun_name(),
             address: "198.18.0.1".to_string(),
             netmask: Some("255.254.0.0".to_string()),
             mtu: 1500,
@@ -446,7 +467,7 @@ fn get_default_tun_config_with_comments() -> String {
 
 [tun]
 # 虚拟网卡名称（macOS 为 utun9，Linux 为 tun0，Windows 为 wintun）
-name = "utun9"
+name = "__PLATFORM_TUN_NAME__"
 # TUN 网卡的虚拟 IP 地址（用于路由劫持，不要与你的局域网 IP 段冲突）
 address = "198.18.0.1"
 # 子网掩码（255.254.0.0 表示劫持 198.18.0.0/15 整个段的流量）
@@ -518,7 +539,7 @@ proxy_remote_ips = ["54.172.101.190"]
 extra_cidrs = ["10.0.0.0/8", "11.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
 # DNS 服务器 IP（这些 IP 的 53 端口请求需要绕过，否则 DNS 查询本身也会被劫持）
 dns_bypass_ips = ["114.114.114.114", "223.5.5.5"]
-"#.to_string()
+"#.to_string().replace("__PLATFORM_TUN_NAME__", &default_tun_name())
 }
 
 /// 从 YAML 字符串解析服务器列表（支持多种格式）
