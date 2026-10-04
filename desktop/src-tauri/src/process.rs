@@ -7,6 +7,9 @@ use crate::dns;
 use crate::logs;
 use crate::state::{AppState, ServiceStatus};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 /// 检查端口是否在监听
 pub fn is_port_listening(port: u16) -> bool {
     TcpStream::connect_timeout(
@@ -392,17 +395,13 @@ pub fn is_tun_running() -> bool {
 
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("powershell.exe")
-            .args([
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                "(Get-NetIPAddress -InterfaceAlias 'SimplePlane' -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object {$_.IPAddress -eq '198.18.0.1'}).Count -gt 0",
-            ])
+        let output = Command::new("netsh")
+            .args(["interface", "ip", "show", "address", "name=SimplePlane"])
+            .creation_flags(0x08000000)
             .output();
         if let Ok(out) = output {
             let stdout = String::from_utf8_lossy(&out.stdout);
-            if stdout.trim().eq_ignore_ascii_case("true") {
+            if out.status.success() && stdout.contains("198.18.0.1") {
                 return true;
             }
         }
@@ -558,11 +557,12 @@ fn start_tun_with_privilege(
     config_path: &std::path::Path,
 ) -> Result<Child, String> {
     let elevated = Command::new("fltmc")
+        .creation_flags(0x08000000)
         .output()
         .map(|output| output.status.success())
         .unwrap_or(false);
     if !elevated {
-        return start_tun_with_uac(tun_path, config_path);
+        return start_tun_with_native_uac(tun_path, config_path);
     }
 
     // Windows 策略：
@@ -581,7 +581,7 @@ fn start_tun_with_privilege(
         Err(e) => {
             let is_elevation_error = e.raw_os_error() == Some(740); // ERROR_ELEVATION_REQUIRED
             if is_elevation_error {
-                return start_tun_with_uac(tun_path, config_path);
+                return start_tun_with_native_uac(tun_path, config_path);
                 // 尝试通过预配置的计划任务启动
                 log::info!("Direct spawn requires elevation, trying scheduled task...");
                 let task_result = Command::new("schtasks")
@@ -615,23 +615,67 @@ fn start_tun_with_privilege(
 }
 
 #[cfg(target_os = "windows")]
-fn start_tun_with_uac(
+fn start_tun_with_native_uac(
     tun_path: &std::path::Path,
     config_path: &std::path::Path,
 ) -> Result<Child, String> {
-    let tun = tun_path.to_string_lossy().replace('\'', "''");
-    let config = config_path.to_string_lossy().replace('\'', "''");
-    let command = format!(
-        "Start-Process -Verb RunAs -WindowStyle Hidden -FilePath '{}' -ArgumentList @('--config','{}'); Start-Sleep -Seconds 30",
-        tun, config
-    );
+    use std::mem::size_of;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::UI::Shell::{
+        ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
+    };
 
-    Command::new("powershell.exe")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &command])
+    let verb: Vec<u16> = std::ffi::OsStr::new("runas")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let file: Vec<u16> = tun_path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let parameters = format!("--config \"{}\"", config_path.display());
+    let parameters: Vec<u16> = std::ffi::OsStr::new(&parameters)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let directory = tun_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."));
+    let directory: Vec<u16> = directory
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let mut execute_info: SHELLEXECUTEINFOW = unsafe { std::mem::zeroed() };
+    execute_info.cbSize = size_of::<SHELLEXECUTEINFOW>() as u32;
+    execute_info.fMask = SEE_MASK_NOCLOSEPROCESS;
+    execute_info.lpVerb = verb.as_ptr();
+    execute_info.lpFile = file.as_ptr();
+    execute_info.lpParameters = parameters.as_ptr();
+    execute_info.lpDirectory = directory.as_ptr();
+    execute_info.nShow = 0; // SW_HIDE
+
+    let launched = unsafe { ShellExecuteExW(&mut execute_info) };
+    if launched == 0 {
+        return Err(format!("Windows UAC elevation failed: {}", std::io::Error::last_os_error()));
+    }
+
+    if !execute_info.hProcess.is_null() {
+        unsafe { windows_sys::Win32::Foundation::CloseHandle(execute_info.hProcess) };
+    }
+
+    // ShellExecuteExW does not produce a std::process::Child. Keep a hidden,
+    // short-lived sentinel so the existing startup polling remains compatible;
+    // stop_tun_adapter also terminates the actual elevated adapter by image name.
+    Command::new("cmd.exe")
+        .args(["/D", "/C", "timeout /T 30 /NOBREAK >NUL"])
+        .creation_flags(0x08000000)
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::null())
         .spawn()
-        .map_err(|e| format!("UAC elevation failed: {}", e))
+        .map_err(|e| format!("UAC sentinel process failed: {}", e))
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
