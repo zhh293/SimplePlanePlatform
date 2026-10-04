@@ -392,12 +392,17 @@ pub fn is_tun_running() -> bool {
 
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("tasklist")
-            .args(["/FI", "IMAGENAME eq tun-adapter.exe"])
+        let output = Command::new("powershell.exe")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "(Get-NetIPAddress -InterfaceAlias 'SimplePlane' -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object {$_.IPAddress -eq '198.18.0.1'}).Count -gt 0",
+            ])
             .output();
         if let Ok(out) = output {
             let stdout = String::from_utf8_lossy(&out.stdout);
-            if stdout.contains("tun-adapter.exe") {
+            if stdout.trim().eq_ignore_ascii_case("true") {
                 return true;
             }
         }
@@ -552,6 +557,14 @@ fn start_tun_with_privilege(
     tun_path: &std::path::Path,
     config_path: &std::path::Path,
 ) -> Result<Child, String> {
+    let elevated = Command::new("fltmc")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false);
+    if !elevated {
+        return start_tun_with_uac(tun_path, config_path);
+    }
+
     // Windows 策略：
     // 1. 先尝试直接启动（主程序已经是管理员时可行）
     // 2. 如果失败且是权限错误(740)，尝试通过计划任务启动
@@ -568,6 +581,7 @@ fn start_tun_with_privilege(
         Err(e) => {
             let is_elevation_error = e.raw_os_error() == Some(740); // ERROR_ELEVATION_REQUIRED
             if is_elevation_error {
+                return start_tun_with_uac(tun_path, config_path);
                 // 尝试通过预配置的计划任务启动
                 log::info!("Direct spawn requires elevation, trying scheduled task...");
                 let task_result = Command::new("schtasks")
@@ -598,6 +612,26 @@ fn start_tun_with_privilege(
             }
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+fn start_tun_with_uac(
+    tun_path: &std::path::Path,
+    config_path: &std::path::Path,
+) -> Result<Child, String> {
+    let tun = tun_path.to_string_lossy().replace('\'', "''");
+    let config = config_path.to_string_lossy().replace('\'', "''");
+    let command = format!(
+        "Start-Process -Verb RunAs -WindowStyle Hidden -FilePath '{}' -ArgumentList @('--config','{}'); Start-Sleep -Seconds 30",
+        tun, config
+    );
+
+    Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &command])
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("UAC elevation failed: {}", e))
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -638,6 +672,13 @@ pub async fn stop_tun_adapter(state: &mut AppState) -> Result<(), String> {
         // 强制终止
         let _ = child.kill();
         let _ = child.wait();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let _ = Command::new("taskkill")
+            .args(["/F", "/T", "/IM", "tun-adapter.exe"])
+            .output();
     }
 
     // macOS 上通过 sudo pkill 兜底（对标 dashboard 的三重 kill）

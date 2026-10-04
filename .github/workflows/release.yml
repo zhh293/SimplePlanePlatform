@@ -138,6 +138,8 @@ jobs:
           
           # Copy tun-adapter
           Copy-Item "tun-adapter/target/${{ matrix.target }}/release/tun-adapter.exe" "$RESOURCES/tun-adapter.exe"
+          # Copy the official Wintun runtime required by tun-adapter on Windows
+          Copy-Item "tun-adapter/wintun.dll" "$RESOURCES/wintun.dll"
           
           # Copy web UI
           if (Test-Path "desktop/web") {

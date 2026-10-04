@@ -46,7 +46,7 @@ if (Test-Path $WintunDll) {
     Copy-Item $WintunDll "$ResourcesDir\wintun.dll" -Force
     Write-Host "[OK] wintun.dll" -ForegroundColor Green
 } else {
-    Write-Host "[WARN] wintun.dll not found (TUN mode may not work)" -ForegroundColor Yellow
+    throw "wintun.dll not found at $WintunDll. Download the matching Wintun architecture DLL before building Windows packages."
 }
 
 # 4. 复制 Web UI
@@ -73,6 +73,8 @@ if (Test-Path $ProxyYml) {
 $TunToml = "$ProjectRoot\tun-adapter\config\tun.toml"
 if (Test-Path $TunToml) {
     Copy-Item $TunToml "$ConfigDir\tun.toml" -Force
+    (Get-Content "$ConfigDir\tun.toml" -Raw).Replace('name = "utun9"', 'name = "SimplePlane"') |
+        Set-Content "$ConfigDir\tun.toml" -Encoding UTF8
     Write-Host "[OK] config-templates\tun.toml" -ForegroundColor Green
 }
 
@@ -84,6 +86,8 @@ Get-ChildItem $ResourcesDir | Format-Table Name, Length, LastWriteTime -AutoSize
 $missing = 0
 if (-not (Test-Path "$ResourcesDir\proxy-local.jar")) { Write-Host "MISSING: proxy-local.jar" -ForegroundColor Red; $missing++ }
 if (-not (Test-Path "$ResourcesDir\jre")) { Write-Host "MISSING: jre\ (run build-jre.ps1 first)" -ForegroundColor Red; $missing++ }
+if (-not (Test-Path "$ResourcesDir\tun-adapter.exe")) { Write-Host "MISSING: tun-adapter.exe" -ForegroundColor Red; $missing++ }
+if (-not (Test-Path "$ResourcesDir\wintun.dll")) { Write-Host "MISSING: wintun.dll" -ForegroundColor Red; $missing++ }
 
 if ($missing -gt 0) {
     Write-Host "`nWARNING: Some resources are missing." -ForegroundColor Yellow

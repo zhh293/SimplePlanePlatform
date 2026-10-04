@@ -20,6 +20,12 @@ if (-not (Get-Command "cargo" -ErrorAction SilentlyContinue)) {
 
 # --- 2. Build tun-adapter ---
 $TunDir = Join-Path $ProjectRoot "tun-adapter"
+$WintunDll = Join-Path $TunDir "wintun.dll"
+if (-not (Test-Path $WintunDll)) {
+    Write-Host "[ERROR] wintun.dll not found at $WintunDll" -ForegroundColor Red
+    Write-Host "        Download the matching official Wintun DLL before starting TUN." -ForegroundColor Yellow
+    exit 1
+}
 Write-Host "[1/3] Building tun-adapter..." -ForegroundColor Yellow
 Push-Location $TunDir
 try {
@@ -28,6 +34,7 @@ try {
 } finally {
     Pop-Location
 }
+Copy-Item $WintunDll (Join-Path $TunDir "target\release\wintun.dll") -Force
 Write-Host "      Build complete." -ForegroundColor Green
 
 # --- 3. Check proxy-local ---

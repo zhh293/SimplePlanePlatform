@@ -1,5 +1,7 @@
 # SimplePlanePlatform
 
+桌面安装包用户请先阅读 [桌面端使用说明与故障排查](docs/桌面端使用说明与故障排查.md)。
+
 ## HTTP/3 / QUIC 传输
 
 项目支持基于 Netty QUIC 的 HTTP/3 传输模式。配置远程节点时将 `transport` 设置为 `http3`，即可使用 UDP/QUIC 建立加密隧道；每个逻辑 `streamId` 映射到独立的 HTTP/3 Stream，以避免 TCP 单连接级别的队头阻塞。

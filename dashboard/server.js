@@ -390,6 +390,25 @@ function startTunViaSudo(bin) {
 // TUN Start — Windows (requires "Run as Administrator")
 // ============================================================
 function startTunWindows(bin) {
+  const wintunDll = path.join(PROJECT_ROOT, 'tun-adapter', 'wintun.dll');
+  const targetWintunDll = path.join(path.dirname(bin), 'wintun.dll');
+  if (!fs.existsSync(wintunDll)) {
+    const msg = `wintun.dll not found: ${wintunDll}. Download the matching official Wintun DLL first.`;
+    addLog('tun-adapter', `[dashboard] ${msg}`, 'stderr');
+    processes['tun-adapter'].status = 'stopped';
+    processes['tun-adapter'].startedAt = null;
+    return { ok: false, error: msg };
+  }
+  try {
+    if (!fs.existsSync(targetWintunDll)) fs.copyFileSync(wintunDll, targetWintunDll);
+  } catch (e) {
+    const msg = `无法复制 wintun.dll 到 tun-adapter 运行目录：${e.message}`;
+    addLog('tun-adapter', `[dashboard] ${msg}`, 'stderr');
+    processes['tun-adapter'].status = 'stopped';
+    processes['tun-adapter'].startedAt = null;
+    return { ok: false, error: msg };
+  }
+
   // On Windows, TUN requires administrator privileges.
   // The Dashboard itself must be launched from an elevated terminal (Run as Administrator).
   // We try to spawn the binary directly — if it fails, we inform the user.
@@ -781,7 +800,22 @@ function buildService(name) {
     proc.stdout.on('data', d => d.toString().split('\n').filter(l => l.trim()).forEach(l => addLog(name, l)));
     proc.stderr.on('data', d => d.toString().split('\n').filter(l => l.trim()).forEach(l => addLog(name, l, 'stderr')));
     proc.on('exit', code => {
-      if (code === 0) { addLog(name, '[dashboard] Build successful'); resolve({ ok: true }); }
+      if (code === 0) {
+        if (name === 'tun-adapter' && IS_WIN) {
+          const sourceDll = path.join(PROJECT_ROOT, 'tun-adapter', 'wintun.dll');
+          const targetDll = path.join(PROJECT_ROOT, 'tun-adapter', 'target', 'release', 'wintun.dll');
+          try {
+            if (!fs.existsSync(sourceDll)) throw new Error(`wintun.dll not found: ${sourceDll}`);
+            fs.copyFileSync(sourceDll, targetDll);
+          } catch (e) {
+            addLog(name, `[dashboard] ${e.message}`, 'stderr');
+            resolve({ ok: false, error: e.message });
+            return;
+          }
+        }
+        addLog(name, '[dashboard] Build successful');
+        resolve({ ok: true });
+      }
       else { addLog(name, `[dashboard] Build failed (code ${code})`, 'stderr'); resolve({ ok: false, error: `exit ${code}` }); }
     });
     proc.on('error', err => resolve({ ok: false, error: err.message }));
