@@ -9,6 +9,7 @@ on:
       - feat/desktop-client
       - feature/http3-desktop-platform-sync
       - feature/proxy-route-provider
+      - 'fix/**'
   pull_request:
     branches:
       - main
