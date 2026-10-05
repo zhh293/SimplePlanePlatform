@@ -8,6 +8,9 @@ use std::process::Command;
 use crate::config::{BypassConfig, IntranetDnsConfig, TunConfig};
 use crate::error::TunError;
 
+#[cfg(target_os = "windows")]
+const WINDOWS_TUN_PEER: &str = "198.18.255.254";
+
 /// 单条路由记录
 #[derive(Debug, Clone)]
 pub struct RouteEntry {
@@ -271,12 +274,11 @@ impl RouteGuard {
             );
         }
 
-        // 添加主路由规则：0.0.0.0/1 和 128.0.0.0/1 指向 TUN 接口
-        // Windows: 使用 TUN 接口的网关地址
-        let tun_gateway = Self::get_tun_gateway_address(iface_name)?;
-        tracing::info!("TUN gateway for routing: {}", tun_gateway);
-        guard.add_route("0.0.0.0/1", &tun_gateway)?;
-        guard.add_route("128.0.0.0/1", &tun_gateway)?;
+        // tun2/Wintun 可能会创建一个指向 peer 的默认路由；先删除它，
+        // 再只安装两条可追踪、可回滚的半默认路由。
+        Self::remove_tun_default_route();
+        guard.add_route_via_interface("0.0.0.0/1", iface_name)?;
+        guard.add_route_via_interface("128.0.0.0/1", iface_name)?;
 
         tracing::info!("Routes configured successfully (Windows)");
         Ok(guard)
@@ -920,7 +922,7 @@ impl RouteGuard {
     }
 
     // ========================================================================
-    // add_route_via_interface() (macOS only, Windows uses gateway-based routing)
+    // add_route_via_interface()
     // ========================================================================
 
     /// 添加一条路由（通过接口名）并记录 — macOS point-to-point 接口
@@ -953,7 +955,52 @@ impl RouteGuard {
         Ok(())
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    fn add_route_via_interface(&mut self, destination: &str, iface: &str) -> Result<(), TunError> {
+        let (dest_ip, mask) = cidr_to_ip_and_mask(destination);
+        let interface_index = Self::get_interface_index(iface)?;
+
+        tracing::info!(
+            "Executing: route add {} mask {} {} if {}",
+            dest_ip, mask, WINDOWS_TUN_PEER, interface_index
+        );
+
+        let output = Command::new("route")
+            .args([
+                "add",
+                &dest_ip,
+                "mask",
+                &mask,
+                WINDOWS_TUN_PEER,
+                "if",
+                &interface_index.to_string(),
+                "metric",
+                "6",
+            ])
+            .output()
+            .map_err(|e| TunError::SystemRoute(format!("failed to add TUN route: {}", e)))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if !output.status.success()
+            && !stdout.contains("already exists")
+            && !stderr.contains("already exists")
+        {
+            return Err(TunError::SystemRoute(format!(
+                "failed to add TUN route {}: {}",
+                destination,
+                stderr.trim()
+            )));
+        }
+
+        self.routes_added.push(RouteEntry {
+            destination: destination.to_string(),
+            gateway: format!("{} if {}", WINDOWS_TUN_PEER, interface_index),
+        });
+        Ok(())
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     #[allow(dead_code)]
     fn add_route_via_interface(&mut self, destination: &str, iface: &str) -> Result<(), TunError> {
         self.routes_added.push(RouteEntry {
@@ -1014,6 +1061,19 @@ impl RouteGuard {
             }
             Err(e) => {
                 tracing::error!("Failed to run route delete command: {}", e);
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn remove_tun_default_route() {
+        let output = Command::new("route")
+            .args(["delete", "0.0.0.0", "mask", "0.0.0.0", WINDOWS_TUN_PEER])
+            .output();
+
+        if let Ok(output) = output {
+            if output.status.success() {
+                tracing::info!("Removed stale Wintun default route via {}", WINDOWS_TUN_PEER);
             }
         }
     }
@@ -1322,6 +1382,9 @@ impl Drop for RouteGuard {
         for entry in self.routes_added.iter().rev() {
             Self::delete_route(&entry.destination);
         }
+
+        #[cfg(target_os = "windows")]
+        Self::remove_tun_default_route();
 
         // 4. 恢复原始默认路由
         if let Some(gateway) = &self.original_gateway {

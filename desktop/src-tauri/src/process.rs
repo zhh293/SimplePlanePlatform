@@ -395,13 +395,21 @@ pub fn is_tun_running() -> bool {
 
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("netsh")
-            .args(["interface", "ip", "show", "address", "name=SimplePlane"])
+        // Wintun 的实际友好名称可能是 "wintun Tunnel"，不能依赖配置中的别名。
+        let output = Command::new("powershell.exe")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "(Get-NetIPAddress -IPAddress '198.18.0.1' -AddressFamily IPv4 -ErrorAction SilentlyContinue).Count -gt 0",
+            ])
             .creation_flags(0x08000000)
             .output();
         if let Ok(out) = output {
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            if out.status.success() && stdout.contains("198.18.0.1") {
+            if String::from_utf8_lossy(&out.stdout)
+                .trim()
+                .eq_ignore_ascii_case("true")
+            {
                 return true;
             }
         }
