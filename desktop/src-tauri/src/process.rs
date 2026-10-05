@@ -678,6 +678,62 @@ fn start_tun_with_native_uac(
         .map_err(|e| format!("UAC sentinel process failed: {}", e))
 }
 
+#[cfg(target_os = "windows")]
+fn stop_tun_with_native_uac() -> Result<(), String> {
+    use std::mem::size_of;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::WaitForSingleObject;
+    use windows_sys::Win32::UI::Shell::{
+        ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
+    };
+
+    let command = std::env::var_os("COMSPEC")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from("C:\\Windows\\System32\\cmd.exe"));
+    let verb: Vec<u16> = std::ffi::OsStr::new("runas")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let file: Vec<u16> = command
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let parameters: Vec<u16> = std::ffi::OsStr::new("/D /C taskkill /F /T /IM tun-adapter.exe")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let directory = command.parent().unwrap_or(std::path::Path::new("."));
+    let directory: Vec<u16> = directory
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let mut execute_info: SHELLEXECUTEINFOW = unsafe { std::mem::zeroed() };
+    execute_info.cbSize = size_of::<SHELLEXECUTEINFOW>() as u32;
+    execute_info.fMask = SEE_MASK_NOCLOSEPROCESS;
+    execute_info.lpVerb = verb.as_ptr();
+    execute_info.lpFile = file.as_ptr();
+    execute_info.lpParameters = parameters.as_ptr();
+    execute_info.lpDirectory = directory.as_ptr();
+    execute_info.nShow = 0; // SW_HIDE
+
+    if unsafe { ShellExecuteExW(&mut execute_info) } == 0 {
+        return Err(format!("Windows UAC stop failed: {}", std::io::Error::last_os_error()));
+    }
+
+    if !execute_info.hProcess.is_null() {
+        unsafe {
+            WaitForSingleObject(execute_info.hProcess, 60_000);
+            CloseHandle(execute_info.hProcess);
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn start_tun_with_privilege(
     tun_path: &std::path::Path,
@@ -720,9 +776,16 @@ pub async fn stop_tun_adapter(state: &mut AppState) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let _ = Command::new("taskkill")
-            .args(["/F", "/T", "/IM", "tun-adapter.exe"])
-            .output();
+        if let Err(error) = stop_tun_with_native_uac() {
+            log::warn!("Failed to stop elevated tun-adapter: {}", error);
+        }
+
+        for _ in 0..20 {
+            if !is_tun_running() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(250)).await;
+        }
     }
 
     // macOS 上通过 sudo pkill 兜底（对标 dashboard 的三重 kill）
