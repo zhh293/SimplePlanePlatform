@@ -8,6 +8,8 @@
 mod config;
 mod error;
 mod fake_dns;
+#[cfg(target_os = "windows")]
+mod local_dns;
 mod route_guard;
 mod router;
 mod socks5;
@@ -102,18 +104,24 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("tun-adapter v{} starting", env!("CARGO_PKG_VERSION"));
     config.print_summary();
 
-    // 5. 创建 TUN 设备（包括路由设置和回环防护）
-    tracing::info!("Creating TUN device...");
-    let tun_mgr = tun_device::TunManager::new(&config.tun, &config.bypass, &config.intranet_dns).await?;
-    let (tun_reader, tun_writer, _route_guard) = tun_mgr.split();
-    tracing::info!("TUN device ready (route guard active)");
-
-    // 6. 初始化 FakeDNS
+    // 5. Initialize FakeDNS before the TUN device, so Windows can bind its
+    // local resolver before any adapter DNS settings are changed.
     let fake_dns = Arc::new(Mutex::new(FakeDnsEngine::new(
         &config.fakeip.range,
         config.fakeip.capacity,
     )));
     tracing::info!("FakeDNS engine initialized");
+
+    #[cfg(target_os = "windows")]
+    let local_dns = local_dns::LocalDnsServer::bind(fake_dns.clone(), &config.intranet_dns)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to bind local DNS proxy on 127.0.0.1:53: {e}"))?;
+
+    // 6. 创建 TUN 设备（包括路由设置和回环防护）
+    tracing::info!("Creating TUN device...");
+    let tun_mgr = tun_device::TunManager::new(&config.tun, &config.bypass, &config.intranet_dns).await?;
+    let (tun_reader, tun_writer, _route_guard) = tun_mgr.split();
+    tracing::info!("TUN device ready (route guard active)");
 
     // 7. 初始化路由引擎
     let router = Arc::new(
@@ -174,6 +182,13 @@ async fn main() -> anyhow::Result<()> {
         notify_tx_dispatch,
     ));
 
+    #[cfg(target_os = "windows")]
+    let mut local_dns_handle = {
+        let handle = tokio::spawn(local_dns.run());
+        _route_guard.activate_windows_dns_proxy()?;
+        handle
+    };
+
     tracing::info!("All modules started, TUN adapter is running");
     tracing::info!("Press Ctrl+C to stop");
 
@@ -213,12 +228,17 @@ async fn main() -> anyhow::Result<()> {
             res = conn_handle => {
                 tracing::error!("Connection dispatcher exited unexpectedly: {:?}", res);
             }
+            res = &mut local_dns_handle => {
+                tracing::error!("Local DNS proxy exited unexpectedly: {:?}", res);
+            }
         }
     }
 
     // 13. 优雅关闭
     tracing::info!("Shutting down gracefully...");
     health_handle.abort();
+    #[cfg(target_os = "windows")]
+    local_dns_handle.abort();
 
     // Drop Guard 会自动恢复路由表
     tracing::info!("TUN adapter stopped");

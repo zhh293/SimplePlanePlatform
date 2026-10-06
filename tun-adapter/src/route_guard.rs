@@ -155,6 +155,15 @@ impl RouteGuard {
                 tracing::info!("Adding bypass route for DNS server: {} via {}", host_route, gw_str);
                 guard.add_route(&host_route, &gw_str)?;
             }
+
+            // Keep split-DNS upstream traffic on the physical adapter.
+            for server in &intranet_dns.servers {
+                if server.parse::<std::net::Ipv4Addr>().is_ok() {
+                    let host_route = format!("{}/32", server);
+                    tracing::info!("Adding bypass route for intranet DNS server: {} via {}", host_route, gw_str);
+                    guard.add_route(&host_route, &gw_str)?;
+                }
+            }
         } else {
             tracing::warn!("No original gateway detected; bypass routes will not be added");
         }
@@ -250,29 +259,17 @@ impl RouteGuard {
         }
 
         // Step 1: 设置内网域名 DNS 分流（NRPT 规则）
-        let resolvers_ok = if !intranet_dns.servers.is_empty() && !intranet_dns.domains.is_empty() {
+        if !intranet_dns.servers.is_empty() && !intranet_dns.domains.is_empty() {
             match guard.setup_intranet_resolvers(intranet_dns) {
-                Ok(()) => true,
+                Ok(()) => {},
                 Err(e) => {
-                    tracing::error!("Intranet DNS NRPT setup failed: {}. Will NOT modify system DNS.", e);
-                    false
+                    tracing::error!("Intranet DNS NRPT setup failed: {}. Local DNS proxy will handle configured split rules.", e);
                 }
             }
-        } else {
-            true
-        };
-
-        // Step 2: 修改系统 DNS 为 198.18.0.2（FakeDNS）
-        if resolvers_ok {
-            if let Err(e) = guard.setup_dns() {
-                tracing::warn!("Failed to set system DNS (non-fatal): {}", e);
-            }
-        } else {
-            tracing::warn!(
-                "Skipping system DNS modification due to NRPT setup failure. \
-                 External domains may not be intercepted by FakeDNS."
-            );
         }
+
+        // Capture existing DNS now; activate loopback DNS only after services start.
+        guard.setup_dns()?;
 
         // tun2/Wintun 可能会创建一个指向 peer 的默认路由；先删除它，
         // 再只安装两条可追踪、可回滚的半默认路由。
@@ -346,9 +343,7 @@ impl RouteGuard {
         Ok(())
     }
 
-    /// 设置系统 DNS 为 FakeDNS (198.18.0.2) — Windows
-    ///
-    /// 使用 PowerShell Set-DnsClientServerAddress 设置接口 DNS。
+    /// Capture original Windows DNS settings before routes are activated.
     #[cfg(target_os = "windows")]
     fn setup_dns(&mut self) -> Result<(), TunError> {
         let interface_name = Self::get_active_interface_name()?;
@@ -364,9 +359,19 @@ impl RouteGuard {
 
         Self::persist_dns_backup(&interface_name, &current_dns);
 
+        Ok(())
+    }
+
+    /// Switch Windows DNS to the local proxy after all TUN services are ready.
+    #[cfg(target_os = "windows")]
+    pub fn activate_windows_dns_proxy(&self) -> Result<(), TunError> {
+        let interface_name = self.original_dns.as_ref()
+            .ok_or_else(|| TunError::SystemRoute("original DNS settings were not captured".to_string()))?
+            .service_name.clone();
+
         // 使用 PowerShell 设置 DNS（比 netsh 更可靠，支持接口名含空格）
         let ps_cmd = format!(
-            "Set-DnsClientServerAddress -InterfaceAlias '{}' -ServerAddresses ('198.18.0.2')",
+            "Set-DnsClientServerAddress -InterfaceAlias '{}' -ServerAddresses ('127.0.0.1')",
             interface_name
         );
 
@@ -377,13 +382,12 @@ impl RouteGuard {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            let _ = std::fs::remove_file(get_dns_backup_file_path());
             return Err(TunError::SystemRoute(format!(
                 "Set-DnsClientServerAddress failed: {}", stderr.trim()
             )));
         }
 
-        tracing::info!("System DNS set to 198.18.0.2 (FakeDNS) on interface '{}'", interface_name);
+        tracing::info!("System DNS set to local DNS proxy (127.0.0.1) on interface '{}'", interface_name);
 
         // 刷新 DNS 缓存
         let _ = Command::new("ipconfig").arg("/flushdns").output();
@@ -893,7 +897,8 @@ impl RouteGuard {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        if output.status.success() {
+        let added_by_us = output.status.success();
+        if added_by_us {
             tracing::info!("Route added successfully: {}/{} -> {}", dest_ip, mask, gateway);
         } else if stdout.contains("already exists") || stderr.contains("already exists") {
             tracing::info!("Route already exists: {} mask {} -> {}", dest_ip, mask, gateway);
@@ -904,10 +909,12 @@ impl RouteGuard {
             );
         }
 
-        self.routes_added.push(RouteEntry {
-            destination: destination.to_string(),
-            gateway: gateway.to_string(),
-        });
+        if added_by_us {
+            self.routes_added.push(RouteEntry {
+                destination: destination.to_string(),
+                gateway: gateway.to_string(),
+            });
+        }
 
         Ok(())
     }
