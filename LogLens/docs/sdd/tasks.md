@@ -43,3 +43,14 @@
 | T24 | [x] | T19,T23 | 最终 Agent 在 Java 17/21 实际 ProxyRemoteServer 中完成启动及 100 个 loopback 连接开关烟测（生命周期事件全量落盘）；实际 OutboundSession 字节计数、队列满载/排空、保留、gap 恢复、只读/loopback 安全和 Java 8 禁用守卫均有测试；部署说明已写入 `docs/proxy-remote-monitoring.md` | R25–R34 |
 | T25 | [x] | T24 | 将发布 Agent 接入实际 systemd proxy-remote.service，验证 Java 17 启动、面板健康和服务 MainPID 持有 loopback Web 端口；通过本地 SSH 隧道验证 UI/API，并记录脱敏部署证据与运维步骤 | R25,R31,R34 |
 | T26 | [~] | T24 | 更新 Docker Remote 至 Java 17+，构建并注入 LogLens Agent；为配置/历史数据增加挂载，为 loopback 面板增加受限 relay 与 SSH 访问文档；默认关闭公网 9090 发布并提供显式 override；需完成 compose 解析与镜像/容器验收 | R29,R32,R34,R35 |
+
+## 可选搜索后端扩展
+
+| 任务 | 状态 | 依赖 | 内容 | 需求 |
+|---|---|---|---|---|
+| T27 | [x] | T00,T06 | 增加 R36–R39、D13 与接口/失败/历史兼容设计；新增 backend 配置并保持默认 SQLite | R36,R39 |
+| T28 | [x] | T27 | 抽象在线 SearchIndex 策略；SQLite adapter 完整保留 captured/processed/source/telemetry、恢复和保留契约 | R36,R38 |
+| T29 | [x] | T28 | 实现 Elasticsearch REST adapter、会话隔离索引、查询/索引/删除操作和安全配置；真实 Elasticsearch 集群验收未做 | R37,R39 |
+| T30 | [x] | T29 | HTTP mock 集成验证 SQLite 回归、ES 查询与失败、JSONL hydration、SSE/聚合契约；Java 17/21 均通过；真实 ES 集群和性能对比未纳入本任务证据 | R36–R39 |
+| T31 | [x] | T30 | 对齐 SQLite 字面子串语义；ES 按 seq index sort 并使用固定水位 keyset 分页；稀疏 source 序号直接检索真实 captured 行；Java 17/21 测试通过，未运行真实 ES | R40 |
+| T32 | [x] | T31 | ES bounded Bulk（最多 100 项、8 MiB）在 FINAL/telemetry SSE 前提交并检查逐项失败；SQLite 与 ES page hydration 按 segment 复用单页 FileChannel；确定性文档 ID 支持安全重放；Java 17/21 全量回归通过 | R41,R42 |

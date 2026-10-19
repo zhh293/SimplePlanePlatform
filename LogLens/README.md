@@ -49,6 +49,8 @@ Agent 参数必须作用于加载目标应用类的 JVM。配置或插件发生�
 
 配置示例见 [loglens.yaml](loglens.yaml)。默认模式是 `observe`，Web 端口为 `127.0.0.1:9527`。结构化存储必须启用才能使用 Web 查询。
 
+在线搜索索引可在 `output.search.backend` 选择，默认 `sqlite`，现有 SQLite 查询、历史恢复和 Viewer 行为继续可用。需要 Elasticsearch 时设置 `backend: elasticsearch`、服务端 `endpoint` 和独立的 `indexPrefix`；ES 需为 7.10 或更新版本。可用 `apiKeyEnv` 指定环境变量名，密钥本身从环境变量读取，不写入 YAML 或会话配置摘要。ES 为每个应用会话建立隔离索引，完整日志仍保存在本地 JSONL；在线 ES 模式需要 ES 服务可达。日志消息、peer/target 地址保持 SQLite 的大小写敏感字面子串语义，分页按递增序号 keyset 进行并固定补拉水位，不使用深偏移。ES 将 captured 与 FINAL 索引动作合并到最多 100 项/8 MiB 的有界 Bulk，FINAL 和 telemetry 仍在对应 SSE 广播前同步确认；因此远端延迟仍会影响 LogLens 消费速度，启用前应按实际日志速率做基准。真实 ES 集群和性能基准尚未验证。切换后需重启 Agent。详见[架构设计](docs/sdd/design.md#可选搜索索引d13)与[验证记录](docs/sdd/verification.md)。
+
 ## 启用 Proxy Remote 监控
 
 在服务端配置中启用 `proxyRemote`，并为数据选择持久化目录：

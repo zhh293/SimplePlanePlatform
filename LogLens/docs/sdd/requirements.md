@@ -58,3 +58,10 @@
 | R33 | 采集及事件发布不得阻塞 Netty IO 或代理业务线程；活动状态、事件队列及每连接计数有明确上限；满载时按可观测的 drop 策略降级，不影响代理转发 | 本次融合目标；R20 |
 | R34 | Java 17 与 Java 21 均须用真实 proxy-remote 测试子 JVM验证；若服务端以 Java 8 启动，Agent 应清晰禁用监控并报告兼容性错误，不得静默宣称已监控 | 本次融合目标；R01,R19 |
 | R35 | Docker 部署必须在同一 Java 17+ Proxy Remote JVM 中启用 LogLens Agent；Agent 配置与历史数据可外部挂载/持久化；面板维持 loopback 绑定且宿主机发布仅为 loopback；默认不将代理服务端口或面板公开到公网，公网代理端口必须显式覆盖配置 | 本次容器化融合目标；R29,R32,R34 |
+| R36 | 搜索索引后端通过配置选择；SQLite 是默认后端且保留当前 schema、过滤、分页、captured/source/telemetry 查询、JSONL 重建与保留行为；启用 Elasticsearch 不得要求删除或迁移 SQLite 会话格式 | 本次搜索后端扩展；R13,R14,R30 |
+| R37 | Elasticsearch 后端须提供与 SQLite 相同的在线 `RecordRepository` 查询契约；索引按应用/会话隔离，搜索结果可从权威 JSONL 定位并恢复完整脱敏 DTO；不得将 Elasticsearch 可用性作为 JSONL 归档完整性的替代 | 本次搜索后端扩展；R13,R14,R15 |
+| R38 | 搜索后端切换不得改变责任链、RepeatFold 合并结果、文本日志和 typed SSE 的载荷/序号契约；processed JSONL 仍先于索引和 SSE，索引未成功时不得广播未完成持久化的 FINAL 记录 | 本次搜索后端扩展；R08–R10,R13,R16 |
+| R39 | Elasticsearch endpoint、index prefix、连接/请求超时和可选 API key 环境变量均需受限校验；不允许任意非 HTTP(S) URL 或将 API key 写入配置摘要/session.json；HTTP 错误、超时和部分写入须使会话状态可观测且不宣称完成 | 本次搜索后端扩展；R11,R15,R20 |
+| R40 | SQLite 与 Elasticsearch 的文本/地址子串过滤保持大小写敏感的字面匹配；分页按唯一递增序号做有界 keyset，不使用深偏移；给定 through 水位时后续写入不得改变该次补拉范围；稀疏 capture 序号不得因区间跨度导致漏查或无界枚举 | 搜索正确性强化；R30,R36,R37 |
+| R41 | ES 索引写入可合并为有界 Bulk 请求；处理 FINAL 或 telemetry 时，写入批次须在对应 SSE 广播前成功可见；bulk 部分失败不能被当作成功，重试必须幂等；SQLite 写入顺序与行为不变 | ES 写入吞吐优化；R37,R38 |
+| R42 | 搜索结果从 JSONL 指针恢复时，同一 segment 的一页结果复用文件句柄，返回顺序、DTO、错误行为和保留时可删除文件的语义不变 | 查询 hydration 优化；R13,R36,R37 |

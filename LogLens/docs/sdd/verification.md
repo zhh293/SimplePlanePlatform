@@ -444,3 +444,21 @@ T16–T24 的 Proxy Remote 融合验收已完成。边界仍为：没有用真�
 更新 Docker Remote 镜像，使其在 Java 17+ runtime 中启动 Proxy Remote 与同 JVM LogLens Agent；新增 loopback 面板 relay、持久化数据挂载、外部 Agent YAML、仅本机发布的面板/代理端口，以及显式的公网 9090 compose override。使用 LogLens runtime 内的 SnakeYAML 2.3 在 Corretto 17.0.14 下解析 `docker-compose.yml`、`docker-compose.remote-public.yml`、`docker/remote.yml`、`docker/proxy.yml` 与 `docker/loglens-proxyremote.yaml`；并由真实 `ConfigLoader` 加载 Agent 配置，确认 Proxy Remote 监控、结构化存储与 `127.0.0.1:9527` loopback Web 均启用。静态检查通过。
 
 当前执行环境没有 Docker 或 Compose CLI，因此尚未实际构建镜像、启动容器、验证 `network_mode: service:proxy-remote` 下的 relay 发布与容器重启行为，也未通过 Docker 部署执行 SSH 隧道浏览器验收。R35/T26 保持待容器环境验收，不因 YAML/Agent 配置校验通过而标为完成。
+
+## 可选 SQLite / Elasticsearch 搜索索引（2026-10-19）
+
+按 R36–R40、D13 新增 `SearchIndex` 策略：默认 SQLite 仍使用 `index.sqlite` 和原有事务/JSONL 重建行为；ES 模式通过 Java 17 `HttpClient` 调 Elasticsearch REST API，为每个应用会话建立隔离索引，查询命中后从 JSONL 指针恢复完整 DTO。在线 `SessionStorage` 写入仍遵循 JSONL→选定索引→文本→SSE，RepeatFold/责任链未更改；历史 Viewer 仍仅使用 SQLite 临时索引。配置支持 backend、HTTP(S) endpoint、index prefix、连接/请求超时及环境变量 API key，摘要不含端点或密钥。
+
+`ElasticsearchIndexTest` 的本机 HTTP mock 验证索引初始化、captured/processed/telemetry/source-group 写入、按段删除、JSONL hydration、水位、SessionStorage 文本与 SSE 广播、索引失败时不广播，以及 HTTP 503 初始化失败。新增查询断言覆盖大小写敏感的字面子串（含 `*`）、peer 地址子串、稀疏序号下的 keyset 翻页、固定 through 水位、无 `from` 深偏移和跨度 1,000,000 的无分组来源查询。`ConfigLoaderTest` 验证 SQLite 默认和 ES 配置边界；既有 `SessionStorageTest`/`HistoryRepositoryTest`/`HistoryScaleTest` 覆盖 SQLite 原路径与 JSONL 恢复。Java 21.0.6 执行 `& ./scripts/build.ps1 -MavenArguments @('-pl','loglens-agent','-am','test')`：12 个 reactor 模块共 94 项测试通过，0 失败/错误/跳过。Corretto 17.0.14 使用相同命令也通过 94 项。最新代码下，Java 21 与 Java 17 各自定向运行 `ElasticsearchIndexTest` 均通过 5 项。证据见各模块 `target/surefire-reports/TEST-*.xml` 和 [ElasticsearchIndexTest.xml](../../loglens-storage/target/surefire-reports/TEST-io.loglens.storage.ElasticsearchIndexTest.xml)。两次完整执行均覆盖 SQLite 历史 100,000 行重建及分页。
+
+ES 查询映射使用 wildcard 字段复现 SQLite `instr` 字面子串语义；排序索引按唯一递增序号预排序，每页通过 `seq > cursor`、`seq <= through` 和 `limit + 1` 做有界 keyset 查询。未运行真实 Elasticsearch 集群或性能基准；本轮按任务约束仅使用本地 HTTP mock，无法据此声称具体集群版本兼容、生产吞吐或延迟已验收。ES 在线写入仍同步 `refresh=wait_for`，远程延迟进入单消费者路径；启用前须在目标集群做端到端基准。支持版本按 wildcard query 要求记为 Elasticsearch 7.10+。
+
+限制：当前没有连接真实 Elasticsearch 服务，REST 兼容只由本地 mock 验证；没有比较 SQLite 与 ES 的查询延迟或承载速率。ES 使用 `refresh=wait_for` 维持 SSE 与历史查询的即时可见性，远程写入延迟会进入唯一消费者路径；生产启用前需对目标流量做基准。不得把 ES 在大规模全文检索场景可能有优势表述为已测得的总体性能提升。
+
+## Elasticsearch Bulk 与 JSONL 分页 hydration（2026-10-19）
+
+按 R41/R42、D14 完成 bounded Bulk 与共享 `SegmentReader.readMany`。captured 可延迟至 processed FINAL 一起提交；批次最多 100 个索引动作、8 MiB，单动作/超限动作走单文档 PUT。FINAL 与 telemetry 的索引确认仍发生在对应 SSE 广播之前；批次响应必须完整且每项成功，部分失败不会被当作成功。确定性文档 ID 使显式重放幂等，失败仍通过既有存储健康状态显式暴露，不执行无界异步重试。SQLite 和 ES 页结果均按 segment 分组，每页每个 segment 只打开一个短生命周期 FileChannel，结束即关闭以允许保留清理删除文件。
+
+`ElasticsearchIndexTest` 覆盖 captured 与 FINAL 合并成 2 项 Bulk、200 响应中的逐项部分失败不广播 FINAL、写入失败状态和查询可见性；`SegmentReaderTest` 覆盖跨 segment hydration 顺序和不安全路径拒绝。最新代码下，Java 21.0.6 与 Corretto 17.0.14 各自执行 `scripts/build.ps1 -MavenArguments @('-pl','loglens-agent','-am','test')`，12 个 reactor 模块均成功，各 95 项测试通过，零失败/错误/跳过；两次全量执行均覆盖 SQLite 的 100,000 行历史恢复与分页。Java 21/17 定向执行 `ElasticsearchIndexTest,SegmentReaderTest` 各 6 项通过。报告见模块 `target/surefire-reports/`，包括 [ElasticsearchIndexTest.xml](../../loglens-storage/target/surefire-reports/TEST-io.loglens.storage.ElasticsearchIndexTest.xml) 和 [SegmentReaderTest.xml](../../loglens-storage/target/surefire-reports/TEST-io.loglens.storage.SegmentReaderTest.xml)。
+
+验证仍仅使用本机 HTTP mock；未在真实 Elasticsearch 上做版本兼容、吞吐、延迟或 SQLite 对比基准。因此这次确认的是批次边界、确认/失败顺序和回归正确性，不代表生产性能提升；部署前仍应使用目标集群和实际流量做基准。共享 ES 索引与 n-gram 未引入，因其增加跨会话清理复杂度或索引磁盘/写入成本，当前缺乏基准证据证明收益大于代价。

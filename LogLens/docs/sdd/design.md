@@ -123,3 +123,18 @@ UI 增加“连接”页：物理连接列表、会话明细、目标和状态�
 | D10 | 字节计数在 forward/writeBack 方法边界累计，并按间隔发累计快照 | 避免每数据包写事件；边界直接对应上/下行代理 payload 长度 |
 | D11 | Agent 适配目标 Java 17/21；不承诺 Java 8 运行时兼容 | LogLens 全模块以 Java 17 API 编译；代理模块字节码目标为 Java 8 不代表 Agent 可运行于 Java 8 |
 | D12 | Docker Remote 镜像在 Java 17+ 中以 premain 启动 LogLens；Web 保持容器 loopback，由共享网络命名空间 relay 转发到宿主机 loopback；9090 默认仅 compose 内网可见，外部接入通过单独 compose override 显式启用 | 容器网卡发布不能直接访问应用 loopback；保持 R32 Web 安全契约，同时让 SSH 隧道可以访问；避免默认暴露代理端口 |
+| D13 | 将在线结构化索引抽象为 SearchIndex 策略，默认 `sqlite`，可选 `elasticsearch`；JSONL 仍是归档事实源，SQLite 历史 Viewer/恢复路径仍固定使用私有 SQLite 重建索引；现有存储写入与 SSE 顺序对 SQLite 保持不变 | 搜索引擎仅替换在线查询索引，避免破坏离线会话与历史恢复；通过接口隔离后端和配置选择，不改责任链/折叠/SSE 语义 |
+
+### 可选搜索索引（D13）
+
+`SessionStorage` 继续拥有 session JSONL/text/metadata/retention 生命周期，在线索引通过 `SearchIndex` 接口注入。`SqliteIndex` 实现该接口并作为默认策略；`ElasticsearchIndex` 使用 Java 17 `HttpClient` 和 Elasticsearch REST JSON API，不引入额外 Agent 客户端类加载依赖。每个应用 session 使用独立 index 名；索引文档只保存查询字段与受校验的 JSONL segment/offset/length 指针，查询命中后仍从 JSONL 读取完整 DTO。captured、processed、telemetry、source group、按序号分页、watermark、删除段清理都纳入同一接口，不能只替换日志列表查询。
+
+在线处理仍按 JSONL append → 已选 SearchIndex 更新 → 文本输出 → processed SSE 广播；SQLite 模式维持既有事务/失败行为。Elasticsearch 写入使用 REST 文档 API 和 `refresh=wait_for`，保证已广播 FINAL 记录可立即通过历史查询读取；这会把 ES 往返延迟放在唯一消费者上，部署前必须对目标日志速率做端到端基准，不承诺仅因采用 ES 就提升整体吞吐。Elasticsearch 配置包含 backend、HTTP(S) endpoint、index prefix、连接/请求超时和环境变量名形式的可选 API key。未选择 Elasticsearch 时不发起网络请求；离线 HistoryRepository 和 JSONL 重建仍使用本地 SQLite 临时索引，不连接 ES。RepeatFold 与责任链不感知后端。
+
+查询一致性与分页（D13 补充）：SQLite `instr` 的筛选语义在 ES 使用 `wildcard` 字段和转义后的 `*literal*` 查询复现，保持大小写敏感和字面 `*`/`?`/反斜线匹配。captured、processed、telemetry 索引在创建时分别按唯一递增 `seq` 做升序 index sort，source group 按 `captureSequence` 排序；每页仍使用严格 `seq > cursor`、固定 `seq <= through`、`size = limit + 1`，不使用随页数增长的 `from`。有界 `through` 是 SSE ready watermark，索引只追加同序号文档，后续写入不会插入其范围；段保留删除属于有意过期。此契约与 SQLite API 游标兼容，并避免 HTTP API 增加 PIT 生命周期/不透明游标。ES 需为 7.10+，因为字面子串使用 wildcard query；深页表现仍需在目标集群按实际 shard/数据量测量。官方说明建议深页避免 `from/size`，在需要跨刷新稳定快照时用 PIT + `search_after`；当前实现依靠追加序号、水位上界及 index sort，不提供跨保留删除的快照保证（[分页 API](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/paginate-search-results)、[Index sorting](https://www.elastic.co/docs/reference/elasticsearch/index-settings/sorting)、[Wildcard query](https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-wildcard-query)）。
+
+### 写入与 hydration 优化（D14）
+
+ES adapter 将 captured 索引动作先放入有界内存批次（最多 100 项且最多 8 MiB）；单条待提交动作或体积超限时使用单文档 PUT，避免为单文档构造 Bulk 包。processed FINAL 动作与待提交的 captured/source-group 动作通过一次 `_bulk?refresh=wait_for` 提交，并且仅在 ES 返回所有 item 成功后才允许 `SessionStorage` 继续文本/SSE；telemetry 也在其 typed SSE 广播前提交。失败、item 部分失败或响应未确认完整批次时保留失败批次、将写入失败反馈给既有 storage health/complete 状态；Bulk 使用确定性 `_id`，重放部分已成功的 index 动作是幂等的。查询入口会先提交 pending 批次，维持 read-after-write。单消费者仍串行化写入，不创建无界后台队列或异步 fire-and-forget。
+
+SQLite 与 ES 的分页 hydration 共用 `SegmentReader.readMany`：先按 segment 分组，一页内每个 segment 只打开一个只读 FileChannel，按原始命中顺序读取指定字节范围后立即关闭，不缓存长期文件句柄，避免 Windows retention 删除被锁文件。共享 ES 索引、n-gram 和自动压缩暂不采用：前者改变会话隔离/清理边界，n-gram 扩大磁盘与写入成本，压缩对当前较小的投影文档未证明收益；待真实集群基准后再决定。

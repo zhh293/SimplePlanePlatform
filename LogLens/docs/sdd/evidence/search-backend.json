@@ -1,0 +1,38 @@
+{
+  "feature": "configurable-search-index",
+  "date": "2026-10-19",
+  "java21": {
+    "runtime": "IDEA JBR 21.0.6",
+    "command": "./scripts/build.ps1 -MavenArguments @('-pl','loglens-agent','-am','test')",
+    "reactorModules": 12,
+    "tests": 95,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "BUILD SUCCESS"
+  },
+  "java17": {
+    "runtime": "Corretto 17.0.14",
+    "command": "./scripts/build.ps1 -JavaHome 'C:\\Users\\92819\\.jdks\\corretto-17.0.14' -MavenArguments @('-pl','loglens-agent','-am','test')",
+    "reactorModules": 12,
+    "tests": 95,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "BUILD SUCCESS"
+  },
+  "elasticsearch": {
+    "validation": "Local HTTP mock only; no live cluster or performance comparison",
+    "finalTargetedTests": "ElasticsearchIndexTest (5) + SegmentReaderTest (1): 6 tests passed on both Java 17 and Java 21; includes bounded capture/FINAL bulk, partial item failure before SSE, literal matching, sparse keyset paging, fixed watermarks, source hydration, and cross-segment read order",
+    "bulkWrite": "At most 100 actions and 8 MiB pending per batch; singleton and byte-overflow actions use single-document PUT; FINAL and telemetry flush before corresponding SSE; validates response item count and each item result; deterministic document IDs make explicit replay idempotent",
+    "jsonlHydration": "SQLite and Elasticsearch page hydration group pointers by segment and use one short-lived read-only FileChannel per segment per page",
+    "pagination": "No from/size offsets; seq keyset with limit+1, fixed through watermark, and index sorting; mock asserts bounded request shape",
+    "minimumVersion": "Elasticsearch 7.10+ (wildcard query)",
+    "testReport": "loglens-storage/target/surefire-reports/TEST-io.loglens.storage.ElasticsearchIndexTest.xml"
+  },
+  "sqlite": {
+    "defaultBackend": true,
+    "historyRebuild": "Existing JSONL-to-SQLite history recovery and 100000-record paging tests passed in both reactors",
+    "selectedByDefault": "SQLite remains the default; existing schema, HistoryRepository and JSONL rebuild paths retained"
+  }
+}

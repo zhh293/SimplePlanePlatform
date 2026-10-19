@@ -63,6 +63,13 @@ output:
     enabled: true
     rotateSizeMiB: 100
     maxDiskMiB: 2048
+  search:
+    backend: sqlite
+    endpoint: http://127.0.0.1:9200
+    indexPrefix: loglens
+    apiKeyEnv: LOG_LENS_ELASTICSEARCH_API_KEY
+    connectTimeoutMillis: 1000
+    requestTimeoutMillis: 3000
   console:
     processed: false
 proxyRemote:

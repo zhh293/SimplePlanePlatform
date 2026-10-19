@@ -36,7 +36,16 @@ public record LogLensConfig(int schemaVersion, String application, Path configPa
         public Redaction { mdcKeys = Set.copyOf(mdcKeys); messageRules = List.copyOf(messageRules); }
     }
     public record MessageRule(String id, Pattern pattern, String replacement) {}
-    public record Output(Path directory, Text text, Structured structured, Console console) {}
+    public record Output(Path directory, Text text, Structured structured, Console console, Search search) {
+        public Output(Path directory, Text text, Structured structured, Console console) {
+            this(directory, text, structured, console, Search.sqlite());
+        }
+    }
+    public enum SearchBackend { SQLITE, ELASTICSEARCH }
+    public record Search(SearchBackend backend, String endpoint, String indexPrefix, String apiKey,
+                         int connectTimeoutMillis, int requestTimeoutMillis) {
+        public static Search sqlite() { return new Search(SearchBackend.SQLITE, "http://127.0.0.1:9200", "loglens", null, 1000, 3000); }
+    }
     public record Text(boolean combined, boolean splitByLevel, int rotateSizeMiB, int retentionDays) {}
     public record Structured(boolean enabled, int rotateSizeMiB, int maxDiskMiB) {}
     public record Console(boolean processed) {}

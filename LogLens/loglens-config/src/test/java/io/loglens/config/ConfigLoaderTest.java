@@ -24,7 +24,27 @@ class ConfigLoaderTest {
         assertEquals(5, config.pipeline().size());
         assertFalse(config.proxyRemote().enabled());
         assertEquals(1000,config.proxyRemote().sampleIntervalMillis());
+        assertEquals(LogLensConfig.SearchBackend.SQLITE, config.output().search().backend());
         assertEquals(64, config.configHash().length());
+    }
+    @Test void selectsElasticsearchWithoutChangingTheSqliteDefault() throws Exception {
+        LogLensConfig config=ConfigLoader.load(yaml("schemaVersion: 1\napplication: demo\noutput:\n  search:\n    backend: elasticsearch\n    endpoint: https://search.example.test:9243\n    indexPrefix: demo_logs\n    apiKeyEnv: LOG_LENS_TEST_KEY\n    connectTimeoutMillis: 500\n    requestTimeoutMillis: 5000\n"));
+        assertEquals(LogLensConfig.SearchBackend.ELASTICSEARCH,config.output().search().backend());
+        assertEquals("https://search.example.test:9243",config.output().search().endpoint());
+        assertEquals("demo_logs",config.output().search().indexPrefix());
+        assertEquals(500,config.output().search().connectTimeoutMillis());
+        assertNull(config.output().search().apiKey());
+        String summary=ConfigSummary.from(config).toString();
+        assertFalse(summary.contains("search.example.test"));
+        assertFalse(summary.contains("LOG_LENS_TEST_KEY"));
+    }
+    @Test void validatesElasticsearchSettingsOnlyWithinSupportedBounds() throws Exception {
+        for(String section:List.of("backend: solr", "endpoint: 'file:///tmp/es'", "endpoint: 'http://user:pass@localhost:9200'",
+                "indexPrefix: UpperCase", "apiKeyEnv: BAD-NAME", "requestTimeoutMillis: 1")) {
+            String settings=section.startsWith("backend:")?section:"backend: elasticsearch\n"+section;
+            assertThrows(IllegalArgumentException.class,()->ConfigLoader.load(yaml("schemaVersion: 1\noutput:\n  search:\n    "+settings.replace("\n","\n    ")+"\n")),section);
+        }
+        assertThrows(IllegalArgumentException.class,()->ConfigLoader.load(yaml("schemaVersion: 1\noutput:\n  structured:\n    enabled: false\n  search:\n    backend: elasticsearch\n")));
     }
     @Test void proxyRemoteTelemetryIsOptInAndRequiresStructuredStorage() throws Exception {
         LogLensConfig enabled=ConfigLoader.load(yaml("schemaVersion: 1\nproxyRemote:\n  enabled: true\n  sampleIntervalMillis: 250\n  maxTrackedConnections: 64\n  maxTrackedSessions: 512\n"));

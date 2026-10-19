@@ -34,7 +34,7 @@ public final class SessionStorage implements RecordRepository, DiagnosticSink, S
     private final SegmentWriter combinedWriter;
     private final Map<LogLevel, SegmentWriter> levelWriters = new EnumMap<>(LogLevel.class);
     private final List<SegmentWriter> writers = new ArrayList<>();
-    private final SqliteIndex index;
+    private final SearchIndex index;
     private final AtomicLong written = new AtomicLong();
     private final AtomicLong capturedCount = new AtomicLong();
     private final AtomicLong telemetryCount = new AtomicLong();
@@ -59,8 +59,11 @@ public final class SessionStorage implements RecordRepository, DiagnosticSink, S
             groupsWriter = writer("groups", "jsonl", structuredSize);
             telemetryWriter = writer("telemetry", "jsonl", structuredSize);
             NativeLibraries.configure(config.output().directory().resolve(".native"));
-            try { index = new SqliteIndex(directory, directory.resolve("index.sqlite"), true); }
-            catch (SQLException | RuntimeException failure) { diagnostics.close(); throw failure; }
+            try { index = SearchIndexFactory.open(config.output().search(), directory, config.application(), sessionId); }
+            catch (IOException | SQLException | RuntimeException failure) {
+                for (SegmentWriter writer : writers) try { writer.close(); } catch (IOException cleanup) { failure.addSuppressed(cleanup); }
+                diagnostics.close(); throw failure;
+            }
         } else { capturedWriter = processedWriter = groupsWriter = telemetryWriter = null; index = null; }
         combinedWriter = config.output().text().combined() ? writer("app", "log", textSize) : null;
         if (config.output().text().splitByLevel()) for (LogLevel level : LogLevel.values()) levelWriters.put(level, writer(level.name().toLowerCase(java.util.Locale.ROOT), "log", textSize));

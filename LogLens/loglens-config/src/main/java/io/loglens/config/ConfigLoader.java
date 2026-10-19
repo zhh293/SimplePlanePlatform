@@ -101,19 +101,46 @@ public final class ConfigLoader {
         if (pipeline.isEmpty()) pipeline = defaultPipeline();
         validatePipeline(pipeline);
         Settings o = new Settings(root.map("output"), "output");
-        o.only("directory", "text", "structured", "console");
+        o.only("directory", "text", "structured", "console", "search");
         Settings t = new Settings(o.map("text"), "output.text");
         t.only("combined", "splitByLevel", "rotateSizeMiB", "retentionDays");
         Settings s = new Settings(o.map("structured"), "output.structured");
         s.only("enabled", "rotateSizeMiB", "maxDiskMiB");
         Settings con = new Settings(o.map("console"), "output.console");
         con.only("processed");
+        Settings search = new Settings(o.map("search"), "output.search");
+        search.only("backend", "endpoint", "indexPrefix", "apiKeyEnv", "connectTimeoutMillis", "requestTimeoutMillis");
+        String backendValue = search.string("backend", "sqlite");
+        SearchBackend searchBackend = switch (backendValue) {
+            case "sqlite" -> SearchBackend.SQLITE;
+            case "elasticsearch" -> SearchBackend.ELASTICSEARCH;
+            default -> throw search.error("backend", "expected sqlite or elasticsearch");
+        };
+        String endpoint = search.string("endpoint", "http://127.0.0.1:9200");
+        java.net.URI endpointUri;
+        try { endpointUri = java.net.URI.create(endpoint); }
+        catch (IllegalArgumentException invalid) { throw search.error("endpoint", "expected an HTTP(S) URL"); }
+        if (!Set.of("http", "https").contains(endpointUri.getScheme()) || endpointUri.getHost() == null || endpointUri.getUserInfo() != null
+                || endpointUri.getQuery() != null || endpointUri.getFragment() != null || endpoint.length() > 2048)
+            throw search.error("endpoint", "expected an HTTP(S) URL without embedded credentials, query or fragment");
+        String indexPrefix = search.string("indexPrefix", "loglens");
+        if (!indexPrefix.matches("[a-z0-9][a-z0-9_-]{0,39}")) throw search.error("indexPrefix", "expected lowercase index prefix (1..40 characters)");
+        String apiKeyEnv = search.string("apiKeyEnv", "LOG_LENS_ELASTICSEARCH_API_KEY");
+        if (!apiKeyEnv.matches("[A-Za-z_][A-Za-z0-9_]{0,127}")) throw search.error("apiKeyEnv", "expected environment variable name");
+        String apiKey = searchBackend == SearchBackend.ELASTICSEARCH ? System.getenv(apiKeyEnv) : null;
+        if (apiKey != null && (apiKey.length() > 4096 || apiKey.isBlank())) throw search.error("apiKeyEnv", "environment value is invalid");
+        Search searchConfig = new Search(searchBackend, endpoint.replaceAll("/+\\s*$", ""), indexPrefix, apiKey,
+                search.integer("connectTimeoutMillis", 1000, 100, 60000), search.integer("requestTimeoutMillis", 3000, 100, 120000));
+        if (searchBackend == SearchBackend.ELASTICSEARCH && !s.bool("enabled", true)) {
+            // Online query APIs require the canonical JSONL archive.
+            throw search.error("backend", "elasticsearch requires structured storage");
+        }
         Path outputDirectory = resolve(base, o.string("directory", "./logs"));
         if (Files.exists(outputDirectory) && !Files.isDirectory(outputDirectory)) throw o.error("directory", "not a directory");
         Output output = new Output(outputDirectory, new Text(t.bool("combined", true), t.bool("splitByLevel", true),
                 t.integer("rotateSizeMiB", 100, 1, 16384), t.integer("retentionDays", 7, 1, 3650)),
                 new Structured(s.bool("enabled", true), s.integer("rotateSizeMiB", 100, 1, 16384), s.integer("maxDiskMiB", 2048, 1, 1_048_576)),
-                new Console(con.bool("processed", false)));
+                new Console(con.bool("processed", false)), searchConfig);
         Settings w = new Settings(root.map("web"), "web");
         w.only("enabled", "host", "port", "recentRecords", "clientQueueSize", "maxClients", "maxQueryLimit");
         String host = w.string("host", "127.0.0.1");

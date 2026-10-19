@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Properties;
 
 /** The index contains query fields and byte locations; JSONL remains authoritative. */
-public final class SqliteIndex implements AutoCloseable {
+public final class SqliteIndex implements SearchIndex {
     private final Path directory;
     private final Path indexFile;
     private final Connection writer;
@@ -114,15 +114,15 @@ public final class SqliteIndex implements AutoCloseable {
     private <T> RecordRepository.Page<T> readPage(String sql, List<Object> parameters, int limit, long after, Class<T> type) {
         try (Connection connection = connect(true); PreparedStatement s = connection.prepareStatement(sql)) {
             for (int i = 0; i < parameters.size(); i++) s.setObject(i + 1, parameters.get(i));
-            List<T> rows = new ArrayList<>(); long next = after; boolean more = false;
+            List<SegmentReader.Location> locations = new ArrayList<>(); long next = after; boolean more = false;
             try (ResultSet result = s.executeQuery()) {
                 while (result.next()) {
-                    if (rows.size() == limit) { more = true; break; }
-                    T value = row(result.getString("segment"), result.getLong("offset"), result.getInt("length"), type);
-                    rows.add(value); next = result.getLong("seq");
+                    if (locations.size() == limit) { more = true; break; }
+                    locations.add(new SegmentReader.Location(result.getString("segment"), result.getLong("offset"), result.getInt("length")));
+                    next = result.getLong("seq");
                 }
             }
-            return new RecordRepository.Page<>(rows, next, more);
+            return new RecordRepository.Page<>(SegmentReader.readMany(directory, locations, type), next, more);
         } catch (SQLException | IOException e) { throw new StorageException("query failed", e); }
     }
     public RecordRepository.Page<TelemetryEvent> telemetry(TelemetryQuery query) {
@@ -168,14 +168,7 @@ public final class SqliteIndex implements AutoCloseable {
         catch (SQLException e) { throw new StorageException("watermark query failed", e); }
     }
     private <T> T row(String segment, long offset, int length, Class<T> type) throws IOException {
-        Path path = directory.resolve(segment).normalize();
-        if (!path.getParent().equals(directory) || !segment.matches("[a-z]+-[0-9]+\\.jsonl") || offset < 0 || length < 0 || length > JsonCodec.MAX_ROW_BYTES)
-            throw new IOException("unsafe index location");
-        ByteBuffer buffer = ByteBuffer.allocate(length);
-        try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
-            while (buffer.hasRemaining()) { int n = channel.read(buffer, offset + buffer.position()); if (n < 0) throw new IOException("incomplete indexed row"); }
-        }
-        return JsonCodec.read(buffer.array(), type);
+        return SegmentReader.read(directory, segment, offset, length, type);
     }
     public void flush() throws SQLException { if (writer != null) try (Statement s = writer.createStatement()) { s.execute("PRAGMA wal_checkpoint(PASSIVE)"); } }
     @Override public void close() throws SQLException { if (writer != null) writer.close(); }

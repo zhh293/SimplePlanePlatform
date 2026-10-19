@@ -311,6 +311,8 @@ logs/order-demo/<session-id>/
 
 JSONL 是可重建依据，SQLite 是查询索引，保存等级、时间、Logger、关联字段、segment 与 offset。单写入线程追加文件，再更新索引，再广播。批量缓冲时网页记录不代表已 fsync，不承诺崩溃零丢失。
 
+在线查询索引支持策略选择：默认 SQLite，亦可配置 Elasticsearch。两者只替换查询索引，不替换 JSONL 事实归档、责任链/RepeatFold、文本输出或 SSE；索引文档保存查询字段和 JSONL 字节位置，命中后读取完整记录。离线 History Viewer 始终从 JSONL 重建私有 SQLite 索引，因此不依赖运行时 Elasticsearch。SQLite 默认模式保留原有行为。
+
 多个文件写入不构成原子事务，使用 recordId 对齐。结构化成功而文本失败时标记降级；查看器可重建索引、忽略末尾不完整 JSON 行、重新导出文本。
 
 按日期/大小滚动，按期限和磁盘上限清理关闭的 segment，并清理索引引用，不删除当前写入文件。汇总明细过期时显示“明细已过期”。磁盘满解除控制台接管并报告，不在内存无限等待。
