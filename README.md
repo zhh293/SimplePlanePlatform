@@ -757,7 +757,7 @@ docker compose logs -f          # 查看日志
 docker compose down             # 停止
 ```
 
-容器模式下，Proxy Remote 与 LogLens Agent 在同一个 Java 17 JVM 中运行；LogLens Web 保持 loopback 绑定，通过 relay 发布到宿主机 `127.0.0.1:9527`，历史数据保存在 `loglens-data/`。proxy-local 通过 compose 服务名连接 Proxy Remote，宿主机代理仅监听 `127.0.0.1:1080`。默认不向公网发布服务端 9090；确需外部客户端连接时使用 `docker-compose.remote-public.yml` 覆盖配置，并限制防火墙来源。面板远程访问使用 SSH 隧道。完整说明见 [Docker 部署说明](docs/docker部署说明.md)。
+容器模式下，Proxy Remote 与 LogLens Agent 在同一个 Java 17 JVM 中运行；LogLens Web 保持 loopback 绑定，通过 relay 发布到宿主机 `127.0.0.1:9527`，历史数据保存在 `loglens-data/`。在线搜索默认 SQLite；切换 Elasticsearch 时编辑挂载的 Agent YAML，配置容器可达的 endpoint，API key 可由宿主机环境变量透传。Compose 不默认启动或公开 ES 服务。proxy-local 通过 compose 服务名连接 Proxy Remote，宿主机代理仅监听 `127.0.0.1:1080`。默认不向公网发布服务端 9090；确需外部客户端连接时使用 `docker-compose.remote-public.yml` 覆盖配置，并限制防火墙来源。面板远程访问使用 SSH 隧道。完整说明见 [Docker 部署说明](docs/docker部署说明.md)。
 
 ## 开启加密
 
