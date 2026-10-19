@@ -25,6 +25,17 @@ docker compose logs -f proxy-remote
 
 首次构建会编译 Java 8 目标字节码的代理模块和 Java 17 LogLens Agent；最终 Proxy Remote 镜像使用 Java 17 运行时。Agent 配置在 `docker/loglens-proxyremote.yaml`，日志和遥测历史持久化到 `./loglens-data/`。`docker/remote.yml` 和 `docker/proxy.yml` 中的加密算法与密钥必须一致；部署前将示例密钥替换为强随机值，不要把实际密钥提交到版本库。
 
+LogLens 在线搜索默认使用 SQLite。若要使用 Elasticsearch，编辑挂载的 `docker/loglens-proxyremote.yaml`，将 `output.search.backend` 改为 `elasticsearch`，并把 `endpoint` 设置为 **Proxy Remote 容器可访问**的 HTTP(S) 地址；同一 Docker 网络中的服务应使用服务 DNS 名，不能直接使用宿主机上的 `127.0.0.1`。Compose 不会默认启动 Elasticsearch，也不会公开 ES 端口。需要 API key 时，在启动 Compose 的 shell 中设置 `LOG_LENS_ELASTICSEARCH_API_KEY`；Compose 只透传该变量，密钥不写入配置文件或仓库。
+
+```bash
+read -rsp 'Elasticsearch API key: ' LOG_LENS_ELASTICSEARCH_API_KEY; echo
+export LOG_LENS_ELASTICSEARCH_API_KEY
+docker compose up -d --build proxy-remote loglens-panel-relay
+unset LOG_LENS_ELASTICSEARCH_API_KEY
+```
+
+不启用 API key 时无需设置该环境变量。切换到 Elasticsearch 只改变在线搜索索引；会话 JSONL 仍保存在 `./loglens-data/`，历史 Viewer/恢复仍使用本地 SQLite。ES 不可达或鉴权失败会使 LogLens 存储报告不健康，启用前应确认容器网络与集群凭据。
+
 本机面板地址：<http://127.0.0.1:9527/>。远程服务器上部署时，在管理工作站建立 SSH 隧道：
 
 ```bash
@@ -58,7 +69,7 @@ docker compose -f docker-compose.yml -f docker-compose.remote-public.yml up -d -
 
 - `docker/remote.yml`：Proxy Remote 的监听和加密配置。`cipherKey` 示例值仅供开发，生产必须替换。
 - `docker/proxy.yml`：proxy-local 连接服务端的配置；同 compose 网络通过服务名 `proxy-remote` 访问。
-- `docker/loglens-proxyremote.yaml`：Agent 的日志过滤、脱敏、遥测上限、loopback Web 端口及存储保留策略。监控默认启用。
+- `docker/loglens-proxyremote.yaml`：Agent 的日志过滤、脱敏、遥测上限、loopback Web 端口、存储保留策略和在线搜索后端；搜索默认 SQLite。
 - `loglens-data/`：LogLens 会话、JSONL 和 SQLite 历史数据；备份时复制该目录。容器使用 UID 10001 写入数据，Linux 主机可按需将目录属主设置为 UID/GID 10001。
 - `ladder.pem`、`.build/`、Maven/Rust/Gradle 缓存、运行日志和 LogLens 数据均在 `.dockerignore` 中排除，避免把私钥、构建缓存或运行数据发送到 Docker 构建上下文。
 

@@ -31,6 +31,9 @@ services:
       - ./docker/remote.yml:/app/config/remote.yml:ro
       - ./docker/loglens-proxyremote.yaml:/app/config/loglens.yaml:ro
       - ./loglens-data:/var/lib/loglens
+    # 可选 Elasticsearch API key：只透传宿主机同名环境变量，不写入 Compose/YAML。
+    environment:
+      LOG_LENS_ELASTICSEARCH_API_KEY:
     networks:
       - proxy-net
     healthcheck:

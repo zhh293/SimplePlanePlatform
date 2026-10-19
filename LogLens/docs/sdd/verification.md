@@ -462,3 +462,9 @@ ES 查询映射使用 wildcard 字段复现 SQLite `instr` 字面子串语义；
 `ElasticsearchIndexTest` 覆盖 captured 与 FINAL 合并成 2 项 Bulk、200 响应中的逐项部分失败不广播 FINAL、写入失败状态和查询可见性；`SegmentReaderTest` 覆盖跨 segment hydration 顺序和不安全路径拒绝。最新代码下，Java 21.0.6 与 Corretto 17.0.14 各自执行 `scripts/build.ps1 -MavenArguments @('-pl','loglens-agent','-am','test')`，12 个 reactor 模块均成功，各 95 项测试通过，零失败/错误/跳过；两次全量执行均覆盖 SQLite 的 100,000 行历史恢复与分页。Java 21/17 定向执行 `ElasticsearchIndexTest,SegmentReaderTest` 各 6 项通过。报告见模块 `target/surefire-reports/`，包括 [ElasticsearchIndexTest.xml](../../loglens-storage/target/surefire-reports/TEST-io.loglens.storage.ElasticsearchIndexTest.xml) 和 [SegmentReaderTest.xml](../../loglens-storage/target/surefire-reports/TEST-io.loglens.storage.SegmentReaderTest.xml)。
 
 验证仍仅使用本机 HTTP mock；未在真实 Elasticsearch 上做版本兼容、吞吐、延迟或 SQLite 对比基准。因此这次确认的是批次边界、确认/失败顺序和回归正确性，不代表生产性能提升；部署前仍应使用目标集群和实际流量做基准。共享 ES 索引与 n-gram 未引入，因其增加跨会话清理复杂度或索引磁盘/写入成本，当前缺乏基准证据证明收益大于代价。
+
+## Docker Elasticsearch 配置（2026-10-19）
+
+Docker Agent YAML 增加显式 `output.search` 配置，默认仍为 SQLite；Compose 仅透传可选的 `LOG_LENS_ELASTICSEARCH_API_KEY`，没有增加 Elasticsearch 服务或公网端口。SnakeYAML 2.2 已解析 `docker-compose.yml`、公网覆盖文件和三个挂载 YAML；Corretto 17.0.14 执行 `scripts/build.ps1 -MavenArguments @('-pl','loglens-config','-am','test')`，API 3 项与 ConfigLoader 13 项均通过。Docker 部署说明写明切换 backend、配置容器可达 endpoint、可选设置 API key 以及重启服务；root README 也补充了入口说明。Compose 未设置 API key 时不注入该环境变量，启用 SQLite 时不会连接 ES。
+
+当前机器未安装 Docker/Compose CLI，未执行 Compose 插值校验、镜像构建或容器启动；T33 保持部分完成，不能据此宣称 Docker 镜像已用 ES 部署验证。

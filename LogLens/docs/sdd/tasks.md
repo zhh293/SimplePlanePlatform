@@ -54,3 +54,4 @@
 | T30 | [x] | T29 | HTTP mock 集成验证 SQLite 回归、ES 查询与失败、JSONL hydration、SSE/聚合契约；Java 17/21 均通过；真实 ES 集群和性能对比未纳入本任务证据 | R36–R39 |
 | T31 | [x] | T30 | 对齐 SQLite 字面子串语义；ES 按 seq index sort 并使用固定水位 keyset 分页；稀疏 source 序号直接检索真实 captured 行；Java 17/21 测试通过，未运行真实 ES | R40 |
 | T32 | [x] | T31 | ES bounded Bulk（最多 100 项、8 MiB）在 FINAL/telemetry SSE 前提交并检查逐项失败；SQLite 与 ES page hydration 按 segment 复用单页 FileChannel；确定性文档 ID 支持安全重放；Java 17/21 全量回归通过 | R41,R42 |
+| T33 | [~] | T32,T26 | Docker Agent YAML 保持 SQLite 默认并提供 Elasticsearch endpoint/index 配置；Compose 仅透传可选 API key 环境变量；部署说明已更新；Compose/容器验收受当前环境无 Docker CLI 限制 | R35,R43 |

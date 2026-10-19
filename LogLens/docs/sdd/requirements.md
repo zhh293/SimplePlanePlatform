@@ -65,3 +65,4 @@
 | R40 | SQLite 与 Elasticsearch 的文本/地址子串过滤保持大小写敏感的字面匹配；分页按唯一递增序号做有界 keyset，不使用深偏移；给定 through 水位时后续写入不得改变该次补拉范围；稀疏 capture 序号不得因区间跨度导致漏查或无界枚举 | 搜索正确性强化；R30,R36,R37 |
 | R41 | ES 索引写入可合并为有界 Bulk 请求；处理 FINAL 或 telemetry 时，写入批次须在对应 SSE 广播前成功可见；bulk 部分失败不能被当作成功，重试必须幂等；SQLite 写入顺序与行为不变 | ES 写入吞吐优化；R37,R38 |
 | R42 | 搜索结果从 JSONL 指针恢复时，同一 segment 的一页结果复用文件句柄，返回顺序、DTO、错误行为和保留时可删除文件的语义不变 | 查询 hydration 优化；R13,R36,R37 |
+| R43 | Docker Agent 配置显式保留 SQLite 默认搜索后端，并允许运维切换到 Elasticsearch；ES endpoint 必须从容器网络可达，可选 API key 只通过宿主机环境变量传入，不随镜像/配置文件提交；默认编排不得额外启动或公开 Elasticsearch | Docker 搜索后端配置；R35,R36,R39 |

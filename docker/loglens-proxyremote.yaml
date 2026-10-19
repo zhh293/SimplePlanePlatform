@@ -61,6 +61,14 @@ output:
     enabled: true
     rotateSizeMiB: 100
     maxDiskMiB: 4096
+  search:
+    # 默认继续使用本地 SQLite。切换 Elasticsearch 时还需配置容器可达的 endpoint。
+    backend: sqlite
+    endpoint: http://127.0.0.1:9200
+    indexPrefix: loglens
+    apiKeyEnv: LOG_LENS_ELASTICSEARCH_API_KEY
+    connectTimeoutMillis: 1000
+    requestTimeoutMillis: 3000
   console:
     processed: false
 proxyRemote:

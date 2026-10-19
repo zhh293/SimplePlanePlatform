@@ -124,6 +124,7 @@ UI 增加“连接”页：物理连接列表、会话明细、目标和状态�
 | D11 | Agent 适配目标 Java 17/21；不承诺 Java 8 运行时兼容 | LogLens 全模块以 Java 17 API 编译；代理模块字节码目标为 Java 8 不代表 Agent 可运行于 Java 8 |
 | D12 | Docker Remote 镜像在 Java 17+ 中以 premain 启动 LogLens；Web 保持容器 loopback，由共享网络命名空间 relay 转发到宿主机 loopback；9090 默认仅 compose 内网可见，外部接入通过单独 compose override 显式启用 | 容器网卡发布不能直接访问应用 loopback；保持 R32 Web 安全契约，同时让 SSH 隧道可以访问；避免默认暴露代理端口 |
 | D13 | 将在线结构化索引抽象为 SearchIndex 策略，默认 `sqlite`，可选 `elasticsearch`；JSONL 仍是归档事实源，SQLite 历史 Viewer/恢复路径仍固定使用私有 SQLite 重建索引；现有存储写入与 SSE 顺序对 SQLite 保持不变 | 搜索引擎仅替换在线查询索引，避免破坏离线会话与历史恢复；通过接口隔离后端和配置选择，不改责任链/折叠/SSE 语义 |
+| D15 | Docker Agent YAML 显式保留 SQLite 默认值并提供 Elasticsearch endpoint/index 配置；Compose 仅透传可选 API key 环境变量，不在默认编排中启动 Elasticsearch | 支持容器部署切换搜索索引，同时不增加默认资源开销/网络暴露面，也不把凭据写入仓库 |
 
 ### 可选搜索索引（D13）
 
@@ -138,3 +139,7 @@ UI 增加“连接”页：物理连接列表、会话明细、目标和状态�
 ES adapter 将 captured 索引动作先放入有界内存批次（最多 100 项且最多 8 MiB）；单条待提交动作或体积超限时使用单文档 PUT，避免为单文档构造 Bulk 包。processed FINAL 动作与待提交的 captured/source-group 动作通过一次 `_bulk?refresh=wait_for` 提交，并且仅在 ES 返回所有 item 成功后才允许 `SessionStorage` 继续文本/SSE；telemetry 也在其 typed SSE 广播前提交。失败、item 部分失败或响应未确认完整批次时保留失败批次、将写入失败反馈给既有 storage health/complete 状态；Bulk 使用确定性 `_id`，重放部分已成功的 index 动作是幂等的。查询入口会先提交 pending 批次，维持 read-after-write。单消费者仍串行化写入，不创建无界后台队列或异步 fire-and-forget。
 
 SQLite 与 ES 的分页 hydration 共用 `SegmentReader.readMany`：先按 segment 分组，一页内每个 segment 只打开一个只读 FileChannel，按原始命中顺序读取指定字节范围后立即关闭，不缓存长期文件句柄，避免 Windows retention 删除被锁文件。共享 ES 索引、n-gram 和自动压缩暂不采用：前者改变会话隔离/清理边界，n-gram 扩大磁盘与写入成本，压缩对当前较小的投影文档未证明收益；待真实集群基准后再决定。
+
+### Docker 中的可选 Elasticsearch（D15）
+
+容器挂载的 Agent YAML 明确配置 `output.search`，默认 `backend: sqlite`；切换 ES 时运维需提供容器可达的 endpoint。Compose 不捆绑或自动公开 Elasticsearch，避免给默认 Docker 部署增加 JVM、shard 与持久化卷运维成本。API key 仅从宿主机 `LOG_LENS_ELASTICSEARCH_API_KEY` 环境变量透传到 Agent 容器；配置只保存环境变量名，不保存密钥。ES/JSONL/SQLite 的归档、历史 Viewer 与失败语义不因 Docker 配置改变。

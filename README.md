@@ -133,7 +133,7 @@ ssh -i <key.pem> -N -L 9527:127.0.0.1:9527 ec2-user@<server>
 
 详细能力、配置、systemd 部署与数据边界见 [LogLens 使用说明](LogLens/README.md)、[Proxy Remote 监控部署指南](LogLens/docs/proxy-remote-monitoring.md) 和 [脱敏部署验证记录](LogLens/docs/sdd/verification.md#proxy-remote-实际-systemd-部署与本地面板验收2026-10-18)。LogLens 的基础 SDD 审计仍有开放项，不能把专项连接监控验收等同为整个子项目全部验收完成。
 
-Docker 部署也已集成 LogLens：Proxy Remote 镜像构建并注入 Agent，运行时统一使用 Java 17；JSONL/SQLite 历史写入 `loglens-data/`。面板仍绑定容器 loopback，由 relay 仅发布到宿主机 `127.0.0.1:9527`，远程查看继续使用上面的 SSH 隧道。详细端口边界、配置和可选的远程 9090 发布见 [Docker 部署说明](docs/docker部署说明.md)。
+Docker 部署也已集成 LogLens：Proxy Remote 镜像构建并注入 Agent，运行时统一使用 Java 17；JSONL/SQLite 历史写入 `loglens-data/`。在线搜索默认 SQLite，也可在挂载的 Agent YAML 中切换 Elasticsearch；Compose 可选透传 API key 环境变量，不默认启动或公开 ES 服务。面板仍绑定容器 loopback，由 relay 仅发布到宿主机 `127.0.0.1:9527`，远程查看继续使用上面的 SSH 隧道。详细端口边界、搜索配置和可选的远程 9090 发布见 [Docker 部署说明](docs/docker部署说明.md)。
 
 ## 快速开始
 
