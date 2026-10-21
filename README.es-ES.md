@@ -4,6 +4,19 @@
 
 Marco de proxy de túneles encriptados de alto rendimiento diseñado bajo el concepto de microkernel de Dubbo. Soporta los modos de proxy SOCKS5/HTTP CONNECT y el modo de proxy transparente global TUN, y proporciona un cliente para Android basado en el sistema `VpnService`. La cadena completa de SPI es enchufable, y la tolerancia a fallos en clúster, el balanceo de carga, los algoritmos de cifrado y las implementaciones de la capa de transporte pueden extenderse y reemplazarse de forma independiente.
 
+## Escritorio: nodos y certificados
+
+Los instaladores de Windows y macOS incluyen Java. Para conectarse se necesitan la dirección, el puerto, el transporte, el cifrado y la clave del servidor.
+
+1. En la configuración del proxy, añade el nodo y sus datos de conexión.
+2. Para HTTP/3, deja vacío el nombre del servidor del certificado para usar el Host del nodo. Si te conectas por IP pero el certificado corresponde a un dominio, escribe ese dominio.
+3. Importa el certificado público PEM proporcionado por el administrador (`.pem`, `.crt` o `.cer`) si el nodo usa un certificado autofirmado o una CA privada. La aplicación guarda una copia; no necesita la clave privada. Puedes quitar el certificado personalizado para usar la confianza del sistema.
+4. Selecciona el nodo, guarda y comprueba que el estado de ejecución sea disponible. El cambio cierra las conexiones del nodo anterior. Para añadir o quitar direcciones en modo TUN, desconecta antes de guardar.
+
+Estas opciones requieren un instalador que incluya la nueva función. Si modificas los archivos de configuración fuera de la aplicación, ciérrala por completo y vuelve a abrirla antes de editar: una página antigua puede sobrescribir los cambios. Consulta la [guía de certificados](desktop/docs/node-certificates.md) y la [guía de escritorio](docs/桌面端使用说明与故障排查.md), en chino.
+
+HTTP/3 permite guardar varios nodos y elegir uno manualmente, con una conexión QUIC por nodo seleccionado. No se conecta de antemano a los nodos de reserva ni cambia automáticamente si falla el seleccionado. Véase el [diseño P1/P2](docs/design/http3-node-selection-p1-p2.md).
+
 ## Posición del Proyecto
 
 Aplica la arquitectura clásica de microkernel + plugins de Dubbo al escenario de proxies de red. Soporta tres formas de uso:
@@ -90,6 +103,7 @@ SimplePlanePlatform/
 ├── proxy-common            SPI 内核：接口定义、ExtensionLoader、注解体系、数据模型
 ├── proxy-exchange          交换层：请求-响应语义（RequestId + Future 映射）
 ├── proxy-transport-netty   传输层：Netty HTTP/2 多路复用、编解码、心跳
+├── proxy-transport-http3   Transporte QUIC/TLS, flujos HTTP/3 y una conexión por nodo activo
 ├── proxy-crypto            加密层：4 种可插拔 AEAD 加密实现
 ├── proxy-cluster           集群层：4 种容错策略 + 4 种负载均衡 + 6 个 Filter
 ├── proxy-local             本地客户端：SOCKS5/HTTP CONNECT 双协议、路由分流、系统代理
@@ -396,9 +410,9 @@ route delete 198.18.0.0
 
 ## Modo de Uso 3: Cliente Android
 
-> ⚠️ **No disponible aún**：El cliente Android aún está en depuración interna. En esta fase, no se recomienda su uso; utiliza el modo Proxy o el modo TUN mencionados arriba. El siguiente contenido es solo un registro de desarrollo.
+El cliente Android admite nodos HTTP/2 y HTTP/3 e incorpora correcciones de conectividad, concurrencia y aislamiento de flujos. Hay pruebas en un dispositivo real de la versión anterior a la integración, `0.1.2-http3-fix`; el estado del código integrado y sus límites están documentados en el [registro de conectividad](docs/android-device-connectivity-20261021.md), en chino. Usa un APK compatible con el transporte elegido: cambiar la dirección en un APK antiguo que solo admite HTTP/2 no permite conectar con un servidor HTTP/3.
 
-El cliente Android lleva todo el sistema de túneles encriptados al dispositivo móvil móvil：se basa en `VpnService` del sistema para crear TUN, todo el tráfico de la aplicación entra en la pila user-space a través de la interf virtual, y la superficie de datos en Rust（`plane-core`, compilada como `libplane_core.so`） completa la resolución de FakeDNS, la tomaevaluevalu判断 de enrutamiento de dominios y el túnel encriptado con ChaCha20, que luego se reenvía a `proxy-remote` a través del túnel HTTP/2. Comparte el mismo protocolo `ProxyMessage` y formato de cifrado ChaCha20-Poly1305 con el escritorio/de escritorio, logrando total interoperabilidad entre ambos extremos.
+El cliente usa `VpnService` y el núcleo Rust `plane-core` para TUN, FakeDNS, enrutamiento y cifrado, y conecta con `proxy-remote` mediante HTTP/2 o HTTP/3. Guarda el transporte, el nombre TLS y el certificado de cada nodo. Ambos extremos deben usar el mismo cifrado; las claves v2 requieren exactamente 32 bytes UTF-8. El plano de datos TUN procesa IPv4; la dirección del servidor proxy puede ser IPv4 o IPv6.
 
 ### Arquitectura
 
@@ -696,7 +710,7 @@ action = "direct"
 | cluster | failover | Estrategia de tolerancia a fallos en clúster |
 | loadBalance | roundrobin | Estrategia de balanceo de carga |
 | timeoutMs | 30000 | Timeout de petición/petición（ms） |
-| connectionsPerNode | 1 | 数 conexiones HTTP/2 por nodo |
+| connectionsPerNode | 1 | Conexiones HTTP/2 por nodo; la selección manual HTTP/3 mantiene una conexión |
 | httpProxyEnabled | true | Si se admite/soporta HTTP CONNECT |
 | route.defaultRoute | direct | Ruta por defecto（proxy/direct） |
 | route.proxyList | [] | Lista de dominios para proxy（admite comodines） |
@@ -792,6 +806,8 @@ curl --max-time 10 -I https://www.google.com
 ```
 
 ## Preguntas Frecuentes
+
+**`CERTIFICATE_VERIFY_FAILED` al cambiar de nodo HTTP/3** — Comprueba el nombre TLS y el certificado de confianza de ese nodo. No reutilices el nombre ni el certificado autofirmado de otro servidor. En la nueva interfaz de escritorio puedes importar el certificado público en la tarjeta del nodo y guardar. Si editaste los archivos fuera de la aplicación, ciérrala por completo y vuelve a abrirla para evitar que una página antigua sobrescriba los cambios.
 
 **Error `Address already in use` al iniciar** — El puerto está ocupado, ejecuta `kill $(lsof -ti :1080)` y reintenta.
 

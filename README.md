@@ -4,6 +4,17 @@
 
 加密层新增 `chacha20-poly1305-v2` 与 `aes-gcm-v2`：使用标准 AEAD、认证记录头、HKDF 派生密钥及独立 stream 状态。两端必须选择同名套件，v2 的共享密钥须恰为 32 字节；保留原有 `Cipher` SPI 和传输分帧。旧 `chacha20` 存在密钥流重叠风险，仅为迁移保留兼容实现，不能把它视为标准 ChaCha20-Poly1305。配置、迁移边界和测试方法见 [加密 v2 规范](docs/design/crypto-v2.md) 与 [验证报告](docs/design/crypto-v2-validation.md)。
 
+## 桌面端：添加节点与证书
+
+Windows 与 macOS 安装包内含 Java 运行时。安装后仍需填写与服务端一致的地址、端口、协议、加密方式和密钥；使用自签名证书的节点还需要导入该节点的公开证书。
+
+1. 打开「代理配置」，添加节点并填写连接信息。
+2. HTTP/3 的「证书服务器名称」留空时使用当前节点 Host；证书签给域名、连接地址却是 IP 时，填写该域名。
+3. 点击「导入证书」，选择管理员提供的 PEM 格式公开证书（`.pem`、`.crt` 或 `.cer`）。证书会复制到应用配置目录；使用系统信任证书时可清除自定义证书。
+4. 选择「使用此节点」并保存，确认运行时节点可用，再测试网页。切换会关闭旧节点的连接；TUN 模式增删节点地址需先断开再保存。
+
+上述入口需要安装包含该功能的新构建，旧安装包不会因拉取源码自动更新。若从文件侧修改配置，应完全退出并重新打开桌面应用后再编辑，避免旧页面保存时覆盖修改。完整操作见 [节点证书说明](desktop/docs/node-certificates.md) 和 [桌面故障排查](docs/桌面端使用说明与故障排查.md)。
+
 ## HTTP/3 / QUIC 传输
 
 项目支持基于 Netty QUIC 的 HTTP/3 传输模式。配置远程节点时将 `transport` 设置为 `http3`，即可使用 UDP/QUIC 建立加密隧道；每个逻辑 `streamId` 映射到独立的 HTTP/3 Stream，以避免 TCP 单连接级别的队头阻塞。
@@ -105,6 +116,7 @@ SimplePlanePlatform/
 ├── proxy-common            SPI 内核：接口定义、ExtensionLoader、注解体系、数据模型
 ├── proxy-exchange          交换层：请求-响应语义（RequestId + Future 映射）
 ├── proxy-transport-netty   传输层：Netty HTTP/2 多路复用、编解码、心跳
+├── proxy-transport-http3   传输层：QUIC/TLS、HTTP/3 Stream、每节点单连接
 ├── proxy-crypto            加密层：版本化 AEAD 套件及旧协议兼容实现
 ├── proxy-cluster           集群层：4 种容错策略 + 4 种负载均衡 + 6 个 Filter
 ├── proxy-local             本地客户端：SOCKS5/HTTP CONNECT 双协议、路由分流、系统代理
@@ -430,9 +442,9 @@ route delete 198.18.0.0
 
 ## 使用方式三：Android 客户端
 
-> ⚠️ **暂未开放**：Android 客户端仍在内部调试中，当前阶段请勿使用，请使用上面的代理模式或 TUN 模式。以下内容仅作开发记录。
+Android 客户端现支持 HTTP/2 与 HTTP/3 节点，已合入联网、并发连接和流隔离修复。合并前的 `0.1.2-http3-fix` 已有真机联网记录；最新合并版本的构建、互通测试与尚未覆盖的场景见 [Android 联网修复记录](docs/android-device-connectivity-20261021.md)。请使用匹配当前协议的新 APK，旧 HTTP/2 APK 仅修改地址不能连接 HTTP/3 节点。
 
-Android 客户端把整套加密隧道带到手机端：基于系统 `VpnService` 建立 TUN，应用全部流量经虚拟网卡进入用户态栈，由 Rust 数据面（`plane-core`，编译为 `libplane_core.so`）完成 FakeDNS 解析、域名路由判断与 ChaCha20 加密，再通过 HTTP/2 隧道转发到 proxy-remote。与桌面端共用同一套 ProxyMessage 协议与 ChaCha20-Poly1305 加密格式，两端完全互通。
+Android 客户端基于系统 `VpnService` 建立 TUN，由 Rust 数据面（`plane-core`，编译为 `libplane_core.so`）完成 FakeDNS、路由与加密，再通过所选 HTTP/2 或 HTTP/3 隧道连接 `proxy-remote`。节点协议、服务器名称和证书可随配置保存；两端需选择相同加密套件，v2 密钥必须为 32 个 UTF-8 字节。当前 TUN 数据面处理 IPv4，代理服务器地址支持 IPv4/IPv6。
 
 ### 架构
 
@@ -726,11 +738,15 @@ action = "direct"
 | remoteServers[].port | 9090 | 远程服务端端口 |
 | remoteServers[].cipher | none | 加密算法，需与服务端一致 |
 | remoteServers[].cipherKey | — | 加密密钥，需与服务端一致 |
-| remoteServers[].ssl | false | 是否启用 TLS |
+| remoteServers[].ssl | false | 兼容字段；HTTP/3 始终通过 QUIC/TLS 建立连接 |
+| remoteServers[].transport | — | `http2` 或 `http3`，须与服务端一致；HTTP/3 使用 QUIC/TLS 和 UDP |
+| remoteServers[].http3.serverName | — | 证书对应的服务器名称；桌面端留空时按节点 Host 生成 |
+| remoteServers[].http3.caFile | — | HTTP/3 信任证书路径或 classpath 资源；自签名节点需匹配该节点的证书 |
+| nodeSelection.selectedNodeId | — | HTTP/3 手动选择的节点 ID；不可用时不会自动回退 |
 | cluster | failover | 集群容错策略 |
 | loadBalance | roundrobin | 负载均衡策略 |
 | timeoutMs | 30000 | 请求超时（ms） |
-| connectionsPerNode | 1 | 每节点 HTTP/2 连接数 |
+| connectionsPerNode | 1 | 每节点 HTTP/2 连接数；HTTP/3 手动节点保持一条连接 |
 | httpProxyEnabled | true | 是否支持 HTTP CONNECT |
 | route.defaultRoute | direct | 默认路由（proxy/direct） |
 | route.proxyList | [] | 走代理的域名列表（支持通配符） |
@@ -826,6 +842,8 @@ curl --max-time 10 -I https://www.google.com
 ```
 
 ## 常见问题
+
+**切换 HTTP/3 节点报 `CERTIFICATE_VERIFY_FAILED`** — 核对该节点的证书服务器名称与信任证书，不要直接复用另一台服务器的名称或独立自签名证书。新版桌面端可在节点卡片导入公开证书；修改后保存并查看运行时状态。如果从文件侧修改，请完全退出并重新打开桌面应用，避免旧页面保存覆盖文件修改。
 
 **启动报 `Address already in use`** — 端口被占用，`kill $(lsof -ti :1080)` 后重试。
 
