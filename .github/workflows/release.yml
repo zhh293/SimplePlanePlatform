@@ -13,6 +13,11 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'desktop/**'
+      - 'proxy-*/**'
+      - 'tun-adapter/**'
+      - 'pom.xml'
 
 permissions:
   contents: write

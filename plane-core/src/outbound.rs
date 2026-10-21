@@ -37,8 +37,10 @@
 //!   仅当 url 带 `cipher=chacha20`（且 `cipherKey=...`）时才与本模块的 ChaCha20-Poly1305
 //!   二进制兼容。联调时 proxy-remote 必须显式配 ChaCha20。
 
+use std::net::IpAddr;
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+use std::time::Duration;
 
 use bytes::Bytes;
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -46,11 +48,13 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use crate::crypto::Cipher;
 use crate::error::{CoreError, Result};
 use crate::proxy_proto::{self, MessageType, ProxyMessage};
+use crate::stats::CoreStats;
 
 /// HTTP/2 单条 stream 初始流控窗口（字节），对齐 Java `initialWindowSize(1024*1024)`。
 pub const H2_STREAM_WINDOW: u32 = 1024 * 1024;
 /// HTTP/2 连接级流控窗口目标（字节，~16MB），对齐 Java「increment 16*1024*1024-65535 后总量」。
 pub const H2_CONNECTION_WINDOW: u32 = 16 * 1024 * 1024;
+const PROXY_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// socket 保护回调抽象 —— 对应 Java/Kotlin 的 `VpnService.protect(fd)`。
 ///
@@ -61,6 +65,19 @@ pub const H2_CONNECTION_WINDOW: u32 = 16 * 1024 * 1024;
 pub trait SocketProtector: Send + Sync {
     /// 保护给定 fd 的 socket，使其流量绕过 VPN 隧道。返回 `false` 表示保护失败。
     fn protect(&self, fd: i32) -> bool;
+
+    /// Resolve through a network outside the VPN when the platform can provide
+    /// one. Returning None lets callers fall back to the normal system resolver.
+    fn resolve_ip(&self, _host: &str) -> Option<IpAddr> {
+        None
+    }
+
+    /// Whether callers may use the process-wide resolver when protected DNS
+    /// returns no address. Android must return false because its system resolver
+    /// is routed into the VPN and can recursively re-enter the TUN interface.
+    fn allow_unprotected_dns_fallback(&self) -> bool {
+        true
+    }
 }
 
 /// 一个永远成功的 no-op 保护器（仅用于单测/本机直连场景）。
@@ -215,7 +232,7 @@ impl InboundReassembler {
 }
 
 /// 单调递增的 requestId 生成器（对齐 Java 侧用全局自增 id 标识一次代理请求）。
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct RequestIdGen {
     next: AtomicI64,
 }
@@ -234,10 +251,62 @@ impl RequestIdGen {
     }
 }
 
+impl Default for RequestIdGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+const STREAM_SEQUENCE_MASK: u64 = 0x0000_FFFF_FFFF_FFFF;
+
+/// Generates IDs with the same 16-bit client / 48-bit sequence layout as the
+/// Java `StreamIdFactory`, keeping concurrent clients from sharing sessions.
+#[derive(Debug)]
+pub struct StreamIdGen {
+    client_id: u16,
+    next: AtomicI64,
+}
+
+impl StreamIdGen {
+    pub fn new() -> Self {
+        let mut client_id = (rand::random::<u32>() & 0xFFFF) as u16;
+        if client_id == 0 {
+            client_id = 1;
+        }
+        Self::with_client_id(client_id)
+    }
+
+    fn with_client_id(client_id: u16) -> Self {
+        assert_ne!(client_id, 0, "stream client ID must be non-zero");
+        Self {
+            client_id,
+            next: AtomicI64::new(0),
+        }
+    }
+
+    pub fn next_id(&self) -> i64 {
+        let sequence =
+            (self.next.fetch_add(1, Ordering::Relaxed) as u64 + 1) & STREAM_SEQUENCE_MASK;
+        (((self.client_id as u64) << 48) | sequence) as i64
+    }
+}
+
+impl Default for StreamIdGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub(crate) fn next_stream_id() -> i64 {
+    static STREAM_IDS: OnceLock<StreamIdGen> = OnceLock::new();
+    STREAM_IDS.get_or_init(StreamIdGen::new).next_id()
+}
+
 /// 出站连接 —— 一条到 proxy-remote 的 HTTP/2 连接，承载多路 stream。
 ///
 /// 通过 [`OutboundConnection::handshake`] 在「已 protect 并 connect」的 IO 流上完成 h2 握手。
 /// `cipher` 用于该连接上所有 stream 的加解密。
+#[derive(Clone)]
 pub struct OutboundConnection {
     send_request: h2::client::SendRequest<Bytes>,
     cipher: Cipher,
@@ -284,6 +353,17 @@ impl OutboundConnection {
     ///
     /// 返回 [`OutboundStream`]，后续用它收发该 stream 上的 [`ProxyMessage`]。
     pub async fn open_proxy_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+        tokio::time::timeout(PROXY_CONNECT_TIMEOUT, self.open_proxy_stream_inner(host, port))
+            .await
+            .map_err(|_| {
+                CoreError::Protocol(format!(
+                    "proxy CONNECT {host}:{port} timed out after {}s; check node transport, cipher and key",
+                    PROXY_CONNECT_TIMEOUT.as_secs()
+                ))
+            })?
+    }
+
+    async fn open_proxy_stream_inner(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
         let cipher = self.cipher.fresh_session()?;
         // 等待连接就绪（h2 流控 / SETTINGS）。
         let mut send_request = self
@@ -307,14 +387,8 @@ impl OutboundConnection {
 
         // 首个 CONNECT 消息（加密 DATA 帧）。
         let request_id = self.req_id_gen.next_id();
-        let stream_id = loop {
-            let id = rand::random::<i64>() & i64::MAX;
-            if id != 0 {
-                break id;
-            }
-        };
-        let mut connect_msg = ProxyMessage::connect(request_id, host, port);
-        connect_msg.stream_id = stream_id;
+        let stream_id = next_stream_id();
+        let connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
         let frame = encode_encrypted_frame(&cipher, &connect_msg)?;
         send_stream
             .send_data(Bytes::from(frame), false)
@@ -324,16 +398,56 @@ impl OutboundConnection {
         let response = response_fut
             .await
             .map_err(|e| CoreError::Protocol(format!("await h2 response failed: {e}")))?;
+        if response.status() != http::StatusCode::OK {
+            return Err(CoreError::Protocol(format!(
+                "proxy HTTP response: {}",
+                response.status()
+            )));
+        }
         let recv_stream = response.into_body();
 
-        Ok(OutboundStream {
+        let mut stream = OutboundStream {
             request_id,
             stream_id,
             cipher: cipher.clone(),
             send_stream,
             recv_stream,
             reassembler: InboundReassembler::new(cipher),
-        })
+            pending_messages: Vec::new(),
+        };
+
+        // HTTP 200 only establishes the HTTP/2 stream. The encrypted response
+        // confirms that the key is correct and the remote reached the target.
+        loop {
+            let messages = stream.recv_wire_messages().await?.ok_or_else(|| {
+                CoreError::Protocol("proxy closed before CONNECT_RESPONSE".to_string())
+            })?;
+            let mut connected = false;
+            for message in messages {
+                if message.type_ == MessageType::ConnectResponse {
+                    if message.request_id != request_id {
+                        return Err(CoreError::Protocol(format!(
+                            "proxy CONNECT {host}:{port} rejected: status={}, request_id={}",
+                            message.status, message.request_id
+                        )));
+                    }
+                    if message.status != 200 {
+                        return Err(CoreError::TargetRejected(format!(
+                            "{host}:{port}, status={}",
+                            message.status
+                        )));
+                    }
+                    connected = true;
+                } else {
+                    // A server greeting can share the response frame or arrive
+                    // before it; keep those bytes for the forwarding loop.
+                    stream.pending_messages.push(message);
+                }
+            }
+            if connected {
+                return Ok(stream);
+            }
+        }
     }
 
     /// 返回本连接所用配置（只读）。
@@ -353,6 +467,7 @@ pub struct OutboundStream {
     send_stream: h2::SendStream<Bytes>,
     recv_stream: h2::RecvStream,
     reassembler: InboundReassembler,
+    pending_messages: Vec<ProxyMessage>,
 }
 
 impl OutboundStream {
@@ -361,11 +476,13 @@ impl OutboundStream {
         self.request_id
     }
 
+    pub fn stream_id(&self) -> i64 {
+        self.stream_id
+    }
+
     /// 发送一段业务数据（包成 DATA 类型 ProxyMessage，加密为一个 h2 DATA 帧）。
     pub fn send_payload(&mut self, payload: &[u8]) -> Result<()> {
-        // DATA is fire-and-forget (requestId=0); streamId selects the outbound session.
-        let mut msg = ProxyMessage::data(0, payload);
-        msg.stream_id = self.stream_id;
+        let msg = ProxyMessage::data(self.stream_id, payload);
         let frame = encode_encrypted_frame(&self.cipher, &msg)?;
         self.send_stream
             .send_data(Bytes::from(frame), false)
@@ -375,8 +492,7 @@ impl OutboundStream {
 
     /// 发送 DISCONNECT 并以 end_stream 关闭发送侧。
     pub fn send_disconnect(&mut self) -> Result<()> {
-        let mut msg = ProxyMessage::disconnect(self.request_id);
-        msg.stream_id = self.stream_id;
+        let msg = ProxyMessage::disconnect(self.request_id, self.stream_id);
         let frame = encode_encrypted_frame(&self.cipher, &msg)?;
         self.send_stream
             .send_data(Bytes::from(frame), true)
@@ -389,6 +505,13 @@ impl OutboundStream {
     /// 返回 `Ok(Some(msgs))`：本次帧切出的消息（可能为空，半条消息留缓冲）。
     /// 返回 `Ok(None)`：对端已结束 stream（EOF）。
     pub async fn recv_messages(&mut self) -> Result<Option<Vec<ProxyMessage>>> {
+        if !self.pending_messages.is_empty() {
+            return Ok(Some(std::mem::take(&mut self.pending_messages)));
+        }
+        self.recv_wire_messages().await
+    }
+
+    async fn recv_wire_messages(&mut self) -> Result<Option<Vec<ProxyMessage>>> {
         match self.recv_stream.data().await {
             Some(Ok(chunk)) => {
                 // h2 流控：消费了多少要归还多少窗口，否则对端会被 stall。
@@ -418,9 +541,21 @@ impl OutboundStream {
 ///
 /// 这里给出可独立编译/测试的最小骨架；与真实 TUN/TCP 栈的接线在 A6 完善。
 pub async fn proxy_via_remote<L>(
+    stream: OutboundStream,
+    local: L,
+    read_buf_size: usize,
+) -> Result<()>
+where
+    L: AsyncRead + AsyncWrite + Unpin,
+{
+    proxy_via_remote_counted(stream, local, read_buf_size, None).await
+}
+
+pub async fn proxy_via_remote_counted<L>(
     mut stream: OutboundStream,
     mut local: L,
     read_buf_size: usize,
+    stats: Option<Arc<CoreStats>>,
 ) -> Result<()>
 where
     L: AsyncRead + AsyncWrite + Unpin,
@@ -437,6 +572,9 @@ where
                     stream.send_disconnect()?;
                     break;
                 }
+                if let Some(stats) = &stats {
+                    stats.add_upload(n);
+                }
                 stream.send_payload(&buf[..n])?;
             }
             // 远端 → 本地
@@ -446,6 +584,9 @@ where
                         for m in msgs {
                             match m.type_ {
                                 MessageType::Data => {
+                                    if let Some(stats) = &stats {
+                                        stats.add_download(m.data.len());
+                                    }
                                     local.write_all(&m.data).await.map_err(CoreError::Io)?;
                                 }
                                 MessageType::Disconnect => return Ok(()),
@@ -478,6 +619,155 @@ where
 mod tests {
     use super::*;
 
+    // Exercise the actual h2 and encrypted frame path, including servers that
+    // accept HTTP/2 but reject or never acknowledge the proxy CONNECT.
+    async fn mock_proxy(
+        http_status: u16,
+        connect_status: Option<u8>,
+        greeting: bool,
+    ) -> (OutboundConnection, tokio::task::JoinHandle<()>) {
+        mock_proxy_with_cipher(
+            http_status,
+            connect_status,
+            greeting,
+            "chacha20",
+            b"test-key",
+        )
+        .await
+    }
+
+    async fn mock_proxy_with_cipher(
+        http_status: u16,
+        connect_status: Option<u8>,
+        greeting: bool,
+        suite: &'static str,
+        key: &'static [u8],
+    ) -> (OutboundConnection, tokio::task::JoinHandle<()>) {
+        let (client_io, server_io) = tokio::io::duplex(65536);
+        let server = tokio::spawn(async move {
+            let mut server = h2::server::handshake(server_io).await.unwrap();
+            while let Some(request) = server.accept().await {
+                let (request, mut respond) = request.unwrap();
+                tokio::spawn(async move {
+                    let mut body = request.into_body();
+                    let cipher = Cipher::test_server(suite, key).unwrap();
+                    let mut decoder = InboundReassembler::new(cipher.clone());
+                    let connect = loop {
+                        let chunk = body.data().await.unwrap().unwrap();
+                        body.flow_control().release_capacity(chunk.len()).unwrap();
+                        let messages = decoder.push_encrypted_frame(&chunk).unwrap();
+                        if let Some(message) = messages.into_iter().next() {
+                            break message;
+                        }
+                    };
+                    let response = http::Response::builder()
+                        .status(http_status)
+                        .body(())
+                        .unwrap();
+                    let mut send = respond.send_response(response, false).unwrap();
+                    if let Some(status) = connect_status {
+                        let response = ProxyMessage {
+                            type_: MessageType::ConnectResponse,
+                            status,
+                            request_id: connect.request_id,
+                            stream_id: 0, // Java ExchangeHandler replies with streamId=0.
+                            host: String::new(),
+                            port: 0,
+                            data: Vec::new(),
+                        };
+                        let mut bytes = encode_encrypted_frame(&cipher, &response).unwrap();
+                        if greeting {
+                            bytes.extend(
+                                encode_encrypted_frame(
+                                    &cipher,
+                                    &ProxyMessage::data(connect.stream_id, b"server greeting"),
+                                )
+                                .unwrap(),
+                            );
+                        }
+                        send.send_data(Bytes::from(bytes), false).unwrap();
+                    }
+                    while let Some(Ok(chunk)) = body.data().await {
+                        body.flow_control().release_capacity(chunk.len()).unwrap();
+                    }
+                    drop(send);
+                });
+            }
+        });
+        let client = OutboundConnection::handshake(
+            client_io,
+            Cipher::from_name(suite, key).unwrap(),
+            OutboundConfig {
+                server_host: "mock-node".to_string(),
+                server_port: 9090,
+                tls: false,
+            },
+        )
+        .await
+        .unwrap();
+        (client, server)
+    }
+
+    #[tokio::test]
+    async fn http2_v2_sessions_are_independent_per_stream() {
+        for suite in ["chacha20-poly1305-v2", "aes-gcm-v2"] {
+            let (mut connection, server) =
+                mock_proxy_with_cipher(200, Some(200), true, suite, &[0x42; 32]).await;
+            tokio::time::timeout(Duration::from_secs(5), async {
+                let mut other = connection.clone();
+                let (first, second) = tokio::join!(
+                    connection.open_proxy_stream("one.test", 80),
+                    other.open_proxy_stream("two.test", 80),
+                );
+                for mut stream in [first.unwrap(), second.unwrap()] {
+                    let messages = stream.recv_messages().await.unwrap().unwrap();
+                    assert_eq!(messages[0].data, b"server greeting");
+                    stream.send_disconnect().unwrap();
+                }
+            })
+            .await
+            .expect("v2 HTTP/2 streams stalled");
+            server.abort();
+        }
+    }
+
+    #[tokio::test]
+    async fn proxy_connect_rejects_http_error() {
+        let (mut connection, server) = mock_proxy(403, None, false).await;
+        let result = connection.open_proxy_stream("example.test", 443).await;
+        assert!(matches!(result, Err(e) if e.to_string().contains("403")));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn proxy_connect_rejects_encrypted_failure_after_http_200() {
+        let (mut connection, server) = mock_proxy(200, Some(244), false).await;
+        let result = connection.open_proxy_stream("example.test", 443).await;
+        assert!(matches!(result, Err(CoreError::TargetRejected(_))));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn proxy_connect_preserves_data_coalesced_with_acknowledgement() {
+        let (mut connection, server) = mock_proxy(200, Some(200), true).await;
+        let mut stream = connection
+            .open_proxy_stream("example.test", 443)
+            .await
+            .unwrap();
+        let messages = stream.recv_messages().await.unwrap().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].data, b"server greeting");
+        server.abort();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn proxy_connect_times_out_when_http_200_has_no_proxy_acknowledgement() {
+        let (mut connection, server) = mock_proxy(200, None, false).await;
+        let result = connection.open_proxy_stream("example.test", 443).await;
+        assert!(matches!(result, Err(e) if e.to_string().contains("timed out")));
+        server.abort();
+    }
+
     fn test_cipher() -> Cipher {
         Cipher::new(b"unit-test-key-please-change-1234").unwrap()
     }
@@ -500,9 +790,21 @@ mod tests {
     }
 
     #[test]
+    fn stream_id_gen_matches_java_layout() {
+        let g = StreamIdGen::with_client_id(0x1234);
+        let first = g.next_id() as u64;
+        let second = g.next_id() as u64;
+
+        assert_eq!(first >> 48, 0x1234);
+        assert_eq!(first & STREAM_SEQUENCE_MASK, 1);
+        assert_eq!(second & STREAM_SEQUENCE_MASK, 2);
+        assert_ne!(first, second);
+    }
+
+    #[test]
     fn encode_encrypted_frame_is_decryptable() {
         let cipher = test_cipher();
-        let msg = ProxyMessage::connect(42, "example.com", 443);
+        let msg = ProxyMessage::connect(42, 9001, "example.com", 443);
         let frame = encode_encrypted_frame(&cipher, &msg).unwrap();
         // 加密帧 = 4字节长度前缀 + nonce(12) + ct + tag(16)，长度 = 明文 + 4 + 28。
         let plaintext = msg.encode();
@@ -547,8 +849,8 @@ mod tests {
         // 同一加密块内含多条 ProxyMessage（明文拼接后整体加密）。
         let cipher = test_cipher();
         let m1 = ProxyMessage::data(1, b"first");
-        let m2 = ProxyMessage::connect(1, "a.com", 80);
-        let m3 = ProxyMessage::disconnect(1);
+        let m2 = ProxyMessage::connect(1, 101, "a.com", 80);
+        let m3 = ProxyMessage::disconnect(2, 101);
         let mut plaintext = Vec::new();
         plaintext.extend_from_slice(&m1.encode());
         plaintext.extend_from_slice(&m2.encode());

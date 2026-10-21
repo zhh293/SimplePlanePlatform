@@ -49,6 +49,23 @@ impl Cipher {
         Ok(Self { inner })
     }
 
+    #[cfg(test)]
+    pub(crate) fn test_server(name: &str, raw_key: &[u8]) -> Result<Self> {
+        let suite = match name {
+            "chacha20" => return Self::new(raw_key),
+            "chacha20-poly1305-v2" => 1,
+            "aes-gcm-v2" => 2,
+            _ => {
+                return Err(CoreError::Crypto(format!(
+                    "Unsupported cipher suite: {name}"
+                )))
+            }
+        };
+        Ok(Self {
+            inner: Implementation::V2(Arc::new(v2::RecordCipher::new(suite, raw_key, true)?)),
+        })
+    }
+
     pub fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
         match &self.inner {
             Implementation::Legacy(cipher) => cipher.encrypt(plaintext),

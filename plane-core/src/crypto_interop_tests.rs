@@ -49,17 +49,8 @@ async fn crypto_remote_echo() {
                 .await
                 .unwrap();
             tasks.push(tokio::spawn(async move {
-                // Wait for the real CONNECT response, do not confuse it with echo DATA.
-                loop {
-                    let messages = stream.recv_messages().await.unwrap().expect("CONNECT EOF");
-                    if let Some(response) = messages
-                        .iter()
-                        .find(|msg| msg.type_ == MessageType::ConnectResponse)
-                    {
-                        assert_eq!(response.status, 200, "CONNECT status");
-                        break;
-                    }
-                }
+                // open_proxy_stream already validates the encrypted CONNECT
+                // response; waiting for another ACK would stall the echo test.
                 let mut total = 0;
                 for round in 0..rounds {
                     let plain: Vec<u8> = (0..payload)

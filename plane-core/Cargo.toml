@@ -8,7 +8,8 @@ authors = ["zhanghonghao"]
 # Android 通过 JNI 加载本 crate，必须产出动态库（libplane_core.so）。
 [lib]
 name = "plane_core"
-crate-type = ["cdylib"]
+# Android loads the cdylib through JNI; rlib keeps host-side CI tests linkable.
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # JNI 桥接（A2 起使用，A1 仅用于 nativeVersion 占位导出）
@@ -47,8 +48,16 @@ aes-gcm = "0.10.3"
 hkdf = "0.12.4"
 # HTTP/2 出站（h2 客户端）+ 字节缓冲 + 头部类型
 h2 = "0.4"
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
+quinn = { version = "0.11.12", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-pemfile = "2"
+webpki-roots = "0.26"
+futures-util = "0.3"
 bytes = "1"
 http = "1"
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 
 # tracing-android 仅在 Android 目标上启用，桌面（如 macOS 本机 cargo check）跳过，
 # 避免在非 Android 平台拉入 android 专用依赖导致编译失败。
@@ -57,3 +66,4 @@ tracing-android = "0.2"
 
 [dev-dependencies]
 tokio-test = "0.4"
+rcgen = "0.13"

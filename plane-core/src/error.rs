@@ -48,6 +48,10 @@ pub enum CoreError {
     #[error("协议编解码失败: {0}")]
     Protocol(String),
 
+    /// The authenticated proxy is healthy but could not reach this destination.
+    #[error("目标连接失败: {0}")]
+    TargetRejected(String),
+
     /// A6 数据面：内部通道/状态异常（如 TCP 事件通道意外关闭、栈内部不变量被破坏）。
     #[error("内部错误: {0}")]
     Internal(String),

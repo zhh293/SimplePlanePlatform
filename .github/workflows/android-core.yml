@@ -1,15 +1,14 @@
 # Android 客户端 CI（Task Q3）
 #
 # 在 GitHub Actions 上把 Rust 数据面（plane-core）的质量门禁与 Android APK 构建跑成
-# 自动护栏。当前阶段（A1~A4 已完成，A5 出站层尚未实现）的落地范围：
+# 自动护栏。覆盖数据面、Android 打包和真实 Java 服务端互通：
 #
 #   - job: rust-test    —— cargo fmt --check + clippy -D warnings + cargo test（强制门禁）
 #                          覆盖率（cargo-llvm-cov）当前为「信息性」，不阻断；
 #                          待 A5 出站层完成、整体代码量稳定后，再把 --fail-under-lines 80 打开。
 #   - job: android-build—— 交叉编译 plane-core 为各 ABI 的 .so（cargo-ndk）+ assembleDebug，
 #                          产出 debug APK 作为 artifact 上传（满足「可上传打包」目标）。
-#   - job: interop      —— 跨语言协议互通（依赖 Q2 harness + A5 出站层），当前阶段尚不具备，
-#                          以 `if: false` 占位禁用，待 A5/Q2 落地后启用（见下方 TODO）。
+#   - job: interop      —— Java / Rust 大载荷、多 stream、v2 加密与旧格式兼容验证。
 #
 # 触发：push 到任意分支 + 针对 main/master 的 PR。
 # 仅当 Rust/Android/CI 相关路径变更时触发，避免纯 Java 后端改动也跑 Android CI。
@@ -81,11 +80,11 @@ jobs:
 
       - name: cargo clippy -D warnings
         working-directory: ${{ env.CRATE_DIR }}
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: cargo test
         working-directory: ${{ env.CRATE_DIR }}
-        run: cargo test --all-targets
+        run: cargo test --locked --lib
 
       # 覆盖率：当前为信息性输出，不阻断 CI。
       # TODO(A5)：A5 出站层（crypto/proxy_proto/outbound）落地、整体代码量稳定后，
@@ -121,7 +120,7 @@ jobs:
       - name: 安装 Android SDK / 命令行工具
         uses: android-actions/setup-android@v3
         with:
-          # The obsolete "tools" package is no longer available in the SDK repository.
+          # setup-android's default includes the removed "tools" package.
           packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
       - name: 安装 Android NDK r26（cargo-ndk 交叉编译需要）
@@ -159,9 +158,9 @@ jobs:
 
       # preBuild 已 dependsOn buildRust（见 app/build.gradle.kts），CI 已在上一步手动编过 .so，
       # 这里用 -PskipRustBuild=true 避免 Gradle 再触发一次（也避免环境差异导致重复失败）。
-      - name: 构建 Debug APK（assembleDebug）
+      - name: 构建 Debug APK 并运行配置测试
         working-directory: android-app
-        run: ./gradlew assembleDebug -PskipRustBuild=true --stacktrace
+        run: ./gradlew assembleDebug testDebugUnitTest -PskipRustBuild=true --stacktrace
 
       - name: 上传 Debug APK artifact
         uses: actions/upload-artifact@v4
@@ -203,10 +202,7 @@ jobs:
           retention-days: 14
 
   # ---------------------------------------------------------------------------
-  # 协议互通（Q2 harness + A5 出站层）—— 当前阶段尚未实现，占位禁用。
-  # TODO(A5/Q2)：A5 出站层（ProxyMessage + ChaCha20-Poly1305 + HTTP/2）与
-  #              Q2 互通 harness（interop.rs + Java proxy-remote service container）
-  #              完成后，把下方 `if: false` 去掉并补全步骤，达成 Q3 三 job 全绿门禁。
+  # 协议互通：Java / HTTP2 / HTTP3 回归 + Rust 与真实 Java 服务端互通。
   # ---------------------------------------------------------------------------
   interop:
     name: 加密协议互通（Java / Rust / 真实服务）

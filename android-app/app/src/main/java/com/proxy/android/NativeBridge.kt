@@ -69,9 +69,16 @@ class NativeBridge(private val vpn: PlaneVpnService? = null) {
             Log.w(TAG, "protect($fd) 被调用但未关联 VpnService，返回 false")
             return false
         }
-        return runCatching { service.protect(fd) }
+        return runCatching { service.protectOutboundSocket(fd) }
             .onFailure { Log.e(TAG, "protect($fd) 抛出异常", it) }
             .getOrDefault(false)
+    }
+
+    fun resolveIp(host: String): String? {
+        val service = vpn ?: return null
+        return runCatching { service.resolveIpOutsideVpn(host) }
+            .onFailure { Log.w(TAG, "resolveIp($host) failed", it) }
+            .getOrNull()
     }
 
     /**
