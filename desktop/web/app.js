@@ -299,6 +299,11 @@ const App = (function () {
         cipher: val($('[data-key="cipher"]', card)),
         key: val($('[data-key="key"]', card)),
         transport: val($('[data-key="transport"]', card)) || 'http3',
+        http3: {
+          ...card.nodeConfig.http3,
+          server_name: val($('[data-key="server_name"]', card)).trim(),
+          ca_file: val($('[data-key="ca_file"]', card)),
+        },
       };
     });
     const selected = cards.find(card => $('[data-key="selected"]', card).checked);
@@ -351,6 +356,7 @@ const App = (function () {
     const card = document.createElement('div');
     card.className = 'server-card';
     card.dataset.nodeId = srv.id || (crypto.randomUUID ? crypto.randomUUID() : `node-${Date.now()}-${index}`);
+    const tlsId = encodeURIComponent(card.dataset.nodeId);
     card.nodeConfig = { ...srv };
     card.innerHTML = `
       <div class="server-card-header">
@@ -379,7 +385,50 @@ const App = (function () {
           </select>
         </div>
         <div class="server-field"><label>Key</label><input class="input" value="${escAttr(srv.key || '')}" data-key="key" type="password"></div>
+      </div>
+      <div class="node-tls" ${srv.transport === 'http2' ? 'hidden' : ''}>
+        <div class="server-field">
+          <label for="tls-name-${tlsId}">证书服务器名称</label>
+          <input id="tls-name-${tlsId}" class="input" data-key="server_name" value="${escAttr(srv.http3?.server_name || '')}" placeholder="留空使用节点 Host；证书为域名时填写域名">
+        </div>
+        <div class="server-field">
+          <label for="tls-ca-${tlsId}">信任证书</label>
+          <div class="node-certificate">
+            <input id="tls-ca-${tlsId}" class="input" data-key="ca_file" value="${escAttr(srv.http3?.ca_file || '')}" placeholder="未指定，使用系统信任" readonly>
+            <button type="button" class="btn-sm btn-import-ca">导入证书</button>
+            <button type="button" class="btn-sm btn-clear-ca">清除</button>
+            <input type="file" class="node-certificate-file" accept=".pem,.crt,.cer" hidden>
+          </div>
+        </div>
+        <p class="node-tls-hint">自签名证书：向服务端管理员获取 PEM 格式的公开证书，导入后保存配置。无需私钥。</p>
       </div>`;
+    $('[data-key="transport"]', card).addEventListener('change', () => {
+      $('.node-tls', card).hidden = $('[data-key="transport"]', card).value !== 'http3';
+    });
+    const certificateFile = $('.node-certificate-file', card);
+    $('.btn-import-ca', card).addEventListener('click', () => certificateFile.click());
+    certificateFile.addEventListener('change', async () => {
+      const file = certificateFile.files[0];
+      if (!file) return;
+      const button = $('.btn-import-ca', card);
+      button.disabled = true;
+      try {
+        if (file.size > 262144) throw new Error('证书文件不能超过 256 KiB');
+        const path = await invoke('import_node_certificate', { pem: await file.text() });
+        $('[data-key="ca_file"]', card).value = path;
+        markChanged();
+        toast('证书已导入，请保存配置后使用该节点', 'success');
+      } catch (e) {
+        toast(`证书导入失败: ${e}`, 'error');
+      } finally {
+        button.disabled = false;
+        certificateFile.value = '';
+      }
+    });
+    $('.btn-clear-ca', card).addEventListener('click', () => {
+      $('[data-key="ca_file"]', card).value = '';
+      markChanged();
+    });
     $$('input, select', card).forEach(el => {
       el.addEventListener('input', markChanged);
       el.addEventListener('change', markChanged);

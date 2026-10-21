@@ -27,6 +27,7 @@ fn main() {
             commands::disconnect,
             commands::status,
             commands::get_config,
+            commands::import_node_certificate,
             commands::save_config,
             commands::get_tun_config,
             commands::save_tun_config,

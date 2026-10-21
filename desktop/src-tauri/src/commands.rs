@@ -152,6 +152,11 @@ pub async fn get_config() -> Result<config::ProxyConfig, String> {
     config::load_proxy_config()
 }
 
+#[tauri::command]
+pub async fn import_node_certificate(pem: String) -> Result<String, String> {
+    config::import_node_certificate(&config::get_config_dir().join("certificates"), &pem)
+}
+
 /// 保存代理配置
 #[tauri::command]
 pub async fn save_config(

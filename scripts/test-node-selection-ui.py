@@ -32,6 +32,12 @@ window.__TAURI__={core:{invoke:async(command,args)=>{
  if(command==='get_tun_config_raw')return '[tun]\\nname="test"';
  if(command==='get_presets')return [];
  if(command==='save_config'){window.saved=args.configData;return 'saved';}
+ if(command==='import_node_certificate'){
+  window.importCalls=(window.importCalls||0)+1;
+  if(window.importFails)throw Error('Invalid certificate');
+  if(!args.pem.startsWith('-----BEGIN CERTIFICATE-----'))throw Error('Expected public PEM');
+  return 'C:/SimplePlane/certificates/node-imported.pem';
+ }
  if(command==='status')return {proxy_status:'running',tun_status:'stopped',proxy_mode:'system',proxy_port:1080,http_port:1080,proxy_port_listening:true,node_status:window.nodeStatus};
  return [];
 }}};
@@ -69,6 +75,38 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(async()=>{
   if(!(nodes[1].http3.ca_file||nodes[1].http3.caFile))throw Error('Save lost TLS options');
   if(nodes[1].cipher!=='aes-gcm-v2')throw Error('Save changed v2 cipher suite');
   if(saved.nodes&&!saved.route.rules?.length)throw Error('Save lost advanced route rules');
+  if(saved.nodes){
+   document.querySelector('#btnAddServer').click();
+   const fresh=[...document.querySelectorAll('.server-card')].at(-1);
+   const field=key=>fresh.querySelector(`[data-key="${key}"]`);
+   field('host').value='20.78.53.111';
+   if(field('server_name').value||field('ca_file').value)throw Error('New node inherited TLS identity');
+   const input=fresh.querySelector('input[type="file"]');
+   const upload=async(file)=>{
+    const transfer=new DataTransfer();transfer.items.add(file);input.files=transfer.files;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+    await new Promise(resolve=>setTimeout(resolve,60));
+   };
+   await upload(new File(['-----BEGIN CERTIFICATE-----\\nTEST\\n-----END CERTIFICATE-----'],'ca.pem'));
+   if(field('ca_file').value!=='C:/SimplePlane/certificates/node-imported.pem')throw Error('Certificate import path not applied');
+   field('server_name').value='proxy.example';
+   document.querySelector('#btnSave').click();
+   await new Promise(resolve=>setTimeout(resolve,60));
+   const added=window.saved.nodes.at(-1);
+   if(added.http3.server_name!=='proxy.example'||added.http3.ca_file!==field('ca_file').value)throw Error('TLS form changes not saved');
+   window.importFails=true;
+   await upload(new File(['-----BEGIN CERTIFICATE-----\\nBAD\\n-----END CERTIFICATE-----'],'bad.pem'));
+   if(field('ca_file').value!==added.http3.ca_file)throw Error('Failed import replaced previous certificate');
+   const calls=window.importCalls;
+   await upload(new File(['x'.repeat(262145)],'huge.pem'));
+   if(window.importCalls!==calls)throw Error('Oversized certificate sent to backend');
+   fresh.querySelector('.btn-clear-ca').click();
+   field('server_name').value='';
+   document.querySelector('#btnSave').click();
+   await new Promise(resolve=>setTimeout(resolve,60));
+   if(window.saved.nodes.at(-1).http3.ca_file||window.saved.nodes.at(-1).http3.server_name)throw Error('Cleared TLS options not saved');
+   fresh.querySelector('.btn-remove').click();
+  }
   cards[0].querySelector('.btn-remove').click();
   if(!cards[1].querySelector('[data-key="selected"]').checked)throw Error('Deleting selected node did not choose remaining node');
   document.body.dataset.smoke='passed';

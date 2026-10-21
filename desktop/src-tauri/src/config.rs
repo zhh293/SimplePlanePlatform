@@ -351,6 +351,24 @@ fn atomic_write(path: &std::path::Path, content: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn import_node_certificate(directory: &std::path::Path, pem: &str) -> Result<String, String> {
+    let pem = pem.trim();
+    if pem.len() > 262144 || !pem.starts_with("-----BEGIN CERTIFICATE-----")
+        || !pem.ends_with("-----END CERTIFICATE-----") || pem.contains("PRIVATE KEY") {
+        return Err("请选择 PEM 格式的公开证书（.pem/.crt），不要导入私钥；最大 256 KiB".into());
+    }
+    fs::create_dir_all(directory).map_err(|e| format!("无法创建证书目录: {}", e))?;
+    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?.as_nanos();
+    // Each import has its own path, so saving a replacement also triggers the config watcher.
+    let path = directory.join(format!("node-{}.pem", stamp));
+    use std::io::Write;
+    let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&path)
+        .map_err(|e| format!("无法保存证书: {}", e))?;
+    file.write_all(pem.as_bytes()).map_err(|e| format!("无法保存证书: {}", e))?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
 pub fn read_node_status() -> Option<serde_json::Value> {
     let text = fs::read_to_string(get_config_dir().join("proxy-java.yml.status.json")).ok()?;
     let status: serde_json::Value = serde_json::from_str(&text).ok()?;
@@ -777,7 +795,7 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
             "id": node.id, "name": node.name, "host": remote.host, "port": remote.port,
             "cipher": remote.cipher, "cipherKey": remote.key, "ssl": false, "transport": remote.transport,
             "http3": {
-                "serverName": h.server_name, "caFile": h.ca_file, "certificatePin": h.certificate_pin,
+                "serverName": if h.server_name.trim().is_empty() { &remote.host } else { &h.server_name }, "caFile": h.ca_file, "certificatePin": h.certificate_pin,
                 "handshakeTimeoutMs": h.handshake_timeout_ms, "idleTimeoutMs": h.idle_timeout_ms,
                 "maxStreams": h.max_streams, "initialConnectionWindow": h.initial_connection_window,
                 "initialStreamWindow": h.initial_stream_window, "maxProxyMessageBytes": h.max_proxy_message_bytes,
@@ -875,6 +893,43 @@ pub fn write_java_config() -> Result<PathBuf, String> {
 #[cfg(test)]
 mod node_tests {
     use super::*;
+
+    #[test]
+    fn blank_tls_name_uses_each_node_host_without_changing_other_options() {
+        let mut config = get_default_proxy_config();
+        config.normalize_nodes().unwrap();
+        config.nodes[0].remote.host = "20.78.53.111".into();
+        config.nodes[0].remote.http3.server_name.clear();
+        config.nodes[0].remote.http3.ca_file.clear();
+        let value: serde_yaml::Value = serde_yaml::from_str(&generate_java_compatible_yaml(&config)).unwrap();
+        assert_eq!(value["remoteServers"][0]["http3"]["serverName"].as_str(), Some("20.78.53.111"));
+        assert_eq!(value["remoteServers"][0]["http3"]["caFile"].as_str(), Some(""));
+        assert_eq!(value["remoteServers"][0]["http3"]["initialStreamWindow"].as_u64(), Some(1048576));
+    }
+
+    #[test]
+    fn importing_public_certificate_copies_it_and_reimport_changes_config_path() {
+        let directory = std::env::temp_dir().join(format!("simpleplane-certificate-test-{}", std::process::id()));
+        let pem = include_str!("../../../proxy-local/src/main/resources/http3-remote-ca.crt");
+        let first = import_node_certificate(&directory, pem).unwrap();
+        let second = import_node_certificate(&directory, pem).unwrap();
+        assert_ne!(first, second);
+        assert_eq!(fs::read_to_string(&first).unwrap(), pem.trim());
+        assert!(std::path::Path::new(&first).starts_with(&directory));
+        fs::remove_file(first).unwrap();
+        fs::remove_file(second).unwrap();
+        fs::remove_dir(directory).unwrap();
+    }
+
+    #[test]
+    fn importing_certificate_rejects_private_keys_and_non_pem_files() {
+        let directory = std::env::temp_dir().join("simpleplane-invalid-certificate-test");
+        for pem in ["not a certificate", "-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----",
+                    "-----BEGIN CERTIFICATE-----\nPRIVATE KEY\n-----END CERTIFICATE-----"] {
+            assert!(import_node_certificate(&directory, pem).is_err());
+        }
+        assert!(import_node_certificate(&directory, &"x".repeat(262145)).is_err());
+    }
 
     #[test]
     fn legacy_config_migrates_to_one_stable_manual_node() {
