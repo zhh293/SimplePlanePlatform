@@ -183,13 +183,11 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
                 }
 
                 if (response != null && response.isSuccess()) {
-                    ctx.executor().execute(() -> {
-                        // Install DATA handling before a fast client can react to the success reply.
-                        ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
-                        ctx.pipeline().remove(HttpConnectHandler.this);
-                        ctx.writeAndFlush(Unpooled.copiedBuffer(CONNECT_RESPONSE, StandardCharsets.UTF_8));
-                        log.info("HTTP tunnel established: {}:{}, streamId={}", host, port, streamId);
-                    });
+                    // Install DATA handling before a fast client can react to the success reply.
+                    ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
+                    ctx.pipeline().remove(HttpConnectHandler.this);
+                    ctx.writeAndFlush(Unpooled.copiedBuffer(CONNECT_RESPONSE, StandardCharsets.UTF_8));
+                    log.info("HTTP tunnel established: {}:{}, streamId={}", host, port, streamId);
                 } else {
                     String errMsg = response != null ? response.getErrorMessage() : "unknown error";
                     log.warn("HTTP CONNECT rejected for {}:{}: {}", host, port, errMsg);
