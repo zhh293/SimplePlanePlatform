@@ -17,6 +17,10 @@ test('manual nodes preserve identity, selection and transport options through YA
   assert.throws(() => validateManualNodes({ ...config, nodeSelection: { mode: 'manual', selectedNodeId: 'missing' } }));
   assert.throws(() => validateManualNodes({ ...config, remoteServers: [config.remoteServers[0], config.remoteServers[0]] }));
   assert.throws(() => validateManualNodes({ ...config, nodeSelection: { mode: 'auto', selectedNodeId: 'b' } }));
+  const automatic = { ...config, nodeSelection: { mode: 'auto', selectedNodeId: 'b', preferredNodeId: 'a' } };
+  validateManualNodes(automatic);
+  assert.deepEqual(parseYaml(toYaml(automatic)), automatic);
+  assert.throws(() => validateManualNodes({ ...automatic, nodeSelection: { ...automatic.nodeSelection, preferredNodeId: 'missing' } }));
 });
 
 test('TUN runtime config includes every candidate address without modifying user config', async () => {

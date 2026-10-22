@@ -14,6 +14,41 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.*;
 
 class StickyClusterInvokerTest {
+    @Test void fixedCurrentDoesNotRotateStreamsAndPausePreservesStandbys() {
+        StickyClusterInvoker cluster = new StickyClusterInvoker();
+        Connection a = new Connection(), b = new Connection();
+        cluster.setInvokers(Arrays.asList(a, b));
+        assertSame(a, cluster.selectCurrent(Arrays.asList(a, b), a));
+        cluster.invoke(message(101, MessageType.CONNECT)).join();
+        cluster.invoke(message(102, MessageType.CONNECT)).join();
+        assertEquals(2, a.calls);
+        assertEquals(0, b.calls);
+        cluster.setCurrentInvoker(null);
+        assertFalse(cluster.isAvailable());
+        assertFalse(cluster.invoke(message(103, MessageType.CONNECT)).join().isSuccess());
+        assertEquals(2, cluster.getAvailableInvokers().size());
+        cluster.retireBindings().join();
+        assertEquals(0, cluster.getBindingCount());
+        assertEquals(0, b.calls);
+        cluster.selectCurrent(Collections.singletonList(b), null);
+        assertTrue(cluster.invoke(message(104, MessageType.CONNECT)).join().isSuccess());
+        assertEquals(1, b.calls);
+    }
+
+    @Test void selectionExcludesUnhealthyCandidatesAndDoesNotFallBackPerStream() {
+        StickyClusterInvoker cluster = new StickyClusterInvoker();
+        Connection a = new Connection(), b = new Connection(), c = new Connection();
+        cluster.setInvokers(Arrays.asList(a, b, c));
+        a.available = false;
+        assertSame(b, cluster.selectCurrent(Arrays.asList(a, b), a));
+        b.available = false;
+        assertFalse(cluster.isAvailable());
+        assertFalse(cluster.invoke(message(105, MessageType.CONNECT)).join().isSuccess());
+        assertEquals(0, c.calls);
+        assertNull(cluster.selectCurrent(Collections.emptyList(), null));
+        assertThrows(IllegalArgumentException.class, () -> cluster.setCurrentInvoker(new Connection()));
+    }
+
     private static final class Connection implements Invoker {
         int calls;
         boolean available = true;

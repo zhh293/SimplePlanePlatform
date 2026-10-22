@@ -27,7 +27,7 @@ class NodeSelectionConfigTest {
         return config;
     }
 
-    @Test void missingDuplicateAndAutomaticSelectionsAreRejected() {
+    @Test void missingDuplicateAndInvalidModesAreRejected() {
         assertThrows(IllegalArgumentException.class, () -> config("missing").validate());
         ProxyConfig duplicate = config("a");
         duplicate.getRemoteServers().get(1).setId("a");
@@ -35,6 +35,21 @@ class NodeSelectionConfigTest {
         ProxyConfig automatic = config("a");
         automatic.getNodeSelection().setMode("auto");
         assertThrows(IllegalArgumentException.class, automatic::validate);
+        automatic.getNodeSelection().setPreferredNodeId("a");
+        assertDoesNotThrow(automatic::validate);
+        automatic.getNodeSelection().setMode("unknown");
+        assertThrows(IllegalArgumentException.class, automatic::validate);
+    }
+
+    @Test void automaticModeRequiresExistingPreferredAndRetainsManualSelection() {
+        ProxyConfig automatic = config("b");
+        automatic.getNodeSelection().setMode("auto");
+        automatic.getNodeSelection().setPreferredNodeId("missing");
+        assertThrows(IllegalArgumentException.class, automatic::validate);
+        automatic.getNodeSelection().setPreferredNodeId("a");
+        automatic.validate();
+        assertEquals("b", automatic.getNodeSelection().getSelectedNodeId());
+        assertEquals("a", automatic.getNodeSelection().getPreferredNodeId());
     }
 
     @Test void invalidConnectionParametersAreRejectedBeforeSwitching() {

@@ -11,6 +11,10 @@ pub struct ProxyConfig {
     pub nodes: Vec<RemoteNode>,
     #[serde(default)]
     pub selected_node_id: String,
+    #[serde(default = "default_node_selection_mode")]
+    pub node_selection_mode: String,
+    #[serde(default)]
+    pub preferred_node_id: String,
     #[serde(default)]
     pub route: RouteConfig,
 }
@@ -24,13 +28,21 @@ pub struct RemoteNode {
     pub remote: RemoteConfig,
 }
 
+fn default_node_selection_mode() -> String { "manual".into() }
+
 impl ProxyConfig {
     pub fn normalize_nodes(&mut self) -> Result<(), String> {
+        if self.node_selection_mode != "manual" && self.node_selection_mode != "auto" {
+            return Err("请选择手动或自动节点模式".into());
+        }
         if self.nodes.is_empty() && self.remote.transport == "http3" {
             self.nodes.push(RemoteNode { id: "legacy-node".into(), name: String::new(), remote: self.remote.clone() });
             self.selected_node_id = "legacy-node".into();
         }
-        if self.nodes.is_empty() { return Ok(()); }
+        if self.nodes.is_empty() {
+            if self.node_selection_mode == "auto" { return Err("自动模式需要 HTTP/3 节点".into()); }
+            return Ok(());
+        }
         let mut ids = std::collections::HashSet::new();
         for node in &self.nodes {
             if node.id.trim().is_empty() || !ids.insert(node.id.clone()) {
@@ -42,6 +54,9 @@ impl ProxyConfig {
         }
         self.remote = self.nodes.iter().find(|node| node.id == self.selected_node_id)
             .ok_or("请选择一个存在的节点")?.remote.clone();
+        if self.node_selection_mode == "auto" && !ids.contains(&self.preferred_node_id) {
+            return Err("请选择一个存在的首选节点".into());
+        }
         Ok(())
     }
 }
@@ -469,6 +484,8 @@ fn get_default_proxy_config() -> ProxyConfig {
     ProxyConfig {
         nodes: Vec::new(),
         selected_node_id: String::new(),
+        node_selection_mode: "manual".into(),
+        preferred_node_id: String::new(),
         local: LocalConfig {
             port: 1080,
             http_proxy_enabled: true,
@@ -807,7 +824,7 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
     let mut selection = serde_json::json!({ "remoteServers": servers });
     if nodes.iter().all(|node| node.remote.transport == "http3") {
         let selected = if config.selected_node_id.is_empty() { &nodes[0].id } else { &config.selected_node_id };
-        selection["nodeSelection"] = serde_json::json!({ "mode": "manual", "selectedNodeId": selected });
+        selection["nodeSelection"] = serde_json::json!({ "mode": config.node_selection_mode, "selectedNodeId": selected, "preferredNodeId": config.preferred_node_id });
     }
     yaml.push_str(&serde_yaml::to_string(&selection).expect("serializable node configuration"));
 
@@ -961,6 +978,22 @@ mod node_tests {
         assert_eq!(value["nodeSelection"]["selectedNodeId"].as_str(), Some("node-b"));
         assert_eq!(value["remoteServers"][1]["cipherKey"].as_str(), Some(config.remote.key.as_str()));
         assert_eq!(value["remoteServers"][1]["http3"]["caFile"].as_str(), Some("C:\\certs\\ca.pem"));
+    }
+
+    #[test]
+    fn automatic_selection_preserves_manual_choice_and_validates_preferred() {
+        let mut config = get_default_proxy_config();
+        config.normalize_nodes().unwrap();
+        config.node_selection_mode = "auto".into();
+        assert!(config.normalize_nodes().is_err());
+        config.preferred_node_id = config.nodes[0].id.clone();
+        config.normalize_nodes().unwrap();
+        let value: serde_yaml::Value = serde_yaml::from_str(&generate_java_compatible_yaml(&config)).unwrap();
+        assert_eq!(value["nodeSelection"]["mode"].as_str(), Some("auto"));
+        assert_eq!(value["nodeSelection"]["preferredNodeId"].as_str(), Some("legacy-node"));
+        assert_eq!(value["nodeSelection"]["selectedNodeId"].as_str(), Some("legacy-node"));
+        config.node_selection_mode = "unsupported".into();
+        assert!(config.normalize_nodes().is_err());
     }
 
     #[test]

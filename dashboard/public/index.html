@@ -248,8 +248,9 @@
             <h2>远程服务器</h2>
             <button class="btn btn-sm btn-accent" id="btnAddServer">+ 添加服务器</button>
           </div>
+          <div class="field-group"><label class="field-label" for="nodeSelectionMode">HTTP/3 节点选择</label><select id="nodeSelectionMode" class="select"><option value="manual">手动选择</option><option value="auto">自动切换</option></select></div>
           <div id="remoteServers" class="server-list"></div>
-          <p class="field-hint">HTTP/3 使用手动节点选择。保存并切换会断开旧节点的代理连接，部分应用需要刷新或重新连接。</p>
+          <p class="field-hint">自动模式优先使用首选节点，故障后随机选择健康备用，恢复后不自动切回。自动模式修改节点配置需重启；切换会中断旧连接。</p>
           <p class="field-hint" id="nodeApplyStatus" role="status" aria-live="polite">等待运行时状态</p>
         </div>
       </section>

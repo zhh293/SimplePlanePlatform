@@ -159,7 +159,7 @@ const App = (function () {
     const target = $('#nodeApplyStatus');
     if (target) target.textContent = !node.ok ? node.error : node.data.error ||
       (node.data.savedRevision !== node.data.appliedRevision ? '配置已保存，尚未应用' :
-      `当前生效节点：${node.data.currentNodeId} · ${({ idle: '等待建连', connecting: '连接中', available: '连接可用', unavailable: '节点不可用', stopped: '已停止' })[node.data.nodeStatus] || '状态未知'} · 活跃流：${node.data.activeStreams} · 配置已应用`);
+      `${node.data.mode === 'auto' ? '自动模式 · 首选：' + node.data.preferredNodeId : '手动模式'} · 当前生效节点：${node.data.currentNodeId || '无'} · ${({ idle: '等待建连', connecting: '连接中', available: '连接可用', unavailable: '节点不可用', stopped: '已停止' })[node.data.nodeStatus] || '状态未知'} · 活跃流：${node.data.activeStreams} · 配置已应用${(node.data.nodes || []).map(n => ' · ' + n.nodeId + '：' + (n.connecting ? '连接中' : n.circuit === 'OPEN' ? '熔断，约 ' + Math.ceil(n.retryAfterMs / 1000) + ' 秒后检查' : n.circuit === 'HALF_OPEN' ? '恢复检查中' : n.available ? '连接可用' : '未连接') + (n.reason ? '（' + n.reason + '）' : '')).join('')}`);
     const res = await api('/status');
     if (res.ok) {
       updateServiceUI('proxy-local', res.services['proxy-local']);
@@ -400,6 +400,7 @@ const App = (function () {
     setVal('#timeoutMs', c.timeoutMs);
     setVal('#connectionsPerNode', c.connectionsPerNode);
     setChecked('#httpProxyEnabled', c.httpProxyEnabled);
+    setVal('#nodeSelectionMode', c.nodeSelection?.mode || 'manual');
     renderServerCards(c.remoteServers || []);
     $('#cluster').closest('.field-group').hidden = (c.remoteServers || []).length > 0
       && c.remoteServers.every(node => node.transport === 'http3');
@@ -428,6 +429,7 @@ const App = (function () {
     card.innerHTML = `
       <div class="server-card-header">
         <label><input type="radio" name="selected-node" data-key="selected" ${localConfig?.nodeSelection?.selectedNodeId === card.dataset.nodeId || (!localConfig?.nodeSelection && index === 0) ? 'checked' : ''}> 使用此节点</label>
+        <label><input type="radio" name="preferred-node" data-key="preferred" ${(localConfig?.nodeSelection?.preferredNodeId || localConfig?.nodeSelection?.selectedNodeId) === card.dataset.nodeId || (!localConfig?.nodeSelection && index === 0) ? 'checked' : ''}> 自动模式首选</label>
         <span class="server-card-title"><span class="server-index">#${index + 1}</span> ${esc(srv.host || '?')}:${srv.port || '?'}</span>
         <button class="btn btn-danger btn-sm btn-remove" title="删除">×</button>
       </div>
@@ -589,7 +591,8 @@ const App = (function () {
       if (servers.length && servers.every(node => node.transport === 'http3')) {
         localConfig.connectionsPerNode = 1;
         const selected = $$('.server-card', $('#remoteServers')).find(card => $('[data-key="selected"]', card).checked);
-        localConfig.nodeSelection = { mode: 'manual', selectedNodeId: selected?.dataset.nodeId || '' };
+        const preferred = $$('.server-card', $('#remoteServers')).find(card => $('[data-key="preferred"]', card).checked);
+        localConfig.nodeSelection = { ...localConfig.nodeSelection, mode: val('#nodeSelectionMode') || 'manual', selectedNodeId: selected?.dataset.nodeId || '', preferredNodeId: preferred?.dataset.nodeId || selected?.dataset.nodeId || '' };
         $('#cluster').closest('.field-group').hidden = true;
       } else {
         delete localConfig.nodeSelection;

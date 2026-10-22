@@ -57,10 +57,10 @@ public final class NodeConfigWatcher implements AutoCloseable {
                 try {
                     ProxyConfig next = new Yaml().loadAs(new String(bytes, StandardCharsets.UTF_8), ProxyConfig.class);
                     if (next == null) {
-                        throw new IllegalArgumentException("Manual nodeSelection is required");
+                        throw new IllegalArgumentException("nodeSelection is required");
                     }
                     next.validate();
-                    if (next.getNodeSelection() == null) throw new IllegalArgumentException("Manual nodeSelection is required");
+                    if (next.getNodeSelection() == null) throw new IllegalArgumentException("nodeSelection is required");
                     if (!startupSettings.equals(nonNodeSettings(next))) {
                         throw new IllegalArgumentException("Non-node configuration changes require restart");
                     }
@@ -90,6 +90,9 @@ public final class NodeConfigWatcher implements AutoCloseable {
                 + ",\"savedRevision\":\"" + observedDigest + "\",\"appliedRevision\":\"" + appliedDigest
                 + "\",\"currentNodeId\":\"" + escape(controller.getCurrentNodeId())
                 + "\",\"activeStreams\":" + controller.getBindingCount()
+                + ",\"mode\":\"" + escape(controller.getMode()) + "\""
+                + ",\"preferredNodeId\":\"" + escape(controller.getPreferredNodeId()) + "\""
+                + ",\"nodes\":" + controller.getNodeStatesJson()
                 + ",\"nodeStatus\":\"" + controller.getNodeStatus() + "\""
                 + ",\"error\":\"" + error + "\"}\n";
         Path target = configPath.resolveSibling(configPath.getFileName() + ".status.json");

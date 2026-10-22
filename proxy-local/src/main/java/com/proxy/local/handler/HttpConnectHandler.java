@@ -183,13 +183,10 @@ public class HttpConnectHandler extends ByteToMessageDecoder {
                 }
 
                 if (response != null && response.isSuccess()) {
-                    // 回复 200 Connection Established
-                    ctx.writeAndFlush(Unpooled.copiedBuffer(CONNECT_RESPONSE, StandardCharsets.UTF_8));
-
-                    // 切换到 Relay 模式：先添加 RelayHandler，再移除自身
+                    // Install DATA handling before a fast client can react to the success reply.
                     ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
                     ctx.pipeline().remove(HttpConnectHandler.this);
-
+                    ctx.writeAndFlush(Unpooled.copiedBuffer(CONNECT_RESPONSE, StandardCharsets.UTF_8));
                     log.info("HTTP tunnel established: {}:{}, streamId={}", host, port, streamId);
                 } else {
                     String errMsg = response != null ? response.getErrorMessage() : "unknown error";

@@ -1,6 +1,6 @@
 # P3/P4：HTTP/3 自动切换设计与实施验收
 
-> 2026-10-22，设计提案，尚未实现。基于已经完成的 P1/P2；本文中的时间参数是待故障注入验证的初始建议，不代表生产测量结果。
+> 2026-10-22，基于 P1/P2 实施中，测试进度见 [SDD 验证记录](../sdd/auto-failover/verification.md)。本文中的时间参数是初始策略，不代表默认网络环境下的恢复时延承诺。
 
 相关文档：[P1/P2 实现](http3-node-selection-p1-p2.md)、[原始总体方案](node-selection-and-failover-plan.md)、[手动切换改造复盘](../手动切换改造复盘：如何约束AI不过度设计.md)。
 
@@ -71,7 +71,7 @@ ClusterInvoker 持有全部节点 Invoker 和当前 Invoker。选择策略在启
 | 初次建连预算 | 复用现有握手超时 | 初始连接未完成不计失败，不另加业务重试层 |
 | 新节点宽限期 | 发布可用后 15 秒 | 暂不根据检查超时作软故障切换 |
 | 持续断连阈值 | 5 秒 | 短暂断线由现有 HTTP3 重连处理 |
-| 单次定向检查超时 | 6 秒 | 检查有界，不能无限等待 |
+| 单次定向检查超时 | 至少 6 秒，且不低于 timeoutMs | 与现有请求预算对齐，检查有界 |
 | 连续检查失败阈值 | 3 次 | 每次为独立检查，不按业务请求数累计 |
 | 检查间隔 | 上次检查结束后至少 5 秒 | 不重叠，不补发错过的检查 |
 | 最短驻留时间 | 30 秒 | 软故障不频繁切换 |
@@ -165,9 +165,13 @@ nodeSelection:
   mode: auto
   selectedNodeId: node-a
   preferredNodeId: node-a
+  probeHost: www.cloudflare.com
+  probePort: 443
 ```
 
 selectedNodeId 保留手动模式的选择，preferredNodeId 表示自动模式启动时的首选。自动运行时的 currentNodeId 是状态，不写入此配置。这样 A 故障切到 B 后，用户首选仍是 A；B 健康时不会切回 A。
+
+probeHost/probePort 是定向 CONNECT 检查目标，默认如上，可换成自己的受控目标。检查有效远端响应，并不验证该网站的 HTTPS 内容；具体故障归类仍遵循 P3 第 3 节。
 
 旧配置继续默认手动，selectedNodeId 语义不变。自动模式必须引用存在且支持本阶段传输的节点；缺失或无效首选报明确配置错误，不能静默切成随机模式。未来若迁移工具需要从 selectedNodeId 初始化首选，应在迁移时明确执行，不让运行时含糊猜测。
 

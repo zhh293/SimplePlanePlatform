@@ -26,14 +26,23 @@ public class ProxyConfig {
     private List<RemoteServer> remoteServers = new ArrayList<>();
     private NodeSelection nodeSelection;
 
-    /** P2 supports explicit manual selection. Automatic failover is a later phase. */
+    /** User preferences; the actual active node is runtime state, not persisted here. */
     public static class NodeSelection {
         private String mode = "manual";
         private String selectedNodeId;
+        private String preferredNodeId;
+        private String probeHost = "www.cloudflare.com";
+        private int probePort = 443;
         public String getMode() { return mode; }
         public void setMode(String value) { mode = value; }
         public String getSelectedNodeId() { return selectedNodeId; }
         public void setSelectedNodeId(String value) { selectedNodeId = value; }
+        public String getPreferredNodeId() { return preferredNodeId; }
+        public void setPreferredNodeId(String value) { preferredNodeId = value; }
+        public String getProbeHost() { return probeHost; }
+        public void setProbeHost(String value) { probeHost = value; }
+        public int getProbePort() { return probePort; }
+        public void setProbePort(int value) { probePort = value; }
     }
 
     public NodeSelection getNodeSelection() { return nodeSelection; }
@@ -376,11 +385,11 @@ public class ProxyConfig {
             nodeSelection.setSelectedNodeId(only.getId());
         }
         if (nodeSelection != null) {
-            if (!"manual".equals(nodeSelection.getMode())) {
-                throw new IllegalArgumentException("Only manual node selection is supported in P2");
+            if (!"manual".equals(nodeSelection.getMode()) && !"auto".equals(nodeSelection.getMode())) {
+                throw new IllegalArgumentException("Node selection mode must be manual or auto");
             }
             if (http3Nodes != remoteServers.size()) {
-                throw new IllegalArgumentException("Manual node selection currently requires HTTP/3 nodes");
+                throw new IllegalArgumentException("Node selection requires HTTP/3 nodes");
             }
             java.util.Set<String> ids = new java.util.HashSet<>();
             for (RemoteServer server : remoteServers) {
@@ -391,6 +400,14 @@ public class ProxyConfig {
             }
             if (!ids.contains(nodeSelection.getSelectedNodeId())) {
                 throw new IllegalArgumentException("Selected node ID does not exist");
+            }
+            if ("auto".equals(nodeSelection.getMode()) && !ids.contains(nodeSelection.getPreferredNodeId())) {
+                throw new IllegalArgumentException("Preferred node ID does not exist");
+            }
+            if ("auto".equals(nodeSelection.getMode()) && (nodeSelection.getProbeHost() == null
+                    || nodeSelection.getProbeHost().trim().isEmpty()
+                    || nodeSelection.getProbePort() < 1 || nodeSelection.getProbePort() > 65535)) {
+                throw new IllegalArgumentException("Automatic probe target is invalid");
             }
             if (connectionsPerNode != 1) throw new IllegalArgumentException("HTTP/3 requires connectionsPerNode=1");
             if (timeoutMs < 1 || timeoutMs > 120000) throw new IllegalArgumentException("timeoutMs must be between 1 and 120000");
