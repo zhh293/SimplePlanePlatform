@@ -184,14 +184,13 @@ public class Socks5ConnectHandler extends ChannelInboundHandlerAdapter {
                     }
 
                     if (response != null && response.isSuccess()) {
-                        // 连接成功，回复 SOCKS5 成功
-                        sendReply(ctx, REP_SUCCESS);
-
-                        // 切换到 Relay 模式
-                        ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
-                        ctx.pipeline().remove(Socks5ConnectHandler.this);
-
-                        log.info("SOCKS5 tunnel established: {}:{}, streamId={}", host, port, streamId);
+                        ctx.executor().execute(() -> {
+                            // Install DATA handling before a fast client can react to the success reply.
+                            ctx.pipeline().addLast("relay", new RelayHandler(invoker, host, port, streamId));
+                            ctx.pipeline().remove(Socks5ConnectHandler.this);
+                            sendReply(ctx, REP_SUCCESS);
+                            log.info("SOCKS5 tunnel established: {}:{}, streamId={}", host, port, streamId);
+                        });
                     } else {
                         String errMsg = response != null ? response.getErrorMessage() : "unknown error";
                         log.warn("CONNECT rejected for {}:{}: {}", host, port, errMsg);
