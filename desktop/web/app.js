@@ -29,9 +29,70 @@ const App = (function () {
     await loadConfig();
     await loadTunConfig();
     await loadPresets();
+    await loadUpdateServerConfig();
     startStatusPolling();
     addLog('info', '应用已启动，等待连接...');
     setTimeout(checkForUpdates, 3000);
+  }
+
+  // ============================================================
+  // Update-server config (local override)
+  // ============================================================
+  async function loadUpdateServerConfig() {
+    try {
+      const { invoke } = window.__TAURI__.core;
+      const res = await invoke('get_update_config');
+      const input = document.getElementById('updateServerUrlInput');
+      const status = document.getElementById('updateServerStatus');
+      if (input) input.value = res.override_url || '';
+      if (status) {
+        if (res.using_override) {
+          status.textContent = `当前使用本地覆盖：${res.override_url}`;
+        } else if (res.last_bootstrap_url) {
+          status.textContent = `当前使用引导发现：${res.last_bootstrap_url}`;
+        } else {
+          status.textContent = '使用默认引导（GitHub Release fallback）';
+        }
+      }
+    } catch (e) {
+      const status = document.getElementById('updateServerStatus');
+      if (status) status.textContent = `读取失败：${e}`;
+    }
+  }
+
+  function bindUpdateServerActions() {
+    const saveBtn = document.getElementById('btnSaveUpdateServer');
+    const resetBtn = document.getElementById('btnResetUpdateServer');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        const input = document.getElementById('updateServerUrlInput');
+        const url = (input?.value || '').trim();
+        if (url && !/^https?:\/\//i.test(url)) {
+          alert('URL 必须以 http:// 或 https:// 开头');
+          return;
+        }
+        try {
+          const { invoke } = window.__TAURI__.core;
+          await invoke('set_update_config', { overrideUrl: url });
+          await loadUpdateServerConfig();
+          toast('已保存。下次检查更新时生效。', 'success');
+        } catch (e) {
+          toast(`保存失败：${e}`, 'error');
+        }
+      });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', async () => {
+        try {
+          const { invoke } = window.__TAURI__.core;
+          await invoke('set_update_config', { overrideUrl: '' });
+          await loadUpdateServerConfig();
+          toast('已恢复使用引导 URL。', 'info');
+        } catch (e) {
+          toast(`重置失败：${e}`, 'error');
+        }
+      });
+    }
   }
 
   // ============================================================
@@ -54,6 +115,7 @@ const App = (function () {
     });
     // 切换到日志页时自动加载
     if (name === 'logs') refreshLogView();
+    if (name === 'settings') loadUpdateServerConfig();
   }
 
   // ============================================================
@@ -779,6 +841,9 @@ const App = (function () {
     document.addEventListener('change', (e) => {
       if (e.target.closest('[data-section="proxy-config"]') || e.target.closest('[data-section="route"]')) markChanged();
     });
+
+    // Update-server settings
+    bindUpdateServerActions();
   }
 
   function bindGlobalKeys() {

@@ -109,6 +109,45 @@
 
 提交到仓库根，GitHub raw + GitHub Pages 自动镜像。
 
+## 本地覆盖（设置页可编辑）
+
+桌面客户端支持本地配置覆盖 bootstrap 结果，让自托管用户在设置 UI 里直接填自己的 update-server URL：
+
+**配置文件**：`<config_dir>/SimplePlane/update-config.json`
+
+```json
+{
+  "override_update_server_url": "https://my-update-server.example.com",
+  "last_bootstrap_url": "https://update.simpleplane.example.com",
+  "updated_at": "epoch:1729587600"
+}
+```
+
+**优先级**（启动检查更新时）：
+
+1. 本地 `override_update_server_url`（非空则用）
+2. `last_bootstrap_url`（bootstrap 缓存，bootstrap fetch 失败时降级用）
+3. fetch bootstrap URL → 拿 `update_server.url` + 缓存到 `last_bootstrap_url`
+4. 全部失败 → 走 `tauri.conf.json` 的 `endpoints`（GitHub Release fallback）
+
+**UI**：设置页"更新服务器"卡片：
+- 输入框：默认显示当前 `override_url`（空则占位 `https://update.example.com`）
+- "保存"按钮：调 `set_update_config({ overrideUrl })`，下次检查更新生效
+- "使用默认"按钮：清空 override，恢复走 bootstrap
+- 状态行：显示"使用本地覆盖 X" / "使用引导发现 X" / "使用默认引导"
+
+**新增 invoke 命令**：
+- `get_update_config() -> UpdateConfigResponse`：读本地配置
+- `set_update_config(override_url: Option<String>) -> UpdateConfigResponse`：写本地配置（空字符串清空）
+
+**自托管用户流程**：
+
+1. 部署自己的 update-server（按 `update-server/docs/deployment.md`）。
+2. 在桌面客户端"设置"页填入 URL（例如 `https://my-update.example.com`），保存。
+3. 下次启动或检查更新时，客户端直接连自托管 server，不走 GitHub bootstrap。
+
+**安全**：本地配置可被 malicious 改，但 attacker 改了也拿不出合法签名包（pubkey 内嵌 app 里），等价 DNS 劫持，可接受。
+
 ## 部署流程
 
 ### 第一次部署 update-server

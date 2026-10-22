@@ -5,6 +5,7 @@ use crate::process;
 use crate::proxy;
 use crate::state::{AppState, ProxyMode, ServiceStatus};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -596,44 +597,6 @@ async fn fetch_update_server_url(bootstrap_urls: &[String]) -> Result<String, St
     Err(format!("all bootstrap URLs failed: {last_err}"))
 }
 
-/// Check for an available update via the bootstrap-discovered update-server.
-/// Returns update metadata (version, notes, pub_date) and the constructed endpoint
-/// URL so the caller can pass it to `install_update` without re-fetching bootstrap.
-#[tauri::command]
-pub async fn check_update_via_bootstrap(
-    app: tauri::AppHandle,
-    bootstrap_urls: Vec<String>,
-) -> Result<CheckUpdateResult, String> {
-    let update_server_url = fetch_update_server_url(&bootstrap_urls).await?;
-    let endpoint = format!(
-        "{}/api/v1/updates/{{{{target}}}}/{{{{arch}}}}/{{{{current_version}}}}",
-        update_server_url
-    );
-    log::info!("[updater] checking via bootstrap: {}", update_server_url);
-    let endpoint_url = Url::parse(&endpoint)
-        .map_err(|e| format!("invalid endpoint URL: {e}"))?;
-    let updater = app
-        .updater()
-        .map_err(|e| format!("updater builder init failed: {e}"))?;
-    let update = updater
-        .endpoints(vec![endpoint_url])
-        .map_err(|e| format!("updater endpoints failed: {e}"))?
-        .build()
-        .map_err(|e| format!("updater build failed: {e}"))?
-        .check()
-        .await
-        .map_err(|e| format!("updater check failed: {e}"))?;
-    match update {
-        Some(u) => Ok(CheckUpdateResult::UpdateAvailable {
-            endpoint,
-            version: u.version.clone(),
-            notes: u.body.clone().unwrap_or_default(),
-            pub_date: u.date.map(|d| d.to_string()),
-        }),
-        None => Ok(CheckUpdateResult::NoUpdate),
-    }
-}
-
 /// Progress events streamed back to JS during `install_update`.
 /// Mirrors the schema used by `tauri-plugin-updater` itself so the JS
 /// `onmessage` handler is symmetric with the official plugin's events.
@@ -692,4 +655,184 @@ pub async fn install_update(
         .await
         .map_err(|e| format!("download_and_install failed: {e}"))?;
     Ok(())
+}
+
+// ============================================================
+// Update-server URL override (local config)
+// ============================================================
+//
+// Lets the user override the bootstrap-discovered update-server URL
+// from the desktop UI. Config is stored at:
+//   Windows: %APPDATA%\SimplePlane\update-config.json
+//   macOS:   ~/Library/Application Support/SimplePlane/update-config.json
+//   Linux:   ~/.config/SimplePlane/update-config.json
+//
+// Lookup priority at check time:
+//   1. Local override_update_server_url (this file, if non-empty)
+//   2. Bootstrap JSON's update_server.url (default discovery)
+//   3. tauri.conf.json plugins.updater.endpoints (fallback)
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateConfig {
+    /// User-set override. Empty string = use bootstrap. Non-empty = use this URL.
+    #[serde(default)]
+    pub override_update_server_url: String,
+    /// Cached bootstrap result from the last successful fetch (so we can degrade
+    /// gracefully if bootstrap URLs are unreachable AND no override is set).
+    #[serde(default)]
+    pub last_bootstrap_url: String,
+    /// ISO 8601 timestamp of last edit.
+    #[serde(default)]
+    pub updated_at: String,
+}
+
+fn update_config_path() -> PathBuf {
+    crate::config::get_config_dir().join("update-config.json")
+}
+
+fn load_update_config() -> UpdateConfig {
+    let path = update_config_path();
+    match std::fs::read_to_string(&path) {
+        Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+        Err(_) => UpdateConfig::default(),
+    }
+}
+
+fn save_update_config(cfg: &UpdateConfig) -> Result<(), String> {
+    let path = update_config_path();
+    let parent = path.parent().ok_or_else(|| "no parent dir".to_string())?;
+    std::fs::create_dir_all(parent).map_err(|e| format!("mkdir failed: {e}"))?;
+    let tmp = path.with_extension("json.tmp");
+    let body = serde_json::to_string_pretty(cfg).map_err(|e| format!("serialize failed: {e}"))?;
+    std::fs::write(&tmp, body).map_err(|e| format!("write failed: {e}"))?;
+    std::fs::rename(&tmp, &path).map_err(|e| format!("rename failed: {e}"))?;
+    Ok(())
+}
+
+#[derive(Debug, Serialize)]
+pub struct UpdateConfigResponse {
+    pub override_url: String,
+    pub last_bootstrap_url: String,
+    pub updated_at: String,
+    pub using_override: bool,
+}
+
+/// Read the current update-server configuration from local storage.
+/// `using_override` indicates whether the local override is active (non-empty).
+#[tauri::command]
+pub async fn get_update_config() -> Result<UpdateConfigResponse, String> {
+    let cfg = load_update_config();
+    Ok(UpdateConfigResponse {
+        override_url: cfg.override_update_server_url.clone(),
+        last_bootstrap_url: cfg.last_bootstrap_url.clone(),
+        updated_at: cfg.updated_at.clone(),
+        using_override: !cfg.override_update_server_url.is_empty(),
+    })
+}
+
+/// Set or clear the update-server URL override.
+/// Pass an empty string to clear (fall back to bootstrap).
+#[tauri::command]
+pub async fn set_update_config(
+    override_url: Option<String>,
+) -> Result<UpdateConfigResponse, String> {
+    let mut cfg = load_update_config();
+    cfg.override_update_server_url = override_url.unwrap_or_default().trim().to_string();
+    cfg.updated_at = chrono_now_iso();
+    save_update_config(&cfg)?;
+    Ok(UpdateConfigResponse {
+        override_url: cfg.override_update_server_url.clone(),
+        last_bootstrap_url: cfg.last_bootstrap_url.clone(),
+        updated_at: cfg.updated_at.clone(),
+        using_override: !cfg.override_update_server_url.is_empty(),
+    })
+}
+
+fn chrono_now_iso() -> String {
+    // Use std::time + format manually to avoid pulling chrono for one timestamp.
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    format!("epoch:{secs}")
+}
+
+/// Resolve the update-server URL to use for this check.
+/// Priority: local override > bootstrap > None (caller falls back to tauri.conf.json).
+async fn resolve_update_server_url(
+    bootstrap_urls: &[String],
+) -> Result<Option<String>, String> {
+    let cfg = load_update_config();
+    if !cfg.override_update_server_url.is_empty() {
+        log::info!(
+            "[updater] using local override: {}",
+            cfg.override_update_server_url
+        );
+        return Ok(Some(cfg.override_update_server_url.clone()));
+    }
+    match fetch_update_server_url(bootstrap_urls).await {
+        Ok(url) => {
+            // Cache for future degradation.
+            let mut updated = cfg;
+            updated.last_bootstrap_url = url.clone();
+            let _ = save_update_config(&updated);
+            Ok(Some(url))
+        }
+        Err(e) => {
+            // Fall back to cached bootstrap URL if available.
+            if !cfg.last_bootstrap_url.is_empty() {
+                log::warn!(
+                    "[updater] bootstrap fetch failed ({e}); using cached: {}",
+                    cfg.last_bootstrap_url
+                );
+                Ok(Some(cfg.last_bootstrap_url.clone()))
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
+// Replace the previous check_update_via_bootstrap with one that honors
+// local override. We keep the old name for backward compatibility but
+// make it call the new logic.
+#[tauri::command]
+pub async fn check_update_via_bootstrap(
+    app: tauri::AppHandle,
+    bootstrap_urls: Vec<String>,
+) -> Result<CheckUpdateResult, String> {
+    let update_server_url = match resolve_update_server_url(&bootstrap_urls).await? {
+        Some(url) => url,
+        None => {
+            // No override, no bootstrap — signal "no update" so the UI stays silent.
+            return Ok(CheckUpdateResult::NoUpdate);
+        }
+    };
+    let endpoint = format!(
+        "{}/api/v1/updates/{{{{target}}}}/{{{{arch}}}}/{{{{current_version}}}}",
+        update_server_url
+    );
+    log::info!("[updater] checking via: {}", update_server_url);
+    let endpoint_url = Url::parse(&endpoint)
+        .map_err(|e| format!("invalid endpoint URL: {e}"))?;
+    let updater = app
+        .updater()
+        .map_err(|e| format!("updater builder init failed: {e}"))?;
+    let update = updater
+        .endpoints(vec![endpoint_url])
+        .map_err(|e| format!("updater endpoints failed: {e}"))?
+        .build()
+        .map_err(|e| format!("updater build failed: {e}"))?
+        .check()
+        .await
+        .map_err(|e| format!("updater check failed: {e}"))?;
+    match update {
+        Some(u) => Ok(CheckUpdateResult::UpdateAvailable {
+            endpoint,
+            version: u.version.clone(),
+            notes: u.body.clone().unwrap_or_default(),
+            pub_date: u.date.map(|d| d.to_string()),
+        }),
+        None => Ok(CheckUpdateResult::NoUpdate),
+    }
 }

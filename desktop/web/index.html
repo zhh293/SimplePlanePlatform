@@ -56,6 +56,13 @@
           </svg>
           <span>日志</span>
         </li>
+        <li class="nav-item" data-section="settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 10 3.17V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>设置</span>
+        </li>
       </ul>
       <div class="nav-footer">
         <span class="version">v0.1.0</span>
@@ -356,6 +363,28 @@
         <div class="log-terminal" id="logTerminal">
           <div id="logContent">
             <div class="log-line"><span class="log-time">--:--:--</span><span class="log-text log-info">SimplePlane Desktop v0.1.0 就绪</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 设置 ========== -->
+      <section id="sec-settings" class="section" data-section="settings">
+        <div class="section-header">
+          <h2>设置</h2>
+        </div>
+        <div class="card">
+          <h3>更新服务器</h3>
+          <p class="hint">默认从引导 URL 自动发现。如果你想指向自托管的 update-server，在此填入 URL（例如 <code>https://update.example.com</code>），留空则使用引导。</p>
+          <div class="form-row">
+            <label>
+              <span>URL</span>
+              <input type="text" id="updateServerUrlInput" placeholder="https://update.example.com" />
+            </label>
+            <button class="btn-save" id="btnSaveUpdateServer">保存</button>
+            <button class="btn-sm" id="btnResetUpdateServer">使用默认</button>
+          </div>
+          <div class="form-row">
+            <span class="hint" id="updateServerStatus">读取中...</span>
           </div>
         </div>
       </section>
