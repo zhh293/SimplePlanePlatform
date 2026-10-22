@@ -77,7 +77,7 @@ const App = (function () {
       const node = st.node_status;
       $('#nodeApplyStatus').textContent = !node ? '代理未运行或尚未确认节点配置'
         : node.error || (node.savedRevision !== node.appliedRevision ? '配置已保存，尚未应用'
-        : `当前生效节点：${node.currentNodeId} · ${nodeStateLabel(node.nodeStatus)} · 活跃流：${node.activeStreams} · 配置已应用`);
+        : `${node.mode === 'auto' ? '自动模式 · 首选：' + node.preferredNodeId : '手动模式'} · 当前生效节点：${node.currentNodeId || '无'} · ${nodeStateLabel(node.nodeStatus)} · 活跃流：${node.activeStreams} · 配置已应用${(node.nodes || []).map(n => ' · ' + n.nodeId + '：' + (n.connecting ? '连接中' : n.circuit === 'OPEN' ? '熔断，约 ' + Math.ceil(n.retryAfterMs / 1000) + ' 秒后检查' : n.circuit === 'HALF_OPEN' ? '恢复检查中' : n.available ? '连接可用' : '未连接') + (n.reason ? '（' + n.reason + '）' : '')).join('')}`);
 
       // 系统代理状态
       const proxyRunning = st.proxy_status === 'running';
@@ -262,6 +262,7 @@ const App = (function () {
     if (!c) return;
     setVal('#localPort', c.local.port);
     $('#httpProxyEnabled').checked = c.local.http_proxy_enabled;
+    setVal('#nodeSelectionMode', c.node_selection_mode || 'manual');
 
     // 远端服务器
     renderServerCards(c.nodes?.length ? c.nodes : [c.remote]);
@@ -308,6 +309,9 @@ const App = (function () {
     });
     const selected = cards.find(card => $('[data-key="selected"]', card).checked);
     localConfig.selected_node_id = selected?.dataset.nodeId || '';
+    localConfig.node_selection_mode = val('#nodeSelectionMode') || 'manual';
+    const preferred = cards.find(card => $('[data-key="preferred"]', card).checked);
+    localConfig.preferred_node_id = preferred?.dataset.nodeId || localConfig.selected_node_id;
     if (selected) localConfig.remote = { ...localConfig.nodes.find(node => node.id === localConfig.selected_node_id) };
     if (localConfig.nodes.length === 1 && localConfig.remote.transport === 'http2') {
       localConfig.nodes = [];
@@ -361,6 +365,7 @@ const App = (function () {
     card.innerHTML = `
       <div class="server-card-header">
         <label><input type="radio" name="selected-node" data-key="selected" ${localConfig?.selected_node_id === card.dataset.nodeId || (!localConfig?.selected_node_id && index === 0) ? 'checked' : ''}> 使用此节点</label>
+        <label><input type="radio" name="preferred-node" data-key="preferred" ${(localConfig?.preferred_node_id || localConfig?.selected_node_id) === card.dataset.nodeId || (!localConfig?.selected_node_id && index === 0) ? 'checked' : ''}> 自动模式首选</label>
         <span class="server-card-title"><span class="server-index">#${index + 1}</span> ${esc(srv.host || '?')}:${srv.port || '?'}</span>
         <button class="btn-sm btn-danger btn-remove" title="删除">×</button>
       </div>

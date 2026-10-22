@@ -75,6 +75,19 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(async()=>{
   if(!(nodes[1].http3.ca_file||nodes[1].http3.caFile))throw Error('Save lost TLS options');
   if(nodes[1].cipher!=='aes-gcm-v2')throw Error('Save changed v2 cipher suite');
   if(saved.nodes&&!saved.route.rules?.length)throw Error('Save lost advanced route rules');
+  const mode=document.querySelector('#nodeSelectionMode');
+  mode.value='auto';mode.dispatchEvent(new Event('change',{bubbles:true}));
+  cards[1].querySelector('[data-key="preferred"]').click();
+  document.querySelector('#btnSave').click();
+  await new Promise(resolve=>setTimeout(resolve,100));
+  const automatic=window.saved;
+  if((automatic.node_selection_mode||automatic.nodeSelection?.mode)!=='auto')throw Error('Automatic mode was not saved');
+  if((automatic.preferred_node_id||automatic.nodeSelection?.preferredNodeId)!=='b')throw Error('Preferred node was not saved');
+  if((automatic.selected_node_id||automatic.nodeSelection?.selectedNodeId)!=='a')throw Error('Automatic preference overwrote manual selection');
+  mode.value='manual';mode.dispatchEvent(new Event('change',{bubbles:true}));
+  document.querySelector('#btnSave').click();
+  await new Promise(resolve=>setTimeout(resolve,100));
+  if((window.saved.node_selection_mode||window.saved.nodeSelection?.mode)!=='manual')throw Error('Manual mode was not restored');
   if(saved.nodes){
    document.querySelector('#btnAddServer').click();
    const fresh=[...document.querySelectorAll('.server-card')].at(-1);
@@ -85,7 +98,10 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(async()=>{
    const upload=async(file)=>{
     const transfer=new DataTransfer();transfer.items.add(file);input.files=transfer.files;
     input.dispatchEvent(new Event('change',{bubbles:true}));
-    await new Promise(resolve=>setTimeout(resolve,60));
+    for(let attempt=0;fresh.querySelector('.btn-import-ca').disabled&&attempt<100;attempt++){
+     await new Promise(resolve=>setTimeout(resolve,10));
+    }
+    if(fresh.querySelector('.btn-import-ca').disabled)throw Error('Certificate import did not finish');
    };
    await upload(new File(['-----BEGIN CERTIFICATE-----\\nTEST\\n-----END CERTIFICATE-----'],'ca.pem'));
    if(field('ca_file').value!=='C:/SimplePlane/certificates/node-imported.pem')throw Error('Certificate import path not applied');
@@ -119,7 +135,7 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(async()=>{
     path = OUTPUT / f"{name}.html"
     path.write_text(html, encoding="utf8")
     result = subprocess.run([str(CHROME), "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
-                             f"--user-data-dir={OUTPUT / (name + '-profile')}", "--window-size=1440,1100", "--virtual-time-budget=2000",
+                             f"--user-data-dir={OUTPUT / (name + '-profile')}", "--window-size=1440,1100", "--virtual-time-budget=6000",
                              f"--screenshot={OUTPUT / (name + '.png')}", "--dump-dom", path.as_uri()],
                             capture_output=True, timeout=45)
     dom = result.stdout.decode("utf8", errors="replace")
@@ -127,4 +143,4 @@ window.addEventListener('DOMContentLoaded',()=>setTimeout(async()=>{
     if result.returncode or 'data-smoke="passed"' not in dom:
         (OUTPUT / f"{name}.chrome.log").write_bytes(result.stderr)
         raise SystemExit(f"{name} UI smoke failed; inspect {OUTPUT}")
-    print(f"{name}: passed (render two nodes, select, save, preserve TLS, delete selected)")
+    print(f"{name}: passed (render nodes, manual/auto modes, preferred node, preserve TLS, delete selected)")

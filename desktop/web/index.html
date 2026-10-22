@@ -244,8 +244,9 @@
                 <button class="btn-sm btn-add" id="btnAddServer">+ 添加</button>
               </div>
             </div>
+            <div class="form-row"><label for="nodeSelectionMode">HTTP/3 节点选择</label><select id="nodeSelectionMode" class="select"><option value="manual">手动选择</option><option value="auto">自动切换</option></select></div>
             <div id="remoteServers" class="server-cards-container"></div>
-            <p class="section-desc">手动选择一个 HTTP/3 节点。保存并切换将断开旧节点的代理连接，部分应用需要刷新或重新连接。TUN 模式修改节点地址列表需先断开连接。</p>
+            <p class="section-desc">自动模式优先使用首选节点，故障后随机选择健康备用，恢复后不自动切回。自动模式修改节点配置需重启；切换会中断旧连接。TUN 修改节点地址列表需先断开。</p>
             <p class="section-desc" id="nodeApplyStatus" role="status" aria-live="polite">等待运行时状态</p>
           </div>
 

@@ -164,14 +164,14 @@ class Http3ManualSwitchIntegrationTest {
         }
     }
 
-    private static URL serverUrl(int port, TestCertificates certificate, String suite) {
+    static URL serverUrl(int port, TestCertificates certificate, String suite) {
         return new URL("proxy", "localhost", port).addParameter("transport", "http3")
                 .addParameter("cipher", suite).addParameter("cipherKey", "0123456789abcdef0123456789abcdef")
                 .addParameter("http3.certificateFile", certificate.certificate().getAbsolutePath())
                 .addParameter("http3.privateKeyFile", certificate.privateKey().getAbsolutePath());
     }
 
-    private static String yaml(int local, int a, int b, TestCertificates certificate, String selected, String suite) {
+    static String yaml(int local, int a, int b, TestCertificates certificate, String selected, String suite) {
         String ca = certificate.ca().getAbsolutePath().replace("'", "''");
         return "localPort: " + local + "\nsystemProxy:\n  enabled: false\nconnectionsPerNode: 1\ntimeoutMs: 5000\nremoteServers:\n"
                 + "  - id: a\n    host: localhost\n    port: " + a + "\n    transport: http3\n    cipher: " + suite + "\n    cipherKey: '0123456789abcdef0123456789abcdef'\n    http3:\n      caFile: '" + ca + "'\n"
@@ -179,7 +179,7 @@ class Http3ManualSwitchIntegrationTest {
                 + "nodeSelection:\n  mode: manual\n  selectedNodeId: " + selected + "\nroute:\n  defaultRoute: proxy\n";
     }
 
-    private static Socket connect(int localPort, int targetPort) throws Exception {
+    static Socket connect(int localPort, int targetPort) throws Exception {
         Socket browser = new Socket("127.0.0.1", localPort);
         browser.setSoTimeout(10000);
         browser.getOutputStream().write(("CONNECT echo.test:" + targetPort + " HTTP/1.1\r\nHost: echo.test\r\n\r\n")
@@ -194,13 +194,13 @@ class Http3ManualSwitchIntegrationTest {
         return browser;
     }
 
-    private static void echo(Socket browser, String value) throws Exception {
+    static void echo(Socket browser, String value) throws Exception {
         byte[] payload = value.getBytes(StandardCharsets.US_ASCII);
         browser.getOutputStream().write(payload);
         assertArrayEquals(payload, readBytes(browser.getInputStream(), payload.length));
     }
 
-    private static byte[] readBytes(InputStream input, int length) throws Exception {
+    static byte[] readBytes(InputStream input, int length) throws Exception {
         byte[] received = new byte[length];
         int offset = 0;
         while (offset < received.length) {
@@ -211,7 +211,7 @@ class Http3ManualSwitchIntegrationTest {
         return received;
     }
 
-    private static Socket connectSocks5(int localPort, int targetPort) throws Exception {
+    static Socket connectSocks5(int localPort, int targetPort) throws Exception {
         Socket browser = new Socket("127.0.0.1", localPort);
         browser.setSoTimeout(10000);
         browser.getOutputStream().write(new byte[]{5, 1, 0});
@@ -230,7 +230,7 @@ class Http3ManualSwitchIntegrationTest {
         return browser;
     }
 
-    private static void verifyPlainHttp(int localPort, int targetPort) throws Exception {
+    static void verifyPlainHttp(int localPort, int targetPort) throws Exception {
         try (Socket browser = new Socket("127.0.0.1", localPort)) {
             browser.setSoTimeout(10000);
             String headers = " HTTP/1.1\r\nHost: echo.test:" + targetPort + "\r\n\r\nbody";
@@ -240,27 +240,33 @@ class Http3ManualSwitchIntegrationTest {
         }
     }
 
-    private static void awaitStatus(Path config, String text) throws Exception {
+    static void awaitStatus(Path config, String text) throws Exception {
         Path status = config.resolveSibling(config.getFileName() + ".status.json");
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
         while (System.nanoTime() < deadline) {
-            if (Files.exists(status) && new String(Files.readAllBytes(status), StandardCharsets.UTF_8).contains(text)) return;
+            if (Files.exists(status)) {
+                String value = new String(Files.readAllBytes(status), StandardCharsets.UTF_8);
+                boolean needsConnection = text.startsWith("\"currentNodeId\"") || text.startsWith("\"appliedRevision\"");
+                if (value.contains(text) && (!needsConnection || value.contains("\"nodeStatus\":\"available\""))) return;
+            }
             Thread.sleep(50);
         }
-        fail("Runtime status did not contain " + text);
+        Path processLog = config.resolveSibling("local-process.log");
+        String details = Files.exists(processLog) ? new String(Files.readAllBytes(processLog), StandardCharsets.UTF_8) : "";
+        fail("Runtime status did not contain " + text + "\n" + details);
     }
 
-    private static int udpPort() throws Exception {
+    static int udpPort() throws Exception {
         try (DatagramSocket socket = new DatagramSocket(0)) { return socket.getLocalPort(); }
     }
-    private static String digest(String value) throws Exception {
+    static String digest(String value) throws Exception {
         StringBuilder result = new StringBuilder();
         for (byte b : java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))) {
             result.append(String.format("%02x", b));
         }
         return result.toString();
     }
-    private static int tcpPort() throws Exception {
+    static int tcpPort() throws Exception {
         try (ServerSocket socket = new ServerSocket(0)) { return socket.getLocalPort(); }
     }
 }

@@ -254,6 +254,8 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
             response = Response.error(
                     message.getMessage() != null ? message.getMessage() : "Remote error");
         }
+        // Local metadata only: distinguishes an actual remote reply from local send errors/timeouts.
+        response.getAttachments().put("remoteResponse", Boolean.TRUE);
         DefaultFuture.received(requestId, response);
     }
 

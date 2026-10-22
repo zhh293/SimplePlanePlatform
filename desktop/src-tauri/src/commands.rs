@@ -410,6 +410,8 @@ fn get_builtin_presets() -> Vec<Preset> {
             config: config::ProxyConfig {
                 nodes: Vec::new(),
                 selected_node_id: String::new(),
+                node_selection_mode: "manual".into(),
+                preferred_node_id: String::new(),
                 local: config::LocalConfig {
                     port: 1080,
                     http_proxy_enabled: true,
@@ -444,6 +446,8 @@ fn get_builtin_presets() -> Vec<Preset> {
             config: config::ProxyConfig {
                 nodes: Vec::new(),
                 selected_node_id: String::new(),
+                node_selection_mode: "manual".into(),
+                preferred_node_id: String::new(),
                 local: config::LocalConfig {
                     port: 1080,
                     http_proxy_enabled: true,
@@ -478,6 +482,8 @@ fn get_builtin_presets() -> Vec<Preset> {
             config: config::ProxyConfig {
                 nodes: Vec::new(),
                 selected_node_id: String::new(),
+                node_selection_mode: "manual".into(),
+                preferred_node_id: String::new(),
                 local: config::LocalConfig {
                     port: 7890,
                     http_proxy_enabled: true,

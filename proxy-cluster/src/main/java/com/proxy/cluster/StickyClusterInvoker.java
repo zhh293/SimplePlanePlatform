@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class StickyClusterInvoker implements ClusterInvoker {
     private volatile List<Invoker> invokers = Collections.emptyList();
     private volatile LoadBalance loadBalance;
+    private volatile Invoker currentInvoker;
+    private volatile boolean fixedSelection;
     private final ConcurrentHashMap<Long, Binding> bindings = new ConcurrentHashMap<>();
 
     private static final class Binding {
@@ -40,29 +42,32 @@ public final class StickyClusterInvoker implements ClusterInvoker {
         catch (NumberFormatException invalid) { return error("Invalid streamId"); }
         if (streamId == 0) return error("Invalid streamId");
         if (invocation.getType() == ProxyMessage.MessageType.CONNECT) {
-            List<Invoker> available = getAvailableInvokers();
-            if (available.isEmpty()) return error("No available invoker");
-            Invoker selected = loadBalance == null ? available.get(0)
-                    : loadBalance.select(available, invocation, Collections.emptySet());
-            Binding binding = new Binding(selected, invocation);
-            if (bindings.putIfAbsent(streamId, binding) != null) return error("Stream already bound");
-            CompletableFuture<Response> result;
-            try {
-                result = selected.invoke(invocation);
-            } catch (RuntimeException failure) {
-                bindings.remove(streamId, binding);
-                return failed(failure);
-            }
-            return result.thenApply(response -> {
-                if (response != null && response.isSuccess() && bindings.get(streamId) == binding) {
-                    binding.active = true;
-                    return response;
+            synchronized (this) {
+                List<Invoker> available = getAvailableInvokers();
+                if (available.isEmpty()) return error("No available invoker");
+                Invoker selected = fixedSelection ? currentInvoker : loadBalance == null ? available.get(0)
+                        : loadBalance.select(available, invocation, Collections.emptySet());
+                if (selected == null || !available.contains(selected)) return error("Current node unavailable");
+                Binding binding = new Binding(selected, invocation);
+                if (bindings.putIfAbsent(streamId, binding) != null) return error("Stream already bound");
+                CompletableFuture<Response> result;
+                try {
+                    result = selected.invoke(invocation);
+                } catch (RuntimeException failure) {
+                    bindings.remove(streamId, binding);
+                    return failed(failure);
                 }
-                bindings.remove(streamId, binding);
-                return response != null && !response.isSuccess() ? response : Response.error("Stream cancelled");
-            }).whenComplete((response, failure) -> {
-                if (failure != null) bindings.remove(streamId, binding);
-            });
+                return result.thenApply(response -> {
+                    if (response != null && response.isSuccess() && bindings.get(streamId) == binding) {
+                        binding.active = true;
+                        return response;
+                    }
+                    bindings.remove(streamId, binding);
+                    return response != null && !response.isSuccess() ? response : Response.error("Stream cancelled");
+                }).whenComplete((response, failure) -> {
+                    if (failure != null) bindings.remove(streamId, binding);
+                });
+            }
         }
         Binding binding = bindings.get(streamId);
         if (binding == null) return error("Stream is not bound");
@@ -98,6 +103,30 @@ public final class StickyClusterInvoker implements ClusterInvoker {
     }
 
     public int getBindingCount() { return bindings.size(); }
+
+    /** Null pauses new CONNECT admission without discarding preconnected members. */
+    public synchronized void setCurrentInvoker(Invoker invoker) {
+        if (invoker != null && !invokers.contains(invoker)) {
+            throw new IllegalArgumentException("Current invoker must be a cluster member");
+        }
+        fixedSelection = true;
+        currentInvoker = invoker;
+    }
+
+    public Invoker getCurrentInvoker() { return currentInvoker; }
+
+    /** Called once per selection, never for each business stream. Candidates are health-filtered by the caller. */
+    public synchronized Invoker selectCurrent(List<Invoker> candidates, Invoker preferred) {
+        List<Invoker> eligible = new ArrayList<>();
+        for (Invoker candidate : candidates) {
+            if (invokers.contains(candidate) && candidate.isAvailable()) eligible.add(candidate);
+        }
+        Invoker selected = eligible.contains(preferred) ? preferred : eligible.isEmpty() ? null
+                : loadBalance == null ? eligible.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(eligible.size()))
+                : loadBalance.select(eligible, null, Collections.emptySet());
+        setCurrentInvoker(selected);
+        return selected;
+    }
 
     private static CompletableFuture<Response> error(String message) {
         return CompletableFuture.completedFuture(Response.error(message));
@@ -139,7 +168,10 @@ public final class StickyClusterInvoker implements ClusterInvoker {
     }
 
     @Override
-    public boolean isAvailable() { return !getAvailableInvokers().isEmpty(); }
+    public boolean isAvailable() {
+        return fixedSelection ? currentInvoker != null && invokers.contains(currentInvoker) && currentInvoker.isAvailable()
+                : !getAvailableInvokers().isEmpty();
+    }
 
     @Override
     public int getActiveCount() { return bindings.size(); }

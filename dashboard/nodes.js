@@ -5,7 +5,7 @@ function validateManualNodes(config) {
   const nodes = config.remoteServers || [];
   if (!Array.isArray(nodes) || !nodes.length) throw new Error('至少需要配置一个节点');
   if (!config.nodeSelection) return;
-  if (config.nodeSelection.mode !== 'manual') throw new Error('当前版本仅支持手动节点选择');
+  if (!['manual', 'auto'].includes(config.nodeSelection.mode)) throw new Error('请选择手动或自动模式');
   if (config.connectionsPerNode !== 1) throw new Error('HTTP/3 每个节点只支持一条连接，请设置 connectionsPerNode=1');
   if (!nodes.length || nodes.some(node => node.transport !== 'http3')) throw new Error('手动节点选择仅支持 HTTP/3 节点');
   const ids = new Set();
@@ -15,6 +15,7 @@ function validateManualNodes(config) {
     ids.add(node.id);
   }
   if (!ids.has(config.nodeSelection.selectedNodeId)) throw new Error('请选择一个存在的节点');
+  if (config.nodeSelection.mode === 'auto' && !ids.has(config.nodeSelection.preferredNodeId)) throw new Error('请选择一个存在的首选节点');
 }
 
 function atomicWrite(file, text) {
