@@ -859,10 +859,21 @@ const App = (function () {
     if (isCheckingUpdate) return;
     isCheckingUpdate = true;
     try {
-      const { check } = window.__TAURI__.updater;
-      const update = await check();
-      if (update) {
-        showUpdateDialog(update);
+      const config = window.__TAURI__?.config?.plugins?.updater;
+      const bootstrapUrls = config?.bootstrap?.endpoints || [];
+      if (!bootstrapUrls.length) {
+        console.warn('[updater] no bootstrap URLs configured; skipping');
+        return;
+      }
+      const { invoke } = window.__TAURI__.core;
+      const result = await invoke('check_update_via_bootstrap', { bootstrapUrls });
+      if (result.status === 'UpdateAvailable') {
+        showUpdateDialog({
+          version: result.version,
+          body: result.notes,
+          endpoint: result.endpoint,
+          pub_date: result.pub_date,
+        });
       }
     } catch (e) {
       console.log('[updater] Check failed (silent):', e);
@@ -910,7 +921,6 @@ const App = (function () {
 
     document.body.appendChild(overlay);
 
-    // 绑定按钮
     $('#btnUpdateLater').addEventListener('click', () => {
       overlay.remove();
     });
@@ -920,25 +930,28 @@ const App = (function () {
       $('#updateProgress').hidden = false;
 
       try {
-        let downloaded = 0;
+        const { invoke, Channel } = window.__TAURI__.core;
+        const channel = new Channel();
         let contentLength = 0;
-
-        await update.downloadAndInstall((event) => {
-          if (event.event === 'Started') {
-            contentLength = event.data.contentLength || 0;
+        let downloaded = 0;
+        channel.onmessage = (msg) => {
+          if (msg.event === 'Started') {
+            contentLength = msg.data?.content_length || 0;
             $('#updateProgressText').textContent = '开始下载...';
-          } else if (event.event === 'Progress') {
-            downloaded += event.data.chunkLength || 0;
+          } else if (msg.event === 'Progress') {
+            downloaded += msg.data?.chunk_length || 0;
             const percent = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
             $('#updateProgressFill').style.width = percent + '%';
             $('#updateProgressText').textContent = percent + '%';
-          } else if (event.event === 'Finished') {
+          } else if (msg.event === 'Finished') {
             $('#updateProgressFill').style.width = '100%';
             $('#updateProgressText').textContent = '下载完成，准备安装...';
           }
+        };
+        await invoke('install_update', {
+          endpoint: update.endpoint,
+          onEvent: channel,
         });
-
-        // 安装完成后重启
         const { relaunch } = window.__TAURI__.process;
         await relaunch();
       } catch (e) {

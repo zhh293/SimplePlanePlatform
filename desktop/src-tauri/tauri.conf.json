@@ -66,7 +66,15 @@
       "endpoints": [
         "https://github.com/zhh293/SimplePlanePlatform/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwRThDQzZBRDBFMEI2MTQKUldRVXR1RFFhc3pvNEpYWjdCNmpZT1JPY1RqNTRVSVR3R1Y3UkZqaThheXNNZkN0T0NjZFRDVFYK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUwRThDQzZBRDBFMEI2MTQKUldRVXR1RFFhc3pvNEpYWjdCNmpZT1JPY1RqNTRVSVR3R1Y3UkZqaThheXNNZkN0T0NjZFRDVFYK",
+      "bootstrap": {
+        "endpoints": [
+          "https://raw.githubusercontent.com/zhh293/SimplePlanePlatform/main/bootstrap.json",
+          "https://zhh293.github.io/SimplePlanePlatform/bootstrap.json"
+        ],
+        "cache_ttl_seconds": 3600,
+        "_comment": "Bootstrap URLs are fetched at startup to discover the current update-server URL. Updating this list requires a new client build; the update-server URL itself (returned by the bootstrap JSON) can be changed without rebuilding the client."
+      }
     }
   }
 }

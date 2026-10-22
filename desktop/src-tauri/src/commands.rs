@@ -525,4 +525,171 @@ fn get_builtin_presets() -> Vec<Preset> {
             },
         },
     ]
+
+// ============================================================
+// Auto-updater with bootstrap URL discovery
+// ============================================================
+//
+// The desktop client no longer hardcodes the update-server URL.
+// It fetches a small "bootstrap" JSON from a fixed list of candidate URLs
+// (GitHub raw + GitHub Pages mirror). The bootstrap returns the current
+// update-server URL, letting us relocate the update infrastructure
+// without shipping a new client build.
+//
+// The pubkey for verifying signed update packages stays embedded in
+// tauri.conf.json — bootstrap only redirects the *download* URL, not
+// the trust anchor. An attacker who hijacks the bootstrap URL can
+// only point clients at a server that still has to produce packages
+// signed with our private key; otherwise the updater rejects them.
+
+use tauri_plugin_updater::UpdaterExt;
+use url::Url;
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "status")]
+pub enum CheckUpdateResult {
+    NoUpdate,
+    UpdateAvailable {
+        endpoint: String,
+        version: String,
+        notes: String,
+        pub_date: Option<String>,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+struct BootstrapResponse {
+    update_server: BootstrapUpdateServer,
+}
+
+#[derive(Debug, Deserialize)]
+struct BootstrapUpdateServer {
+    url: String,
+}
+
+/// Fetch the first reachable bootstrap URL and return the update-server URL it advertises.
+async fn fetch_update_server_url(bootstrap_urls: &[String]) -> Result<String, String> {
+    if bootstrap_urls.is_empty() {
+        return Err("no bootstrap URLs configured".into());
+    }
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .user_agent("simpleplane-desktop-updater/1")
+        .build()
+        .map_err(|e| format!("http client init failed: {e}"))?;
+    let mut last_err = String::new();
+    for url in bootstrap_urls {
+        match client.get(url).send().await {
+            Ok(res) if res.status().is_success() => {
+                match res.json::<BootstrapResponse>().await {
+                    Ok(body) if !body.update_server.url.is_empty() => {
+                        return Ok(body.update_server.url.trim_end_matches('/').to_string());
+                    }
+                    Ok(_) => last_err = format!("bootstrap {url}: empty update_server.url"),
+                    Err(e) => last_err = format!("bootstrap {url}: invalid JSON ({e})"),
+                }
+            }
+            Ok(res) => last_err = format!("bootstrap {url}: HTTP {}", res.status()),
+            Err(e) => last_err = format!("bootstrap {url}: {e}"),
+        }
+    }
+    Err(format!("all bootstrap URLs failed: {last_err}"))
+}
+
+/// Check for an available update via the bootstrap-discovered update-server.
+/// Returns update metadata (version, notes, pub_date) and the constructed endpoint
+/// URL so the caller can pass it to `install_update` without re-fetching bootstrap.
+#[tauri::command]
+pub async fn check_update_via_bootstrap(
+    app: tauri::AppHandle,
+    bootstrap_urls: Vec<String>,
+) -> Result<CheckUpdateResult, String> {
+    let update_server_url = fetch_update_server_url(&bootstrap_urls).await?;
+    let endpoint = format!(
+        "{}/api/v1/updates/{{{{target}}}}/{{{{arch}}}}/{{{{current_version}}}}",
+        update_server_url
+    );
+    log::info!("[updater] checking via bootstrap: {}", update_server_url);
+    let endpoint_url = Url::parse(&endpoint)
+        .map_err(|e| format!("invalid endpoint URL: {e}"))?;
+    let updater = app
+        .updater()
+        .map_err(|e| format!("updater builder init failed: {e}"))?;
+    let update = updater
+        .endpoints(vec![endpoint_url])
+        .map_err(|e| format!("updater endpoints failed: {e}"))?
+        .build()
+        .map_err(|e| format!("updater build failed: {e}"))?
+        .check()
+        .await
+        .map_err(|e| format!("updater check failed: {e}"))?;
+    match update {
+        Some(u) => Ok(CheckUpdateResult::UpdateAvailable {
+            endpoint,
+            version: u.version.clone(),
+            notes: u.body.clone().unwrap_or_default(),
+            pub_date: u.date.map(|d| d.to_string()),
+        }),
+        None => Ok(CheckUpdateResult::NoUpdate),
+    }
+}
+
+/// Progress events streamed back to JS during `install_update`.
+/// Mirrors the schema used by `tauri-plugin-updater` itself so the JS
+/// `onmessage` handler is symmetric with the official plugin's events.
+#[derive(Debug, Serialize, Clone)]
+#[serde(tag = "event", content = "data")]
+pub enum UpdateProgress {
+    #[serde(rename_all = "camelCase")]
+    Started {
+        content_length: Option<u64>,
+    },
+    #[serde(rename_all = "camelCase")]
+    Progress {
+        chunk_length: usize,
+    },
+    Finished,
+}
+
+/// Download and install an update via the endpoint returned by `check_update_via_bootstrap`.
+/// The caller passes the endpoint URL back; this avoids a second bootstrap fetch.
+#[tauri::command]
+pub async fn install_update(
+    app: tauri::AppHandle,
+    endpoint: String,
+    on_event: tauri::ipc::Channel<UpdateProgress>,
+) -> Result<(), String> {
+    log::info!("[updater] installing via endpoint: {}", endpoint);
+    let endpoint_url = Url::parse(&endpoint)
+        .map_err(|e| format!("invalid endpoint URL: {e}"))?;
+    let updater = app
+        .updater()
+        .map_err(|e| format!("updater builder init failed: {e}"))?;
+    let update = updater
+        .endpoints(vec![endpoint_url])
+        .map_err(|e| format!("updater endpoints failed: {e}"))?
+        .build()
+        .map_err(|e| format!("updater build failed: {e}"))?
+        .check()
+        .await
+        .map_err(|e| format!("updater check failed: {e}"))?
+        .ok_or_else(|| "no update available at the given endpoint".to_string())?;
+
+    let mut first_chunk = true;
+    update
+        .download_and_install(
+            |chunk_length, content_length| {
+                if first_chunk {
+                    first_chunk = !first_chunk;
+                    let _ = on_event.send(UpdateProgress::Started { content_length });
+                }
+                let _ = on_event.send(UpdateProgress::Progress { chunk_length });
+            },
+            || {
+                let _ = on_event.send(UpdateProgress::Finished);
+            },
+        )
+        .await
+        .map_err(|e| format!("download_and_install failed: {e}"))?;
+    Ok(())
 }
