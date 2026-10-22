@@ -1,5 +1,7 @@
 # HTTP/3 多节点手动切换：实现与验证
 
+后续提案：[P3/P4：自动切换设计与实施验收](http3-auto-failover-p3-p4.md)。两阶段尚未实现，不改变本文记录的手动模式行为。
+
 本文对应 [改造方案](node-selection-and-failover-plan.md) 的 P1、P2。范围是 Java local 的 HTTP/3 代理链路、Web Dashboard 与桌面端；HTTP/2 继续沿用原有选择逻辑。自动故障切换、节点熔断与恢复探测属于 P3。
 
 HTTP/3 每个节点固定一条 QUIC 连接，配置要求 `connectionsPerNode: 1`。仅连接当前所选节点，不预建备用节点连接；节点内部不再进行连接池管理或负载均衡。
