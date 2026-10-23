@@ -526,6 +526,7 @@ fn get_builtin_presets() -> Vec<Preset> {
             },
         },
     ]
+}
 
 // ============================================================
 // Auto-updater with bootstrap URL discovery
@@ -625,10 +626,8 @@ pub async fn install_update(
     log::info!("[updater] installing via endpoint: {}", endpoint);
     let endpoint_url = Url::parse(&endpoint)
         .map_err(|e| format!("invalid endpoint URL: {e}"))?;
-    let updater = app
-        .updater()
-        .map_err(|e| format!("updater builder init failed: {e}"))?;
-    let update = updater
+    let update = app
+        .updater_builder()
         .endpoints(vec![endpoint_url])
         .map_err(|e| format!("updater endpoints failed: {e}"))?
         .build()
@@ -815,10 +814,8 @@ pub async fn check_update_via_bootstrap(
     log::info!("[updater] checking via: {}", update_server_url);
     let endpoint_url = Url::parse(&endpoint)
         .map_err(|e| format!("invalid endpoint URL: {e}"))?;
-    let updater = app
-        .updater()
-        .map_err(|e| format!("updater builder init failed: {e}"))?;
-    let update = updater
+    let update = app
+        .updater_builder()
         .endpoints(vec![endpoint_url])
         .map_err(|e| format!("updater endpoints failed: {e}"))?
         .build()
