@@ -29,9 +29,70 @@ const App = (function () {
     await loadConfig();
     await loadTunConfig();
     await loadPresets();
+    await loadUpdateServerConfig();
     startStatusPolling();
     addLog('info', '应用已启动，等待连接...');
     setTimeout(checkForUpdates, 3000);
+  }
+
+  // ============================================================
+  // Update-server config (local override)
+  // ============================================================
+  async function loadUpdateServerConfig() {
+    try {
+      const { invoke } = window.__TAURI__.core;
+      const res = await invoke('get_update_config');
+      const input = document.getElementById('updateServerUrlInput');
+      const status = document.getElementById('updateServerStatus');
+      if (input) input.value = res.override_url || '';
+      if (status) {
+        if (res.using_override) {
+          status.textContent = `当前使用本地覆盖：${res.override_url}`;
+        } else if (res.last_bootstrap_url) {
+          status.textContent = `当前使用引导发现：${res.last_bootstrap_url}`;
+        } else {
+          status.textContent = '使用默认引导（GitHub Release fallback）';
+        }
+      }
+    } catch (e) {
+      const status = document.getElementById('updateServerStatus');
+      if (status) status.textContent = `读取失败：${e}`;
+    }
+  }
+
+  function bindUpdateServerActions() {
+    const saveBtn = document.getElementById('btnSaveUpdateServer');
+    const resetBtn = document.getElementById('btnResetUpdateServer');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        const input = document.getElementById('updateServerUrlInput');
+        const url = (input?.value || '').trim();
+        if (url && !/^https?:\/\//i.test(url)) {
+          alert('URL 必须以 http:// 或 https:// 开头');
+          return;
+        }
+        try {
+          const { invoke } = window.__TAURI__.core;
+          await invoke('set_update_config', { overrideUrl: url });
+          await loadUpdateServerConfig();
+          toast('已保存。下次检查更新时生效。', 'success');
+        } catch (e) {
+          toast(`保存失败：${e}`, 'error');
+        }
+      });
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', async () => {
+        try {
+          const { invoke } = window.__TAURI__.core;
+          await invoke('set_update_config', { overrideUrl: '' });
+          await loadUpdateServerConfig();
+          toast('已恢复使用引导 URL。', 'info');
+        } catch (e) {
+          toast(`重置失败：${e}`, 'error');
+        }
+      });
+    }
   }
 
   // ============================================================
@@ -54,6 +115,7 @@ const App = (function () {
     });
     // 切换到日志页时自动加载
     if (name === 'logs') refreshLogView();
+    if (name === 'settings') loadUpdateServerConfig();
   }
 
   // ============================================================
@@ -779,6 +841,9 @@ const App = (function () {
     document.addEventListener('change', (e) => {
       if (e.target.closest('[data-section="proxy-config"]') || e.target.closest('[data-section="route"]')) markChanged();
     });
+
+    // Update-server settings
+    bindUpdateServerActions();
   }
 
   function bindGlobalKeys() {
@@ -859,10 +924,21 @@ const App = (function () {
     if (isCheckingUpdate) return;
     isCheckingUpdate = true;
     try {
-      const { check } = window.__TAURI__.updater;
-      const update = await check();
-      if (update) {
-        showUpdateDialog(update);
+      const config = window.__TAURI__?.config?.plugins?.updater;
+      const bootstrapUrls = config?.bootstrap?.endpoints || [];
+      if (!bootstrapUrls.length) {
+        console.warn('[updater] no bootstrap URLs configured; skipping');
+        return;
+      }
+      const { invoke } = window.__TAURI__.core;
+      const result = await invoke('check_update_via_bootstrap', { bootstrapUrls });
+      if (result.status === 'UpdateAvailable') {
+        showUpdateDialog({
+          version: result.version,
+          body: result.notes,
+          endpoint: result.endpoint,
+          pub_date: result.pub_date,
+        });
       }
     } catch (e) {
       console.log('[updater] Check failed (silent):', e);
@@ -910,7 +986,6 @@ const App = (function () {
 
     document.body.appendChild(overlay);
 
-    // 绑定按钮
     $('#btnUpdateLater').addEventListener('click', () => {
       overlay.remove();
     });
@@ -920,25 +995,28 @@ const App = (function () {
       $('#updateProgress').hidden = false;
 
       try {
-        let downloaded = 0;
+        const { invoke, Channel } = window.__TAURI__.core;
+        const channel = new Channel();
         let contentLength = 0;
-
-        await update.downloadAndInstall((event) => {
-          if (event.event === 'Started') {
-            contentLength = event.data.contentLength || 0;
+        let downloaded = 0;
+        channel.onmessage = (msg) => {
+          if (msg.event === 'Started') {
+            contentLength = msg.data?.content_length || 0;
             $('#updateProgressText').textContent = '开始下载...';
-          } else if (event.event === 'Progress') {
-            downloaded += event.data.chunkLength || 0;
+          } else if (msg.event === 'Progress') {
+            downloaded += msg.data?.chunk_length || 0;
             const percent = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
             $('#updateProgressFill').style.width = percent + '%';
             $('#updateProgressText').textContent = percent + '%';
-          } else if (event.event === 'Finished') {
+          } else if (msg.event === 'Finished') {
             $('#updateProgressFill').style.width = '100%';
             $('#updateProgressText').textContent = '下载完成，准备安装...';
           }
+        };
+        await invoke('install_update', {
+          endpoint: update.endpoint,
+          onEvent: channel,
         });
-
-        // 安装完成后重启
         const { relaunch } = window.__TAURI__.process;
         await relaunch();
       } catch (e) {
