@@ -716,8 +716,26 @@ pub struct UpdateConfigResponse {
     pub using_override: bool,
 }
 
-/// Read the current update-server configuration from local storage.
-/// `using_override` indicates whether the local override is active (non-empty).
+/// Expose configured bootstrap endpoints to the webview through IPC.
+#[tauri::command]
+pub fn get_update_bootstrap_urls(app: tauri::AppHandle) -> Vec<String> {
+    app.config()
+        .plugins
+        .0
+        .get("updater")
+        .and_then(|config| config.get("bootstrap"))
+        .and_then(|bootstrap| bootstrap.get("endpoints"))
+        .and_then(|endpoints| endpoints.as_array())
+        .map(|endpoints| {
+            endpoints
+                .iter()
+                .filter_map(|url| url.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Read the local update configuration; `using_override` indicates a non-empty override.
 #[tauri::command]
 pub async fn get_update_config() -> Result<UpdateConfigResponse, String> {
     let cfg = load_update_config();

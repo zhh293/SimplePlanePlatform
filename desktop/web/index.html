@@ -370,21 +370,35 @@
       <!-- ========== 设置 ========== -->
       <section id="sec-settings" class="section" data-section="settings">
         <div class="section-header">
-          <h2>设置</h2>
-        </div>
-        <div class="card">
-          <h3>更新服务器</h3>
-          <p class="hint">默认从引导 URL 自动发现。如果你想指向自托管的 update-server，在此填入 URL（例如 <code>https://update.example.com</code>），留空则使用引导。</p>
-          <div class="form-row">
-            <label>
-              <span>URL</span>
-              <input type="text" id="updateServerUrlInput" placeholder="https://update.example.com" />
-            </label>
-            <button class="btn-save" id="btnSaveUpdateServer">保存</button>
-            <button class="btn-sm" id="btnResetUpdateServer">使用默认</button>
+          <div>
+            <p class="settings-eyebrow">SIMPLEPLANE / PREFERENCES</p>
+            <h2>设置</h2>
+            <p class="settings-intro">管理客户端更新，按你的方式保持最新。</p>
           </div>
-          <div class="form-row">
-            <span class="hint" id="updateServerStatus">读取中...</span>
+        </div>
+        <div class="settings-panel">
+          <div class="settings-panel-heading">
+            <div class="settings-icon" aria-hidden="true">↻</div>
+            <div><h3>软件更新</h3><p>默认自动发现更新服务，也可连接自托管服务器。</p></div>
+          </div>
+          <form id="updateServerForm" class="settings-form" novalidate>
+            <label for="updateServerUrlInput">更新服务器地址 <span>可选</span></label>
+            <input class="input" type="url" id="updateServerUrlInput" placeholder="https://update.example.com" autocomplete="off" spellcheck="false" aria-describedby="updateServerHelp updateServerError" />
+            <p class="settings-help" id="updateServerHelp">填写完整的 HTTP 或 HTTPS 地址；留空则使用默认更新服务。</p>
+            <p class="settings-error" id="updateServerError" role="alert" hidden></p>
+            <div class="settings-actions">
+              <button type="submit" class="btn-save" id="btnSaveUpdateServer">保存更改</button>
+              <button type="button" class="btn-sm" id="btnResetUpdateServer">恢复默认</button>
+              <span id="updateServerDirty" class="settings-unsaved" hidden>有未保存的更改</span>
+            </div>
+          </form>
+          <div class="settings-source" role="status" aria-live="polite">
+            <span class="settings-source-label">当前更新来源</span>
+            <span id="updateServerStatus">正在读取配置…</span>
+          </div>
+          <div class="settings-check">
+            <div><h4>检查新版本</h4><p id="updateCheckStatus" role="status" aria-live="polite">使用已保存的更新服务器检查可用版本。</p></div>
+            <button type="button" class="btn-sm" id="btnCheckUpdate">检查更新</button>
           </div>
         </div>
       </section>
