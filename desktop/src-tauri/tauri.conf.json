@@ -63,6 +63,7 @@
       "open": true
     },
     "updater": {
+      "dangerousInsecureTransportProtocol": true,
       "endpoints": [
         "https://github.com/zhh293/SimplePlanePlatform/releases/latest/download/latest.json"
       ],
