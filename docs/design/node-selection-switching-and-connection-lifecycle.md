@@ -1,6 +1,6 @@
 # 节点选择、故障切换与连接生命周期
 
-本文记录当前实现中的手动节点选择、自动故障切换，以及切换时浏览器侧和节点侧连接的清理方式。重点区分业务调用中的可用性检查与控制器触发的节点重选，不涉及代码修改方案。
+本文记录截至 `e94a2c2` 的手动节点选择、自动故障切换与连接生命周期，保留当时 cluster 绑定及逐流退役的说明。本轮已移除这两项管理，当前行为以[作者设计文档第 3.5 节](node-switching-author-prompt-and-source-mapping.md#remove-cluster-bindings)为准；下文源码链接固定到历史提交，不将旧实现表述为当前代码。
 
 ## 1. 入口与对象关系
 
@@ -28,19 +28,20 @@ Http3NodeController
 
 相关代码：
 
-- [ProxyLocalServer.java](../../proxy-local/src/main/java/com/proxy/local/ProxyLocalServer.java)：`buildInvokerChain()`。
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`Node`、`beginConnect()`。
-- [HeaderExchanger.java](../../proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchanger.java)：`connect()`。
+- [ProxyLocalServer.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/ProxyLocalServer.java)：`buildInvokerChain()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`Node`、`beginConnect()`。
+- [HeaderExchanger.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchanger.java)：`connect()`。
 
 ## 2. 手动模式
 
 初始化时只连接 `selectedNodeId` 对应的节点。连接成功后，将其 `wrapped` 加入集群，并调用 `cluster.setCurrentInvoker(node.wrapped)`。因此，成功初始化后，集群中只有选中节点的一个 Invoker，业务使用固定的 `currentInvoker`。
 
-手动模式不自动寻找其他节点兜底，但仍检查连接可用性。`StickyClusterInvoker.invoke()` 在处理每个 CONNECT 时先计算 `getAvailableInvokers()`：
+手动模式不自动寻找其他节点兜底，但仍检查连接可用性。`StickyClusterInvoker.invoke()` 在处理每个 CONNECT 时直接取得 `currentInvoker`：
 
-- 可用列表为空，返回 `No available invoker`。
-- 当前 Invoker 为空或不在可用列表中，返回 `Current node unavailable`。
+- 当前 Invoker 为空、不属于集群成员或连接不可用，返回 `Current node unavailable`。
 - 当前 Invoker 可用，使用它创建 stream 绑定并发起 CONNECT。
+
+业务入口不遍历备用节点检查其可用性，也不调用负载均衡。初始化尚未完成、切换清理中或没有健康候选时，current 可以为空；此时 `isAvailable()` 同样返回 false，等待控制器安装 current。调整理由及测试记录见[作者原始设计与源码对应，第 3.4 节](node-switching-author-prompt-and-source-mapping.md#current-invoker-only)。
 
 因此，“手动模式不需要管其他可用节点”可以理解为不自动切换到其他节点，不能理解为完全不检查当前连接是否可用。
 
@@ -50,9 +51,9 @@ Http3NodeController
 
 相关代码：
 
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`initialize()`、`apply()`、`selectionKey()`。
-- [StickyClusterInvoker.java](../../proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`invoke()`、`setCurrentInvoker()`。
-- [NodeConfigWatcher.java](../../proxy-local/src/main/java/com/proxy/local/config/NodeConfigWatcher.java)：`poll()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`initialize()`、`apply()`、`selectionKey()`。
+- [StickyClusterInvoker.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`invoke()`、`setCurrentInvoker()`。
+- [NodeConfigWatcher.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/NodeConfigWatcher.java)：`poll()`。
 
 ## 3. 自动模式的选点与重选
 
@@ -63,11 +64,13 @@ Http3NodeController
 
 健康的首选节点优先；否则使用控制器配置的 `random` 负载均衡策略选择节点，再调用 `setCurrentInvoker()` 固定选择。初次选点时，若首选节点仍在连接，会先等待其连接结果。
 
+每次 `initialize()` 都会重置 `lastSelectionAt`，所以从手动模式重新进入自动模式也会执行上述首选等待规则，不沿用上一次自动运行期间的选点间隔或初始化状态。
+
 ### 3.1 可用性检查不等于当次重选
 
-自动模式同样会在每个业务 CONNECT 时检查可用列表，但发现当前 Invoker 不可用时，当次请求返回错误，不会在该次调用中立即负载均衡重选。
+自动模式同样会在每个业务 CONNECT 时检查 current 的成员归属与连接可用性。发现 current 不可用时，当次请求返回错误，不会在该次调用中立即负载均衡重选，也不生成全体可用成员列表。
 
-`setCurrentInvoker()` 会将 `fixedSelection` 设为 `true`；手动和自动模式都走固定当前节点的路径。自动模式的重选由控制器负责，不是 `StickyClusterInvoker.invoke()` 内的循环重试。
+手动和自动模式都直接使用控制器安装的 current；`fixedSelection` 及业务入口中的负载均衡兜底分支已移除。自动模式的重选仍由控制器调用 `selectCurrent()` 负责，该方法保留健康候选过滤和负载均衡，不在 `StickyClusterInvoker.invoke()` 内重试。
 
 当前选点没有“在一次调用中不断选择，直到拿到健康节点”的循环。本次没有候选时保持不可用，后续由控制器再次尝试。已经存在 `currentNodeId` 时，`chooseCurrent()` 直接返回，因此恢复后的首选节点不会抢占健康的当前节点。
 
@@ -105,9 +108,9 @@ tick()
 
 相关代码：
 
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`chooseCurrent()`、`tick()`、`observe()`、`probe()`、`fail()`。
-- [NodeCircuit.java](../../proxy-local/src/main/java/com/proxy/local/config/NodeCircuit.java)：可选条件、故障计时、熔断与恢复状态机。
-- [Http3Client.java](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`attachConnectionListener()`、`scheduleReconnect()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`chooseCurrent()`、`tick()`、`observe()`、`probe()`、`fail()`。
+- [NodeCircuit.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/NodeCircuit.java)：可选条件、故障计时、熔断与恢复状态机。
+- [Http3Client.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`attachConnectionListener()`、`scheduleReconnect()`。
 
 ## 4. 切换时的 stream 退役与两侧连接关闭
 
@@ -156,13 +159,13 @@ HTTP/3 实现会停止重连任务，终结并清空所属 stream，然后调用
 
 相关代码：
 
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`retireCurrent()`、`closeNode()`。
-- [StickyClusterInvoker.java](../../proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`retireBindings()`、`unbind()`。
-- [ClientInvoker.java](../../proxy-cluster/src/main/java/com/proxy/cluster/ClientInvoker.java)：`close()`。
-- [HeaderExchangeClient.java](../../proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchangeClient.java)：`close()`。
-- [ExchangeHandler.java](../../proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java)：`trackRequest()`、`failPending()`、`onStreamClosed()`。
-- [Http3Client.java](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`close()`。
-- [Http3Connection.java](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Connection.java)：`close()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`retireCurrent()`、`closeNode()`。
+- [StickyClusterInvoker.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`retireBindings()`、`unbind()`。
+- [ClientInvoker.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/main/java/com/proxy/cluster/ClientInvoker.java)：`close()`。
+- [HeaderExchangeClient.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchangeClient.java)：`close()`。
+- [ExchangeHandler.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java)：`trackRequest()`、`failPending()`、`onStreamClosed()`。
+- [Http3Client.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`close()`。
+- [Http3Connection.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Connection.java)：`close()`。
 
 ## 5. 已建立 stream 不随选点迁移
 

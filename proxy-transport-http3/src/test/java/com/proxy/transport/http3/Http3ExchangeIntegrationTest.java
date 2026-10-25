@@ -68,6 +68,18 @@ class Http3ExchangeIntegrationTest {
             org.junit.jupiter.api.Assertions.assertFalse(browserA.isActive());
             assertTrue(browserB.isActive());
             assertTrue(b.isAvailable());
+            ExchangeClient currentB = b;
+            assertEquals(1, b.getClient().getActiveStreamCount());
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> currentB.send(
+                    ProxyMessage.builder().streamId(701).type(ProxyMessage.MessageType.DATA)
+                            .data(new byte[]{42}).build()));
+            org.junit.jupiter.api.Assertions.assertFalse(b.request(ProxyMessage.builder().streamId(701)
+                    .type(ProxyMessage.MessageType.DISCONNECT).build(), 5000)
+                    .get(10, TimeUnit.SECONDS).isSuccess());
+            assertEquals(1, b.getClient().getActiveStreamCount(), "Old events must not create a new stream");
+            assertTrue(browserB.isActive(), "Rejecting an old stream must not close B's browser");
+            assertTrue(registry.containsKey(702L));
+            assertEquals(0, com.proxy.exchange.header.DefaultFuture.getActiveFutureCount());
             assertTrue(b.request(ProxyMessage.builder().streamId(702)
                     .type(ProxyMessage.MessageType.DISCONNECT).build(), 5000)
                     .get(10, TimeUnit.SECONDS).isSuccess());

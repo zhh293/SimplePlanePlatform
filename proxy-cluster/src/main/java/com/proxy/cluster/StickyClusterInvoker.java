@@ -11,27 +11,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
-/** Selects a concrete connection only at CONNECT. Never retries or replays DATA. */
+/** Dispatches to the controller-installed current connection. Stream lifecycle belongs to its client. */
 public final class StickyClusterInvoker implements ClusterInvoker {
     private volatile List<Invoker> invokers = Collections.emptyList();
     private volatile LoadBalance loadBalance;
     private volatile Invoker currentInvoker;
-    private volatile boolean fixedSelection;
-    private final ConcurrentHashMap<Long, Binding> bindings = new ConcurrentHashMap<>();
-
-    private static final class Binding {
-        final Invoker invoker;
-        final String targetHost;
-        final int targetPort;
-        volatile boolean active;
-        Binding(Invoker invoker, Invocation connect) {
-            this.invoker = invoker;
-            this.targetHost = connect.getTargetHost();
-            this.targetPort = connect.getTargetPort();
-        }
-    }
 
     @Override
     public CompletableFuture<Response> invoke(Invocation invocation) {
@@ -41,75 +26,31 @@ public final class StickyClusterInvoker implements ClusterInvoker {
         try { streamId = Long.parseLong(id.toString()); }
         catch (NumberFormatException invalid) { return error("Invalid streamId"); }
         if (streamId == 0) return error("Invalid streamId");
-        if (invocation.getType() == ProxyMessage.MessageType.CONNECT) {
-            synchronized (this) {
-                List<Invoker> available = getAvailableInvokers();
-                if (available.isEmpty()) return error("No available invoker");
-                Invoker selected = fixedSelection ? currentInvoker : loadBalance == null ? available.get(0)
-                        : loadBalance.select(available, invocation, Collections.emptySet());
-                if (selected == null || !available.contains(selected)) return error("Current node unavailable");
-                Binding binding = new Binding(selected, invocation);
-                if (bindings.putIfAbsent(streamId, binding) != null) return error("Stream already bound");
-                CompletableFuture<Response> result;
-                try {
-                    result = selected.invoke(invocation);
-                } catch (RuntimeException failure) {
-                    bindings.remove(streamId, binding);
-                    return failed(failure);
-                }
-                return result.thenApply(response -> {
-                    if (response != null && response.isSuccess() && bindings.get(streamId) == binding) {
-                        binding.active = true;
-                        return response;
-                    }
-                    bindings.remove(streamId, binding);
-                    return response != null && !response.isSuccess() ? response : Response.error("Stream cancelled");
-                }).whenComplete((response, failure) -> {
-                    if (failure != null) bindings.remove(streamId, binding);
-                });
+        if (invocation.getType() != ProxyMessage.MessageType.CONNECT
+                && invocation.getType() != ProxyMessage.MessageType.DATA
+                && invocation.getType() != ProxyMessage.MessageType.DISCONNECT) {
+            return error("Unsupported message type");
+        }
+        // Admission and dispatch use the same lock as current replacement. Stream ownership,
+        // cancellation and closure belong to the exchange/transport layer, not this cluster.
+        synchronized (this) {
+            Invoker selected = currentInvoker;
+            if (selected == null || !invokers.contains(selected) || !selected.isAvailable()) {
+                return error("Current node unavailable");
+            }
+            try {
+                return selected.invoke(invocation);
+            } catch (RuntimeException failure) {
+                return failed(failure);
             }
         }
-        Binding binding = bindings.get(streamId);
-        if (binding == null) return error("Stream is not bound");
-        if (invocation.getType() == ProxyMessage.MessageType.DISCONNECT) {
-            // Remove before invoking: a late CONNECT completion cannot resurrect this binding.
-            bindings.remove(streamId, binding);
-        } else if (invocation.getType() != ProxyMessage.MessageType.DATA || !binding.active) {
-            return error("Stream is not active");
-        }
-        try {
-            return binding.invoker.invoke(invocation);
-        } catch (RuntimeException failure) {
-            return failed(failure);
-        }
     }
 
-    /** Called by the stream lifecycle owner after transport failure or browser cancellation. */
-    public void unbind(long streamId) { bindings.remove(streamId); }
-
-    /** Stop all old bindings before retiring their transports; cleanup uses the original concrete invoker. */
-    public CompletableFuture<Void> retireBindings() {
-        List<CompletableFuture<Response>> disconnects = new ArrayList<>();
-        bindings.forEach((streamId, binding) -> {
-            if (!bindings.remove(streamId, binding)) return;
-            binding.active = false;
-            Invocation disconnect = new Invocation(binding.targetHost, binding.targetPort, null,
-                    ProxyMessage.MessageType.DISCONNECT);
-            disconnect.setAttachment("streamId", streamId);
-            try { disconnects.add(binding.invoker.invoke(disconnect)); }
-            catch (RuntimeException ignored) { /* Transport closure remains the final cleanup boundary. */ }
-        });
-        return CompletableFuture.allOf(disconnects.toArray(new CompletableFuture<?>[0]));
-    }
-
-    public int getBindingCount() { return bindings.size(); }
-
-    /** Null pauses new CONNECT admission without discarding preconnected members. */
+    /** Null pauses business dispatch while the controller closes the old client. */
     public synchronized void setCurrentInvoker(Invoker invoker) {
         if (invoker != null && !invokers.contains(invoker)) {
             throw new IllegalArgumentException("Current invoker must be a cluster member");
         }
-        fixedSelection = true;
         currentInvoker = invoker;
     }
 
@@ -169,10 +110,13 @@ public final class StickyClusterInvoker implements ClusterInvoker {
 
     @Override
     public boolean isAvailable() {
-        return fixedSelection ? currentInvoker != null && invokers.contains(currentInvoker) && currentInvoker.isAvailable()
-                : !getAvailableInvokers().isEmpty();
+        Invoker selected = currentInvoker;
+        return selected != null && invokers.contains(selected) && selected.isAvailable();
     }
 
     @Override
-    public int getActiveCount() { return bindings.size(); }
+    public int getActiveCount() {
+        Invoker selected = currentInvoker;
+        return selected == null ? 0 : selected.getActiveCount();
+    }
 }

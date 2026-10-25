@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class Http3AutoSwitchIntegrationTest {
     @TempDir Path temp;
 
-    @Test void remoteFailureRecoveryAndAutoToManualUseOriginalTransportPaths() throws Exception {
+    @Test void remoteFailureRecoveryAndModeRoundTripUseOriginalTransportPaths() throws Exception {
         TestCertificates certificate = TestCertificates.create();
         NioEventLoopGroup workers = new NioEventLoopGroup(2);
         ExecutorService business = Executors.newFixedThreadPool(4);
@@ -73,6 +73,8 @@ class Http3AutoSwitchIntegrationTest {
             }
             try (Socket browserB = connectSocks5(localPort, targetPort)) {
                 echo(browserB, "automatic-after-failure");
+                // closeAll permanently retires the old manager; a remote restart needs fresh state.
+                dispatchA = new DispatchInvoker(business, connector, 3000);
                 a = new Http3Server(serverUrl(portA, certificate, "aes-gcm-v2"), new ExchangeHandler(dispatchA));
                 a.start();
                 Path status = config.resolveSibling("auto.yml.status.json");
@@ -91,10 +93,27 @@ class Http3AutoSwitchIntegrationTest {
                 awaitStatus(config, "\"nodeStatus\":\"available\"");
                 assertEquals(-1, browserB.getInputStream().read());
             }
-            try (Socket manual = connect(localPort, targetPort)) { echo(manual, "manual-after-auto"); }
+            try (Socket manual = connect(localPort, targetPort)) {
+                echo(manual, "manual-after-auto");
+                deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+                while (a.getActiveConnectionCount() != 0 && System.nanoTime() < deadline) Thread.sleep(25);
+                assertEquals(0, a.getActiveConnectionCount(), "Manual mode closes backup preconnections");
+                Files.write(config, automatic.getBytes(StandardCharsets.UTF_8));
+                awaitStatus(config, "\"mode\":\"auto\"");
+                awaitStatus(config, "\"currentNodeId\":\"a\"");
+                assertEquals(-1, manual.getInputStream().read(), "Returning to auto retires the manual stream");
+                try (Socket automaticBrowser = connectSocks5(localPort, targetPort)) {
+                    echo(automaticBrowser, "automatic-after-manual");
+                    verifyPlainHttp(localPort, targetPort);
+                }
+            }
             deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-            while (a.getActiveConnectionCount() != 0 && System.nanoTime() < deadline) Thread.sleep(25);
-            assertEquals(0, a.getActiveConnectionCount(), "Manual mode closes backup preconnections");
+            while (System.nanoTime() < deadline && (dispatchA.getSessionManager().activeCount() != 0
+                    || dispatchB.getSessionManager().activeCount() != 0
+                    || com.proxy.exchange.header.DefaultFuture.getActiveFutureCount() != 0)) Thread.sleep(25);
+            assertEquals(0, dispatchA.getSessionManager().activeCount());
+            assertEquals(0, dispatchB.getSessionManager().activeCount());
+            assertEquals(0, com.proxy.exchange.header.DefaultFuture.getActiveFutureCount());
         } finally {
             if (local != null) local.shutdown();
             if (a != null) a.close();
