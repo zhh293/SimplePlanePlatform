@@ -83,6 +83,7 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
+          shell: bash
           command: cargo tauri --version || cargo install tauri-cli --locked
 
       # Step 1: Build fat-jar
