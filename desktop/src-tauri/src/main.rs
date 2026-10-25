@@ -46,6 +46,11 @@ fn main() {
             commands::clear_logs,
             commands::get_config_dir,
             commands::diagnose_tun,
+            commands::check_update_via_bootstrap,
+            commands::install_update,
+            commands::get_update_config,
+            commands::get_update_bootstrap_urls,
+            commands::set_update_config,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {

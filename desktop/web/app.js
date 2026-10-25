@@ -29,9 +29,105 @@ const App = (function () {
     await loadConfig();
     await loadTunConfig();
     await loadPresets();
+    await loadUpdateServerConfig();
     startStatusPolling();
     addLog('info', '应用已启动，等待连接...');
-    setTimeout(checkForUpdates, 3000);
+    setTimeout(() => checkForUpdates(), 3000);
+  }
+
+  // ============================================================
+  // Update-server config (local override)
+  // ============================================================
+  let savedUpdateServerUrl = '';
+  let updateConfigBusy = false;
+  let updateConfigLoaded = false;
+  let updateConfigRequest = 0;
+
+  function showUpdateConfig(res, replaceInput = true) {
+    savedUpdateServerUrl = res.override_url || '';
+    updateConfigLoaded = true;
+    if (replaceInput) $('#updateServerUrlInput').value = savedUpdateServerUrl;
+    $('#updateServerStatus').textContent = res.using_override
+      ? `自定义服务器 · ${res.override_url}`
+      : res.last_bootstrap_url ? `自动发现 · ${res.last_bootstrap_url}` : '默认更新服务 · 自动发现';
+    updateServerDirtyState();
+  }
+
+  function updateServerDirtyState() {
+    $('#updateServerDirty').hidden = !updateConfigLoaded || $('#updateServerUrlInput').value.trim() === savedUpdateServerUrl;
+  }
+
+  async function loadUpdateServerConfig() {
+    if (updateConfigBusy) return;
+    const request = ++updateConfigRequest;
+    const initialValue = $('#updateServerUrlInput').value;
+    const wasDirty = updateConfigLoaded && initialValue.trim() !== savedUpdateServerUrl;
+    try {
+      const res = await invoke('get_update_config');
+      if (request !== updateConfigRequest) return;
+      showUpdateConfig(res, !wasDirty && $('#updateServerUrlInput').value === initialValue);
+    } catch (e) {
+      if (request === updateConfigRequest) $('#updateServerStatus').textContent = `读取失败：${e}。可重新进入设置页重试。`;
+    }
+  }
+
+  async function saveUpdateServerConfig(reset = false) {
+    if (updateConfigBusy) return;
+    const input = $('#updateServerUrlInput');
+    const error = $('#updateServerError');
+    let url = reset ? '' : input.value.trim();
+    error.hidden = true;
+    input.removeAttribute('aria-invalid');
+    if (url) {
+      try {
+        const parsed = new URL(url);
+        if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname || parsed.username || parsed.password || parsed.search || parsed.hash) throw new Error();
+        url = parsed.href.replace(/\/+$/, '');
+      } catch {
+        error.textContent = '请输入有效的 HTTP 或 HTTPS 服务器地址，不包含账号、查询参数或片段。';
+        error.hidden = false;
+        input.setAttribute('aria-invalid', 'true');
+        input.focus();
+        return;
+      }
+    }
+    updateConfigBusy = true;
+    ++updateConfigRequest; // Discard reads started before this write.
+    const buttons = [$('#btnSaveUpdateServer'), $('#btnResetUpdateServer'), $('#btnCheckUpdate')];
+    buttons.forEach(button => { button.disabled = true; });
+    input.disabled = true;
+    const action = reset ? $('#btnResetUpdateServer') : $('#btnSaveUpdateServer');
+    const label = action.textContent;
+    action.textContent = reset ? '正在恢复…' : '正在保存…';
+    try {
+      const res = await invoke('set_update_config', { overrideUrl: url });
+      showUpdateConfig(res);
+      $('#updateCheckStatus').textContent = '使用已保存的更新服务器检查可用版本。';
+      toast(reset ? '已恢复默认更新服务' : '已保存，下次检查更新时生效', 'success');
+    } catch (e) {
+      error.textContent = `保存失败：${e}。请重试。`;
+      error.hidden = false;
+    } finally {
+      updateConfigBusy = false;
+      buttons.forEach(button => { button.disabled = false; });
+      $('#btnCheckUpdate').disabled = isCheckingUpdate;
+      input.disabled = false;
+      action.textContent = label;
+    }
+  }
+
+  function bindUpdateServerActions() {
+    $('#updateServerForm').addEventListener('submit', e => {
+      e.preventDefault();
+      saveUpdateServerConfig();
+    });
+    $('#btnResetUpdateServer').addEventListener('click', () => saveUpdateServerConfig(true));
+    $('#btnCheckUpdate').addEventListener('click', () => checkForUpdates(true));
+    $('#updateServerUrlInput').addEventListener('input', () => {
+      $('#updateServerError').hidden = true;
+      $('#updateServerUrlInput').removeAttribute('aria-invalid');
+      updateServerDirtyState();
+    });
   }
 
   // ============================================================
@@ -54,6 +150,7 @@ const App = (function () {
     });
     // 切换到日志页时自动加载
     if (name === 'logs') refreshLogView();
+    if (name === 'settings') loadUpdateServerConfig();
   }
 
   // ============================================================
@@ -779,13 +876,17 @@ const App = (function () {
     document.addEventListener('change', (e) => {
       if (e.target.closest('[data-section="proxy-config"]') || e.target.closest('[data-section="route"]')) markChanged();
     });
+
+    // Update-server settings
+    bindUpdateServerActions();
   }
 
   function bindGlobalKeys() {
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        if (hasChanges) saveAll();
+        if (currentSection === 'settings') saveUpdateServerConfig();
+        else if (hasChanges) saveAll();
       }
     });
   }
@@ -855,19 +956,36 @@ const App = (function () {
   // ============================================================
   let isCheckingUpdate = false;
 
-  async function checkForUpdates() {
+  async function checkForUpdates(manual = false) {
     if (isCheckingUpdate) return;
     isCheckingUpdate = true;
+    const button = $('#btnCheckUpdate');
+    const status = $('#updateCheckStatus');
+    button.disabled = true;
+    button.textContent = '正在检查…';
+    if (manual) status.textContent = '正在连接更新服务器…';
     try {
-      const { check } = window.__TAURI__.updater;
-      const update = await check();
-      if (update) {
-        showUpdateDialog(update);
+      // Tauri exposes app configuration through IPC, not window.__TAURI__.config.
+      const config = await invoke('get_update_bootstrap_urls');
+      const result = await invoke('check_update_via_bootstrap', { bootstrapUrls: config });
+      if (result.status === 'UpdateAvailable') {
+        status.textContent = `发现新版本 v${result.version}`;
+        showUpdateDialog({
+          version: result.version,
+          body: result.notes,
+          endpoint: result.endpoint,
+          pub_date: result.pub_date,
+        });
+      } else if (manual) {
+        status.textContent = '当前已是最新版本。';
       }
     } catch (e) {
-      console.log('[updater] Check failed (silent):', e);
+      if (manual) status.textContent = `检查失败：${e}。请重试。`;
+      console.log('[updater] Check failed:', e);
     } finally {
       isCheckingUpdate = false;
+      button.disabled = updateConfigBusy;
+      button.textContent = '检查更新';
     }
   }
 
@@ -910,7 +1028,6 @@ const App = (function () {
 
     document.body.appendChild(overlay);
 
-    // 绑定按钮
     $('#btnUpdateLater').addEventListener('click', () => {
       overlay.remove();
     });
@@ -920,25 +1037,28 @@ const App = (function () {
       $('#updateProgress').hidden = false;
 
       try {
-        let downloaded = 0;
+        const { invoke, Channel } = window.__TAURI__.core;
+        const channel = new Channel();
         let contentLength = 0;
-
-        await update.downloadAndInstall((event) => {
-          if (event.event === 'Started') {
-            contentLength = event.data.contentLength || 0;
+        let downloaded = 0;
+        channel.onmessage = (msg) => {
+          if (msg.event === 'Started') {
+            contentLength = msg.data?.content_length || 0;
             $('#updateProgressText').textContent = '开始下载...';
-          } else if (event.event === 'Progress') {
-            downloaded += event.data.chunkLength || 0;
+          } else if (msg.event === 'Progress') {
+            downloaded += msg.data?.chunk_length || 0;
             const percent = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
             $('#updateProgressFill').style.width = percent + '%';
             $('#updateProgressText').textContent = percent + '%';
-          } else if (event.event === 'Finished') {
+          } else if (msg.event === 'Finished') {
             $('#updateProgressFill').style.width = '100%';
             $('#updateProgressText').textContent = '下载完成，准备安装...';
           }
+        };
+        await invoke('install_update', {
+          endpoint: update.endpoint,
+          onEvent: channel,
         });
-
-        // 安装完成后重启
         const { relaunch } = window.__TAURI__.process;
         await relaunch();
       } catch (e) {

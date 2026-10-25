@@ -1,0 +1,129 @@
+{
+  "timestamp": "2026-10-22T10:55:24.949Z",
+  "node_version": "v24.10.0",
+  "platform": "win32",
+  "scenarios": {
+    "login_success": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "unauth_blocked": {
+      "pass": true,
+      "detail": "status=401"
+    },
+    "login_lockout_429": {
+      "pass": true,
+      "detail": "5 wrong attempts triggered 429"
+    },
+    "login_correct_blocked_during_lockout": {
+      "pass": true,
+      "detail": "status=429"
+    },
+    "create_session_win_0.2.3": {
+      "pass": true,
+      "detail": "status=201"
+    },
+    "resume_offset_after_partial_upload": {
+      "pass": true,
+      "detail": "expected=12288 actual=12288"
+    },
+    "signature_upload_complete": {
+      "pass": true,
+      "detail": "status=204"
+    },
+    "complete_success": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "complete_sha256_matches": {
+      "pass": true,
+      "detail": "expected=63858ef40e90cbf6088355bae7e73e3d4843674352306294b1b6c6b2090370fc actual=63858ef40e90cbf6088355bae7e73e3d4843674352306294b1b6c6b2090370fc"
+    },
+    "publish_win_0.2.3": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "client_sees_0.2.3": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "client_no_update_when_current": {
+      "pass": true,
+      "detail": "status=204"
+    },
+    "create_session_mac_0.2.4": {
+      "pass": true,
+      "detail": "status=201"
+    },
+    "publish_mac_0.2.4": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "dual_platform_independence_win": {
+      "pass": true,
+      "detail": "version=0.2.3"
+    },
+    "dual_platform_independence_mac": {
+      "pass": true,
+      "detail": "version=0.2.4"
+    },
+    "monotonic_rejects_older_version": {
+      "pass": true,
+      "detail": "status=409 err=version_older_than_latest"
+    },
+    "delete_latest_409": {
+      "pass": true,
+      "detail": "status=409"
+    },
+    "delete_non_latest_204": {
+      "pass": true,
+      "detail": "status=204"
+    },
+    "patch_notes_success": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "patch_immutable_field_422": {
+      "pass": true,
+      "detail": "status=422"
+    },
+    "download_serves_package": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "download_cache_headers": {
+      "pass": true,
+      "detail": "cache-control=public, max-age=31536000, immutable"
+    },
+    "latest_json_has_both_platforms": {
+      "pass": true,
+      "detail": "platforms=windows-x86_64,darwin-aarch64"
+    },
+    "srp_params_endpoint": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "srp_challenge_returns_salt_B": {
+      "pass": true,
+      "detail": "status=200"
+    },
+    "srp_replay_blocked": {
+      "pass": true,
+      "detail": "status=404"
+    },
+    "srp_wrong_M1_rejected_401": {
+      "pass": true,
+      "detail": "status=401"
+    },
+    "srp_fresh_ephemerals_per_handshake": {
+      "pass": true,
+      "detail": "A0==A1: false, B0==B1: false"
+    },
+    "srp_legacy_login_deprecated_410": {
+      "pass": true,
+      "detail": "status=410"
+    }
+  },
+  "total_failures": 0,
+  "passed": true
+}

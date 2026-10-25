@@ -56,6 +56,13 @@
           </svg>
           <span>日志</span>
         </li>
+        <li class="nav-item" data-section="settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 10 3.17V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>设置</span>
+        </li>
       </ul>
       <div class="nav-footer">
         <span class="version">v0.1.0</span>
@@ -356,6 +363,42 @@
         <div class="log-terminal" id="logTerminal">
           <div id="logContent">
             <div class="log-line"><span class="log-time">--:--:--</span><span class="log-text log-info">SimplePlane Desktop v0.1.0 就绪</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== 设置 ========== -->
+      <section id="sec-settings" class="section" data-section="settings">
+        <div class="section-header">
+          <div>
+            <p class="settings-eyebrow">SIMPLEPLANE / PREFERENCES</p>
+            <h2>设置</h2>
+            <p class="settings-intro">管理客户端更新，按你的方式保持最新。</p>
+          </div>
+        </div>
+        <div class="settings-panel">
+          <div class="settings-panel-heading">
+            <div class="settings-icon" aria-hidden="true">↻</div>
+            <div><h3>软件更新</h3><p>支持 HTTP / HTTPS 更新服务器，保存地址后点击“检查新版本”。</p></div>
+          </div>
+          <form id="updateServerForm" class="settings-form" novalidate>
+            <label for="updateServerUrlInput">更新服务器地址 <span>可选</span></label>
+            <input class="input" type="url" id="updateServerUrlInput" placeholder="https://update.example.com" autocomplete="off" spellcheck="false" aria-describedby="updateServerHelp updateServerError" />
+            <p class="settings-help" id="updateServerHelp">填写完整的 HTTP 或 HTTPS 地址；留空则使用默认更新服务。</p>
+            <p class="settings-error" id="updateServerError" role="alert" hidden></p>
+            <div class="settings-actions">
+              <button type="submit" class="btn-save" id="btnSaveUpdateServer">保存更改</button>
+              <button type="button" class="btn-sm" id="btnResetUpdateServer">恢复默认</button>
+              <span id="updateServerDirty" class="settings-unsaved" hidden>有未保存的更改</span>
+            </div>
+          </form>
+          <div class="settings-source" role="status" aria-live="polite">
+            <span class="settings-source-label">当前更新来源</span>
+            <span id="updateServerStatus">正在读取配置…</span>
+          </div>
+          <div class="settings-check">
+            <div><h4>检查新版本</h4><p id="updateCheckStatus" role="status" aria-live="polite">使用已保存的更新服务器检查可用版本。</p></div>
+            <button type="button" class="btn-sm" id="btnCheckUpdate">检查更新</button>
           </div>
         </div>
       </section>

@@ -1,0 +1,16 @@
+{
+  "name": "simpleplane-update-server",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Self-hosted update service for SimplePlane desktop releases",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node --experimental-sqlite src/server.js",
+    "migrate": "node --experimental-sqlite scripts/migrate-latest-json.mjs",
+    "test": "node --experimental-sqlite --test tests/*.test.mjs",
+    "e2e": "node --experimental-sqlite scripts/e2e-test.mjs"
+  }
+}

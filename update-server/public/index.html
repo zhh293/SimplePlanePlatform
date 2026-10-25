@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SimplePlane 更新控制面板</title>
+  <link rel="stylesheet" href="/admin/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-name">SimplePlane</span>
+      <span class="brand-sub">Update Console</span>
+    </div>
+    <nav class="nav" id="nav" hidden>
+      <button data-view="versions" class="nav-btn active">版本</button>
+      <button data-view="upload" class="nav-btn">上传</button>
+      <button data-view="audit" class="nav-btn">审计</button>
+      <button data-view="logout" class="nav-btn nav-logout">退出</button>
+    </nav>
+  </header>
+
+  <main class="content">
+    <!-- Login view -->
+    <section id="view-login" class="view active">
+      <div class="card login-card">
+        <h1>管理员登录</h1>
+        <p class="hint">使用管理员密码登录控制面板。</p>
+        <form id="loginForm" autocomplete="off">
+          <label>
+            <span>密码</span>
+            <input type="password" name="password" required autocomplete="current-password" />
+          </label>
+          <button type="submit" class="btn btn-primary">登录</button>
+          <p id="loginError" class="error" hidden></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Versions list view -->
+    <section id="view-versions" class="view">
+      <div class="card">
+        <div class="card-head">
+          <h2>版本列表</h2>
+          <div class="card-actions">
+            <select id="platformFilter">
+              <option value="">全部平台</option>
+              <option value="windows-x86_64">windows-x86_64</option>
+              <option value="darwin-aarch64">darwin-aarch64</option>
+            </select>
+            <button id="refreshVersions" class="btn btn-secondary">刷新</button>
+          </div>
+        </div>
+        <table class="versions-table">
+          <thead>
+            <tr>
+              <th>平台</th>
+              <th>版本</th>
+              <th>大小</th>
+              <th>SHA256</th>
+              <th>最新</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="versionsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Upload view -->
+    <section id="view-upload" class="view">
+      <div class="card">
+        <h2>上传新版本</h2>
+        <form id="uploadForm" autocomplete="off">
+          <label>
+            <span>平台</span>
+            <select name="platform" required>
+              <option value="windows-x86_64">windows-x86_64</option>
+              <option value="darwin-aarch64">darwin-aarch64</option>
+            </select>
+          </label>
+          <label>
+            <span>版本号</span>
+            <input type="text" name="version" placeholder="0.2.4" pattern="\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?" required />
+          </label>
+          <label>
+            <span>更新说明</span>
+            <textarea name="notes" rows="3" placeholder="修复了哪些问题"></textarea>
+          </label>
+          <label>
+            <span>安装包 (.zip / .tar.gz)</span>
+            <input type="file" id="packageFile" accept=".zip,.tar.gz" required />
+          </label>
+          <label>
+            <span>签名文件 (.sig)</span>
+            <input type="file" id="signatureFile" accept=".sig" required />
+          </label>
+          <p class="hint" id="uploadHint">服务端要求签名文件名与安装包严格配对（如 <code>foo.zip</code> ↔ <code>foo.zip.sig</code>）。版本号必须严格大于当前 latest。</p>
+          <button type="submit" id="btnStartUpload" class="btn btn-primary">开始上传</button>
+          <button type="button" id="btnCancelUpload" class="btn btn-secondary" hidden>取消</button>
+        </form>
+
+        <div id="uploadProgress" class="upload-progress" hidden>
+          <h3>上传进度</h3>
+          <div class="progress-row">
+            <span class="progress-label">安装包</span>
+            <div class="progress-bar"><div class="progress-fill" id="packageFill"></div></div>
+            <span class="progress-text" id="packageProgress">0%</span>
+          </div>
+          <div class="progress-row">
+            <span class="progress-label">签名</span>
+            <div class="progress-bar"><div class="progress-fill" id="signatureFill"></div></div>
+            <span class="progress-text" id="signatureProgress">0%</span>
+          </div>
+          <p id="uploadStage" class="stage"></p>
+        </div>
+
+        <div id="uploadResult" class="upload-result" hidden>
+          <h3>上传完成</h3>
+          <pre id="uploadResultJson"></pre>
+          <button id="btnPublish" class="btn btn-primary">发布为 latest</button>
+          <p id="publishResult" class="success"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Audit view -->
+    <section id="view-audit" class="view">
+      <div class="card">
+        <div class="card-head">
+          <h2>审计日志</h2>
+          <div class="card-actions">
+            <input type="number" id="auditLimit" value="100" min="1" max="500" />
+            <button id="refreshAudit" class="btn btn-secondary">刷新</button>
+          </div>
+        </div>
+        <table class="audit-table">
+          <thead>
+            <tr><th>时间</th><th>操作者</th><th>动作</th><th>平台</th><th>版本</th><th>详情</th></tr>
+          </thead>
+          <tbody id="auditBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/admin/static/srp-client.js"></script>
+  <script type="module" src="/admin/static/app.js"></script>
+</body>
+</html>

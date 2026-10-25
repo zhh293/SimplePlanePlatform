@@ -61,13 +61,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install Tauri CLI
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          command: cargo install tauri-cli --locked
-
       - name: Cache Maven
         uses: actions/cache@v4
         with:
@@ -83,6 +76,34 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install Tauri CLI
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          shell: bash
+          command: cargo tauri --version || cargo install tauri-cli --locked
+
+      - name: Prepare updater signing key
+        env:
+          UPDATER_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const raw = (process.env.UPDATER_PRIVATE_KEY || '').trim();
+          if (!raw) throw new Error('TAURI_SIGNING_PRIVATE_KEY is not configured');
+          const key = raw.startsWith('untrusted comment:')
+            ? Buffer.from(raw, 'utf8').toString('base64')
+            : raw;
+          if (!Buffer.from(key, 'base64').toString('utf8').startsWith('untrusted comment:')) {
+            throw new Error('Updater signing key must be a Minisign key file or its base64 encoding');
+          }
+          console.log('::add-mask::' + key);
+          fs.appendFileSync(process.env.GITHUB_ENV, 'TAURI_SIGNING_PRIVATE_KEY=' + key + '\n');
+          NODE
 
       # Step 1: Build fat-jar
       - name: Build proxy-local fat-jar
@@ -168,6 +189,8 @@ jobs:
 
       - name: Build Tauri Desktop App
         if: "!startsWith(github.ref, 'refs/tags/')"
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           cd desktop
           cargo tauri build --target ${{ matrix.target }}
@@ -189,7 +212,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: desktop

@@ -1,0 +1,9 @@
+{
+  "_comment": "Bootstrap manifest fetched by the desktop client at startup to discover the current update-server URL. This file is hosted at a fixed location (GitHub raw + GitHub Pages mirror). Editing it lets us relocate the update infrastructure without shipping a new client build.",
+  "update_server": {
+    "url": "https://update.simpleplane.example.com",
+    "_comment_url": "Replace with your production update-server domain. The client will hit {url}/api/v1/updates/{target}/{arch}/{current_version} for version checks and {url}/download/... for package retrieval."
+  },
+  "min_client_version": "0.2.0",
+  "_comment_min_client_version": "Optional floor on client version. If the running client is older than this, the client should prompt the user to manually upgrade (bootstrap itself can't update the client — only the update-server can, and very old clients might not speak the current protocol)."
+}
