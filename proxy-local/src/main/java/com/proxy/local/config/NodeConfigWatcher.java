@@ -89,7 +89,7 @@ public final class NodeConfigWatcher implements AutoCloseable {
                 + ",\"updatedAt\":" + System.currentTimeMillis()
                 + ",\"savedRevision\":\"" + observedDigest + "\",\"appliedRevision\":\"" + appliedDigest
                 + "\",\"currentNodeId\":\"" + escape(controller.getCurrentNodeId())
-                + "\",\"activeStreams\":" + controller.getBindingCount()
+                + "\",\"activeStreams\":" + controller.getActiveStreamCount()
                 + ",\"mode\":\"" + escape(controller.getMode()) + "\""
                 + ",\"preferredNodeId\":\"" + escape(controller.getPreferredNodeId()) + "\""
                 + ",\"nodes\":" + controller.getNodeStatesJson()

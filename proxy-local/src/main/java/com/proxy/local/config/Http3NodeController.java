@@ -76,7 +76,7 @@ public final class Http3NodeController implements AutoCloseable {
     private boolean automatic() { return "auto".equals(snapshot.getNodeSelection().getMode()); }
     public ClusterInvoker getClusterInvoker() { return cluster; }
     public String getCurrentNodeId() { return currentNodeId; }
-    public int getBindingCount() { return cluster.getBindingCount(); }
+    public int getActiveStreamCount() { return StreamChannelRegistry.getInstance().size(); }
     public String getMode() { return snapshot.getNodeSelection().getMode(); }
     public String getPreferredNodeId() {
         String preferred = snapshot.getNodeSelection().getPreferredNodeId();
@@ -172,7 +172,6 @@ public final class Http3NodeController implements AutoCloseable {
                         if (!automatic()) nodeStatus = "unavailable";
                     } else {
                         result.setStreamRegistry(StreamChannelRegistry.getInstance().getInternalMap());
-                        result.setStreamClosedListener(cluster::unbind);
                         node.raw = new ClientInvoker(result, snapshot.getTimeoutMs(), node.config.getId());
                         FilterChainBuilder builder = ExtensionLoader.getLoader(FilterChainBuilder.class).getDefaultExtension();
                         node.wrapped = builder.build(new Invoker() {
@@ -314,9 +313,6 @@ public final class Http3NodeController implements AutoCloseable {
 
     private void retireCurrent() {
         cluster.setCurrentInvoker(null);
-        try { cluster.retireBindings().get(Math.min(2000, snapshot.getTimeoutMs()), TimeUnit.MILLISECONDS); }
-        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
-        catch (ExecutionException | TimeoutException ignored) { log.debug("Closing old node without disconnect acknowledgement"); }
         Node old = nodes.get(currentNodeId);
         if (old != null) closeNode(old);
         currentNodeId = "";

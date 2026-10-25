@@ -10,6 +10,48 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConnectionOwnershipTest {
+    @Test void clientCloseCancelsPendingConnectBeforeTransportCloseAndIgnoresLateSuccess() {
+        ExchangeHandler handler = new ExchangeHandler();
+        EmbeddedChannel transport = new EmbeddedChannel(handler);
+        EmbeddedChannel browser = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        ConcurrentHashMap<Long, ChannelHandlerContext> registry = new ConcurrentHashMap<>();
+        registry.put(105L, browser.pipeline().firstContext());
+        handler.setStreamRegistry(registry);
+        java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean();
+        java.util.concurrent.atomic.AtomicLong requestId = new java.util.concurrent.atomic.AtomicLong();
+        com.proxy.common.transport.Client raw = new com.proxy.common.transport.Client() {
+            public void send(ProxyMessage message) { requestId.set(message.getRequestId()); }
+            public boolean isAvailable() { return !closed.get(); }
+            public int getActiveStreamCount() { return 0; }
+            public void close() {
+                assertFalse(browser.isActive(), "Owned browser is closed before transport retirement");
+                assertTrue(registry.isEmpty());
+                closed.set(true);
+            }
+        };
+        HeaderExchangeClient client = new HeaderExchangeClient(raw,
+                new com.proxy.common.model.URL("proxy", "localhost", 9090), handler);
+        try {
+            java.util.concurrent.CompletableFuture<Response> pending = client.request(ProxyMessage.builder()
+                    .streamId(105).type(ProxyMessage.MessageType.CONNECT).host("target").port(443).build(), 5000);
+            assertFalse(pending.isDone());
+            client.close();
+            browser.runPendingTasks();
+            assertTrue(closed.get());
+            assertTrue(pending.isCompletedExceptionally());
+            transport.writeInbound(ProxyMessage.builder().requestId(requestId.get()).streamId(105)
+                    .type(ProxyMessage.MessageType.CONNECT_RESPONSE).status(Response.OK).build());
+            assertTrue(pending.isCompletedExceptionally(), "Late success must not revive a closed CONNECT");
+            assertFalse(browser.isActive());
+            assertTrue(registry.isEmpty());
+            assertEquals(0, DefaultFuture.getActiveFutureCount());
+        } finally {
+            client.close();
+            transport.finishAndReleaseAll();
+            browser.finishAndReleaseAll();
+        }
+    }
+
     @Test void synchronousConnectCallbackWritesHandshakeBeforeFollowingData() {
         ExchangeHandler handler = new ExchangeHandler();
         EmbeddedChannel transport = new EmbeddedChannel(handler);

@@ -1,6 +1,6 @@
 # 节点选择、故障切换与连接生命周期
 
-本文记录当前实现中的手动节点选择、自动故障切换，以及切换时浏览器侧和节点侧连接的清理方式。重点区分业务调用中的可用性检查与控制器触发的节点重选，不涉及代码修改方案。
+本文记录截至 `e94a2c2` 的手动节点选择、自动故障切换与连接生命周期，保留当时 cluster 绑定及逐流退役的说明。本轮已移除这两项管理，当前行为以[作者设计文档第 3.5 节](node-switching-author-prompt-and-source-mapping.md#remove-cluster-bindings)为准；下文源码链接固定到历史提交，不将旧实现表述为当前代码。
 
 ## 1. 入口与对象关系
 
@@ -28,9 +28,9 @@ Http3NodeController
 
 相关代码：
 
-- [ProxyLocalServer.java](../../proxy-local/src/main/java/com/proxy/local/ProxyLocalServer.java)：`buildInvokerChain()`。
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`Node`、`beginConnect()`。
-- [HeaderExchanger.java](../../proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchanger.java)：`connect()`。
+- [ProxyLocalServer.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/ProxyLocalServer.java)：`buildInvokerChain()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`Node`、`beginConnect()`。
+- [HeaderExchanger.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchanger.java)：`connect()`。
 
 ## 2. 手动模式
 
@@ -51,9 +51,9 @@ Http3NodeController
 
 相关代码：
 
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`initialize()`、`apply()`、`selectionKey()`。
-- [StickyClusterInvoker.java](../../proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`invoke()`、`setCurrentInvoker()`。
-- [NodeConfigWatcher.java](../../proxy-local/src/main/java/com/proxy/local/config/NodeConfigWatcher.java)：`poll()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`initialize()`、`apply()`、`selectionKey()`。
+- [StickyClusterInvoker.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`invoke()`、`setCurrentInvoker()`。
+- [NodeConfigWatcher.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/NodeConfigWatcher.java)：`poll()`。
 
 ## 3. 自动模式的选点与重选
 
@@ -108,9 +108,9 @@ tick()
 
 相关代码：
 
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`chooseCurrent()`、`tick()`、`observe()`、`probe()`、`fail()`。
-- [NodeCircuit.java](../../proxy-local/src/main/java/com/proxy/local/config/NodeCircuit.java)：可选条件、故障计时、熔断与恢复状态机。
-- [Http3Client.java](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`attachConnectionListener()`、`scheduleReconnect()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`chooseCurrent()`、`tick()`、`observe()`、`probe()`、`fail()`。
+- [NodeCircuit.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/NodeCircuit.java)：可选条件、故障计时、熔断与恢复状态机。
+- [Http3Client.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`attachConnectionListener()`、`scheduleReconnect()`。
 
 ## 4. 切换时的 stream 退役与两侧连接关闭
 
@@ -159,13 +159,13 @@ HTTP/3 实现会停止重连任务，终结并清空所属 stream，然后调用
 
 相关代码：
 
-- [Http3NodeController.java](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`retireCurrent()`、`closeNode()`。
-- [StickyClusterInvoker.java](../../proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`retireBindings()`、`unbind()`。
-- [ClientInvoker.java](../../proxy-cluster/src/main/java/com/proxy/cluster/ClientInvoker.java)：`close()`。
-- [HeaderExchangeClient.java](../../proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchangeClient.java)：`close()`。
-- [ExchangeHandler.java](../../proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java)：`trackRequest()`、`failPending()`、`onStreamClosed()`。
-- [Http3Client.java](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`close()`。
-- [Http3Connection.java](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Connection.java)：`close()`。
+- [Http3NodeController.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)：`retireCurrent()`、`closeNode()`。
+- [StickyClusterInvoker.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)：`retireBindings()`、`unbind()`。
+- [ClientInvoker.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/main/java/com/proxy/cluster/ClientInvoker.java)：`close()`。
+- [HeaderExchangeClient.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchangeClient.java)：`close()`。
+- [ExchangeHandler.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java)：`trackRequest()`、`failPending()`、`onStreamClosed()`。
+- [Http3Client.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)：`close()`。
+- [Http3Connection.java](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Connection.java)：`close()`。
 
 ## 5. 已建立 stream 不随选点迁移
 

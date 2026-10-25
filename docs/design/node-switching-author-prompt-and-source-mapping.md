@@ -2,9 +2,9 @@
 
 本文保存作者对手动选点、自动故障切换及两种模式互切的原始设计说明，并将其中每个关键动作对应到实际源码。正文沿用作者的思路和叙述顺序，不另起一套设计。
 
-核对日期：2026-10-25。源码基线：`bd25489e3a541b30109e7c5118d90a0e78eb21b4`。下文讨论配置启用 `nodeSelection` 的 HTTP/3 节点选择路径；未启用该配置时的传统 Cluster SPI 路径不属于本文范围。带行号的历史源码链接固定到该提交，避免后续改动使行号失去对应；第 3.4 节的新实现与测试链接使用仓库相对路径，定位当前工作区的方法。
+核对日期：2026-10-25。源码基线：`bd25489e3a541b30109e7c5118d90a0e78eb21b4`。下文讨论配置启用 `nodeSelection` 的 HTTP/3 节点选择路径；未启用该配置时的传统 Cluster SPI 路径不属于本文范围。原始实现的带行号链接固定到该提交，第 3.4 节源码链接固定到 `e94a2c2`；第 3.5 节使用仓库相对路径定位本轮实现，避免用当前源码冒充历史版本。
 
-第 3.4 节单独记录作者在本次核对后提出的 `invoke()` 简化及验证结果。其余原始代码摘录保留上述历史基线，便于区分最初实现和后续调整。
+第 3.4、3.5 节分别记录作者后续提出的 current-only 调用及移除 cluster 绑定管理的调整。其余原始代码摘录保留上述历史基线，便于区分最初实现和后续调整。第 3.4 节的测试结果对应提交 `e94a2c2`；第 3.5 节另行记录本轮结果。
 
 原始提示词是本次对话中由作者回述的实现设计，本文不将它描述为具有独立历史存档证据的早期提示词。代码摘录来自对应版本的实际实现；时序图是对调用顺序的整理。第 9 节保留最初核对时的测试源码说明，本次代码调整的实际测试执行结果另见第 3.4 节。
 
@@ -160,36 +160,59 @@ RelayHandler → StickyClusterInvoker → Binding.invoker
                 }
 ```
 
-实现定位：[StickyClusterInvoker.invoke() 与 isAvailable()](../../proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)、[控制器 chooseCurrent()](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)。这次调整不把自动选点挪入业务路径，也不改变四种切换由控制器组织的流程。
+实现定位：[StickyClusterInvoker.invoke() 与 isAvailable()](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)、[控制器 chooseCurrent()](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)。这次调整不把自动选点挪入业务路径，也不改变四种切换由控制器组织的流程。
 
 新增验证对应以下实际测试：
 
-- [StickyClusterInvokerTest](../../proxy-cluster/src/test/java/com/proxy/cluster/StickyClusterInvokerTest.java)：显式选点仍调用负载均衡，业务 CONNECT 不调用；无 current 时拒绝；不检查备用可用性；已移除或不可用的 current 不兜底；非法 streamId、同步／异步失败和空响应不泄漏绑定。原有重复 CONNECT、迟到成功、旧绑定和退役确认测试保留。
-- [AutoNodeControllerTest](../../proxy-local/src/test/java/com/proxy/local/config/AutoNodeControllerTest.java)：新增 `pendingPreferredInitializationDoesNotLetConnectChooseStandby`、`manualToAutoClosesOldClientAndInstallsPreferredBeforeBusinessConnect` 与 `reenteringAutoResetsSelectionEpochAndWaitsForPreferred`，验证初始化暂停、手动 → 自动和再次进入自动模式。最后一项故意延迟首选连接并保持时钟不变，确认旧选点状态不会影响新一轮初始化。
-- [Http3ManualSwitchIntegrationTest](../../proxy-local/src/test/java/com/proxy/local/Http3ManualSwitchIntegrationTest.java)：真实 TCP 浏览器、QUIC 节点及 TCP 目标；覆盖三种加密配置、手动切换、无效配置、旧流关闭、HTTP／SOCKS5 和独立 local JVM。
-- [Http3AutoSwitchIntegrationTest](../../proxy-local/src/test/java/com/proxy/local/Http3AutoSwitchIntegrationTest.java)：真实故障、恢复不抢占、自动 → 手动 → 自动、旧浏览器关闭，以及新模式的数据往返和会话／Future 清理。
+- [StickyClusterInvokerTest](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-cluster/src/test/java/com/proxy/cluster/StickyClusterInvokerTest.java)：显式选点仍调用负载均衡，业务 CONNECT 不调用；无 current 时拒绝；不检查备用可用性；已移除或不可用的 current 不兜底；非法 streamId、同步／异步失败和空响应不泄漏绑定。原有重复 CONNECT、迟到成功、旧绑定和退役确认测试保留。
+- [AutoNodeControllerTest](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/test/java/com/proxy/local/config/AutoNodeControllerTest.java)：新增 `pendingPreferredInitializationDoesNotLetConnectChooseStandby`、`manualToAutoClosesOldClientAndInstallsPreferredBeforeBusinessConnect` 与 `reenteringAutoResetsSelectionEpochAndWaitsForPreferred`，验证初始化暂停、手动 → 自动和再次进入自动模式。最后一项故意延迟首选连接并保持时钟不变，确认旧选点状态不会影响新一轮初始化。
+- [Http3ManualSwitchIntegrationTest](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/test/java/com/proxy/local/Http3ManualSwitchIntegrationTest.java)：真实 TCP 浏览器、QUIC 节点及 TCP 目标；覆盖三种加密配置、手动切换、无效配置、旧流关闭、HTTP／SOCKS5 和独立 local JVM。
+- [Http3AutoSwitchIntegrationTest](https://github.com/zhh293/SimplePlanePlatform/blob/e94a2c20a7a66da1e198b382f6fefa1027dfd008/proxy-local/src/test/java/com/proxy/local/Http3AutoSwitchIntegrationTest.java)：真实故障、恢复不抢占、自动 → 手动 → 自动、旧浏览器关闭，以及新模式的数据往返和会话／Future 清理。
 
-扩展最后一项测试时发现并修正了原测试夹具中的重启模拟问题：`SessionManager.closeAll()` 会永久关闭管理器，原测试重启 QUIC 服务时却复用了该管理器，恢复后的节点只能返回目标连接失败。本次重启时新建 `DispatchInvoker` 和会话管理器，继续保留新业务连接成功的断言，没有通过放宽断言绕过失败。
 
-完整回归的通用命令如下，需有 Maven、JDK 和与平台匹配的 QUIC native 库：
 
-```sh
-mvn -B -pl proxy-local -am test \
-  '-Dtest=*Test,!BaiduProxyTest' \
-  -Dsurefire.failIfNoSpecifiedTests=false \
-  '-DargLine=-XX:ActiveProcessorCount=2 -Xmx256m' \
-  -Dhttp3.lifecycle.probe=true \
-  -Dhttp3.lifecycle.limit=4 \
-  -Dhttp3.lifecycle.cycles=8
-```
+<a id="remove-cluster-bindings"></a>
 
-实际执行环境为 WSL2 Ubuntu 22.04、OpenJDK 17.0.18、Maven 3.9.11，使用真实 Linux QUIC native 库。最终完整回归发现 218 项测试：**215 项通过、0 失败、0 错误、3 项按原有条件跳过**，所有 reactor 模块构建成功。35 项与本次修改直接相关的单元、控制器、熔断、交换层及真实链路用例全部通过，无跳过；它们包含在完整回归内，不与总数重复相加。
+### 3.5 作者补充：移除 cluster 的 Binding 和 retireBindings，统一由交换与传输层管理 stream
 
-3 项跳过分别是两项需显式启用的系统代理设置测试，以及一项会重写旧向量文件的生成测试。依赖公网的 `BaiduProxyTest` 由命令显式排除。全链路使用本机真实 TCP／QUIC、目标 TCP 服务及独立 local JVM；没有停启生产远端服务，也没有对 Windows／macOS 原生运行和生产网络长期压力作验证结论。
+作者指出，当前设计在切换时会先断开旧节点和所属浏览器连接，再安装新 current，不保留旧流继续服务，因此不需要在 cluster 再维护一张 `streamId → Binding` 表，也不需要 `retireBindings()` 逐流发送 DISCONNECT 后再关闭 client。这与第 3.4 节相同，目标是让 cluster 专注于调用 current，把 stream 生命周期集中到实际拥有连接的层。
 
-随后执行 `mvn -pl proxy-local -am package -DskipTests` 重新打包，并运行 `python3 scripts/smoke-http3-node-selection.py`，验证新 JAR 启动、真实 HTTP/3 transport、不可用节点的有界 502、A → B 配置热切换及进程实例不变，结果通过。额外用 `javap` 检查包内字节码，确认 `invoke()` 不再调用 `getAvailableInvokers()`／`LoadBalance.select()`，而 `selectCurrent()` 仍保留负载均衡；JAR 内两个修改后的生产类与 reactor 编译输出逐字节一致。
+本轮按此设计实现，保留 streamId 本身，移除的是 cluster 层重复的管理：
 
-[测试摘要与源码 SHA-256](../sdd/current-invoker-only/evidence/test-summary.json) 保存各测试类结果、35 项相关用例名称、跳过原因、原始日志摘要和两轮失败后修复的记录。本次结果来自 Surefire 断言；JaCoCo 因旧执行数据存在版本不匹配警告，本文不据此声称覆盖率达标。测试通过只证明覆盖场景中的行为，不表示所有运行环境和时序下绝无异常。
+1. 删除 `Binding`、`bindings`、`unbind()`、`retireBindings()` 和 cluster 的 `getBindingCount()`。
+2. CONNECT、DATA、DISCONNECT 均校验并调用控制器安装的 current；不新增负载均衡兜底，不缓存旧 invoker，不迁移或重放旧数据。合法 streamId 的分配和一次 CONNECT 的业务时序仍由浏览器 Handler 负责。
+3. 切换清理采用 `setCurrentInvoker(null) → closeNode(old) → 后续连接并安装新 current`。不再逐流等待 DISCONNECT 应答；`HeaderExchangeClient.close()` 先通知旧 handler，后关闭底层 client。
+4. `ExchangeHandler.pendingRequests`、`ownedStreams`、共享浏览器路由表及 `Http3Client.streams` 保留。前两者负责未完成请求及所属浏览器清理，传输层负责 stream 的建立、队列、关闭和失效检查。移除控制器对 `cluster::unbind` 的注册，不通过回调维护第二份 cluster 状态。
+5. 状态 JSON 的 `activeStreams` 改由已有 `StreamChannelRegistry.size()` 提供，包含已注册且正在 CONNECT 或已建立的代理浏览器流，不包含没有浏览器的健康探测流。`Invoker.getActiveCount()` 仍表示调用数，不能把它冒充为浏览器 stream 数。
+6. 旧浏览器关闭后可能仍有关闭通知排队；下层收到不属于新 client 的旧 DATA／DISCONNECT 时必须拒绝，不允许创建新的传输 stream，也不能关闭另一个 stream。通过测试确认这一边界，而不是为它保留整张 cluster 绑定表。
+
+源码依赖决定生产改动不能只落在一个文件：除 [StickyClusterInvoker](../../proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java) 外，还需在 [Http3NodeController](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java) 移除退役和解绑调用、调整统计，在 [NodeConfigWatcher](../../proxy-local/src/main/java/com/proxy/local/config/NodeConfigWatcher.java) 同步统计方法名。这些是删除原方法后必要的调用方集成；本轮不为 stream 增加新的管理层或绑定表。
+
+本轮测试将验证：current 校验与控制器选点继续生效；旧 client 关闭可以结束未完成 CONNECT、关闭所属浏览器并释放远端会话；旧 DATA／DISCONNECT 不会在新 client 上创建 stream 或误伤新浏览器；四种切换、加密、HTTP／SOCKS5、独立 JVM 及打包产物继续工作。原来针对 cluster 绑定表存在性的测试需改为职责分层的行为测试，不保留已删除结构的断言。
+
+本轮额外增加的风险回归矩阵如下。测试覆盖具体边界，不将“没有失败”扩展成数学意义上的所有时序均无遗漏。
+
+| 风险或边界 | 实际验证 |
+| --- | --- |
+| 取消正在建立的 CONNECT 后，迟到成功响应复活旧连接 | `Http3PendingConnectLifecycleTest`：`none`、ChaCha20-Poly1305-v2、AES-GCM-v2 三种加密，分别组合 client 关闭、浏览器关闭和请求超时，共 9 个真实 QUIC 用例；检查旧 Future 仍失败、旧浏览器关闭、旧传输 stream 消失 |
+| 清理旧请求误伤另一个 client | 同一组 9 个用例共享浏览器注册表；独立 client 的 stream 保持存在，浏览器保持活跃，DATA 确实到达远端 |
+| 旧 DATA／DISCONNECT 进入新 client 后创建新 stream | `Http3ExchangeIntegrationTest.independentClientsShareBrowserRegistryWithoutCrossConnectionCleanup`：三种加密均验证拒绝旧事件，新 client 的传输 stream 数不增加 |
+| 分层单测通过，但实际 cluster 转发组合仍有问题 | `ClusterStreamLifecycleIntegrationTest`：实际 controller／cluster／exchange／QUIC／远端 TCP 目标；切换后连续三轮发送旧 DATA 和 DISCONNECT，确认远端仍只有新会话、新数据可以完整往返，关闭 controller 后两端远端会话和 Future 归零；此用例的浏览器 ctx 使用 EmbeddedChannel |
+| 关闭发生在 CONNECT 已选中 current、但尚未注册到 client 的窗口 | `StickyClusterInvokerTest.currentCannotBeRetiredBeforeDispatchRegistersItsPendingRequest`：两个线程和锁存器控制时序，确认 current 替换等待本次 dispatch 交给 client，再由 client 取消未完成请求；不靠随机竞争碰运气 |
+| 新 CONNECT 被取消后释放不完整，或旧响应污染新 current | `ConnectionOwnershipTest.clientCloseCancelsPendingConnectBeforeTransportCloseAndIgnoresLateSuccess` 与上述真实 QUIC 取消矩阵，检查关闭顺序、路由表清理与 Future 归零 |
+| 切换清理仍偷偷发送逐流 DISCONNECT | `AutoNodeControllerTest.manualToAutoClosesOldClientAndInstallsPreferredBeforeBusinessConnect` 检查旧 client 已关闭且没有逐流退役请求 |
+| 删除绑定后把控制请求数当成业务 stream 数 | `AutoNodeControllerTest.streamStatisticsUseBrowserRegistryInsteadOfPendingInvocationCount`：浏览器注册后 stream 数为 1，而 pending 调用数仍为 0；关闭浏览器后统计回到 0 |
+| 其他四种切换、正常浏览器握手或加密数据回归 | 保留 `Http3ManualSwitchIntegrationTest`、`Http3AutoSwitchIntegrationTest`、`TunnelHandoffTest` 等真实 TCP／QUIC、HTTP／SOCKS5 及独立 local JVM 用例，并执行全部 Java 回归 |
+
+新增源码：[取消矩阵](../../proxy-transport-http3/src/test/java/com/proxy/transport/http3/Http3PendingConnectLifecycleTest.java)、[实际 cluster 迟到事件组合测试](../../proxy-local/src/test/java/com/proxy/local/ClusterStreamLifecycleIntegrationTest.java)、[cluster 并发测试](../../proxy-cluster/src/test/java/com/proxy/cluster/StickyClusterInvokerTest.java)。
+
+本轮最终执行结果：完整 Java 回归发现 **227 项测试，224 项通过、0 失败、0 错误、3 项按原条件跳过**，所有 reactor 模块构建成功。直接相关的 **50 项风险及链路用例全部通过，无跳过**，包含在上述总数中，不重复相加。3 项跳过仍是两项显式启用的系统代理测试和一项旧向量生成测试，公网 `BaiduProxyTest` 明确排除；核心链路使用真实 loopback TCP／QUIC，不以 mock 代替传输与远端 TCP 目标。
+
+最终 JAR 打包及启动／热切换冒烟同样通过。检查确认包内没有遗留 `StickyClusterInvoker$Binding.class`，也没有绑定表、`unbind()` 或 `retireBindings()`；三个修改后的生产类与本轮编译输出逐字节一致。生产修改落在三个必要文件，合计新增 24 行、删除 81 行，净减少 57 行；其余改动用于测试、文档和可核查证据。
+
+环境为 WSL2 Ubuntu 22.04、OpenJDK 17、Maven 3.9.11。一轮回归曾因 `jspawnhelper` 无法启动子 JVM 报错，保留该环境失败记录；最终重跑使用 `-Djdk.lang.Process.launchMechanism=FORK`，独立 JVM 测试继续启用且通过，没有为了通过而跳过它。通用命令沿用第 3.4 节，在 `argLine` 中增加该测试环境选项即可。
+
+[本轮测试明细与源码 SHA-256](../sdd/no-cluster-bindings/evidence/test-summary.json) 保存 50 项相关用例名称、完整回归的各类结果、跳过原因、源码及日志摘要；第 3.4 节证据文件继续保留，不能冒充为本轮结果。现有 JaCoCo 数据存在版本不匹配警告，本轮仅依据 Surefire 断言，不声称覆盖率达到某个阈值。验证范围不包括所有操作系统、生产公网长期压力或全部可能的线程时序。
 
 ## 4. 手动切换节点：配置变化触发旧连接退役和新节点初始化
 
