@@ -1,0 +1,565 @@
+{
+  "recorded_at": "2026-10-25T12:24:45.440694+00:00",
+  "base_commit": "8239ecf9c81c86754e9af1b622ece95bb2559c54",
+  "working_tree_change": "CONNECT uses only controller-installed currentInvoker; removes fixedSelection",
+  "environment": "Ubuntu 22.04 on WSL2, OpenJDK 17.0.18, Maven 3.9.11, real Linux QUIC native library",
+  "command": "mvn -B -pl proxy-local -am test '-Dtest=*Test,!BaiduProxyTest' -Dsurefire.failIfNoSpecifiedTests=false '-DargLine=-XX:ActiveProcessorCount=2 -Xmx256m' -Dhttp3.lifecycle.probe=true -Dhttp3.lifecycle.limit=4 -Dhttp3.lifecycle.cycles=8",
+  "excluded_test": "BaiduProxyTest (public Internet dependent)",
+  "totals": {
+    "tests": 218,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 3
+  },
+  "suites": [
+    {
+      "name": "com.proxy.common.model.UrlSecretTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.common.transport.FlowPermitTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.exchange.header.ConnectionOwnershipTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.crypto.AeadRecordCipherTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.crypto.AeadStandardVectorTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.crypto.CipherRoundTripTest$AesCtrHmac",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.crypto.CipherRoundTripTest$AesGcm",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.crypto.CipherRoundTripTest$ChaCha20",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.crypto.CipherRoundTripTest",
+      "tests": 0,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.crypto.CryptoVectorGenTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    {
+      "name": "com.proxy.crypto.CryptoVectorReplayTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.transport.netty.codec.ProxyCodecTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.transport.netty.handler.CipherFramingTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.transport.netty.integration.CryptoChannelIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.transport.http3.Http3CodecHandlerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.transport.http3.Http3ExchangeIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.transport.http3.Http3LoopbackIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.transport.http3.Http3SpiTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.cluster.StickyClusterInvokerTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.remote.integration.AeadAesGcmOutboundIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.remote.integration.AeadChaChaOutboundIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.remote.integration.ClientServerIntegrationTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.remote.integration.Http3OutboundIntegrationTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.remote.integration.OutboundIntegrationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.remote.integration.StreamFailureIsolationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.remote.outbound.SessionLifecycleTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.config.AutoNodeControllerTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.config.NodeCircuitTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.config.NodeSelectionConfigTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.handler.HttpProxyHandlerTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.handler.HttpRequestParserTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.handler.RouteEngineTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.handler.Socks5ConnectHandlerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.handler.Socks5InitHandlerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.handler.TunnelHandoffTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.Http3AutoSwitchIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.Http3ManualSwitchIntegrationTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.proxy.local.sysproxy.SystemProxyManagerTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    }
+  ],
+  "skipped_tests": [
+    {
+      "class": "com.proxy.crypto.CryptoVectorGenTest",
+      "test": "generateCrossLanguageVectors",
+      "reason": "System property [crypto.generateLegacyVectors] does not exist"
+    },
+    {
+      "class": "com.proxy.local.sysproxy.SystemProxyManagerTest",
+      "test": "testEnableAndDisable",
+      "reason": "Environment variable [PROXY_TEST_SYSPROXY] does not exist"
+    },
+    {
+      "class": "com.proxy.local.sysproxy.SystemProxyManagerTest",
+      "test": "testDoubleEnable",
+      "reason": "Environment variable [PROXY_TEST_SYSPROXY] does not exist"
+    }
+  ],
+  "focused_cases": [
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "explicitControllerSelectionStillUsesLoadBalanceButBusinessConnectDoesNot",
+      "seconds": "0.117",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "retiringBindingsCleansThroughOldConnectionAndInvalidatesLateConnect",
+      "seconds": "0.007",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "retirementTraversesClientFiltersAndWaitsForDisconnectAcknowledgement",
+      "seconds": "0.226",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "businessConnectDoesNotInspectStandbyAvailability",
+      "seconds": "0.005",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "fixedCurrentDoesNotRotateStreamsAndPausePreservesStandbys",
+      "seconds": "0.0",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "selectionExcludesUnhealthyCandidatesAndDoesNotFallBackPerStream",
+      "seconds": "0.011",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "unavailableBindingNeverSendsDataToAnotherConnection",
+      "seconds": "0.001",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "dataAndDisconnectRetainOriginalConnectionAfterSelectionChanges",
+      "seconds": "0.001",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "failedAndDuplicateConnectDoNotLeakBindings",
+      "seconds": "0.0",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "cancelledConnectCannotBeActivatedByLateSuccess",
+      "seconds": "0.0",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "invalidStreamIdsAreRejectedBeforeCallingCurrent",
+      "seconds": "0.0",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "synchronousAndAsynchronousConnectFailuresReleaseBindings",
+      "seconds": "0.002",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "connectRequiresExplicitCurrentEvenWithHealthyMembersAndLoadBalance",
+      "seconds": "0.001",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.cluster.StickyClusterInvokerTest",
+      "test": "removedOrUnavailableCurrentRejectsConnectWithoutBindingOrFallback",
+      "seconds": "0.001",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.exchange.header.ConnectionOwnershipTest",
+      "test": "synchronousConnectCallbackWritesHandshakeBeforeFollowingData",
+      "seconds": "1.228",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.exchange.header.ConnectionOwnershipTest",
+      "test": "disconnectClosesOnlyOwnedEstablishedStreamsAndRequests",
+      "seconds": "0.01",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "autoToSameManualNodeStillClosesAndRecreatesClient",
+      "seconds": "4.538",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "preconnectsAllButOnlyCurrentReceivesBusinessAndStandbysSurviveFailover",
+      "seconds": "0.15",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "recoveredPreferredReturnsToStandbyWithoutPreemptingHealthyCurrent",
+      "seconds": "0.017",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "pendingPreferredInitializationDoesNotLetConnectChooseStandby",
+      "seconds": "0.018",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "manualToAutoClosesOldClientAndInstallsPreferredBeforeBusinessConnect",
+      "seconds": "0.03",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "lateAutomaticConnectionCannotRejoinManualCluster",
+      "seconds": "0.005",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "autoNodeEditsRequireRestartAndDoNotRebuildMembers",
+      "seconds": "1.955",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "initialPreferredFailureAllowsHealthyBackupWithoutWaitingForAll",
+      "seconds": "0.029",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "reenteringAutoResetsSelectionEpochAndWaitsForPreferred",
+      "seconds": "0.022",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.AutoNodeControllerTest",
+      "test": "autoToManualStopsOldNodeAndKeepsOnlyChosenMember",
+      "seconds": "0.011",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.NodeCircuitTest",
+      "test": "cooldownCapsAndConfigurationBlockPreventsRecovery",
+      "seconds": "0.0",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.NodeCircuitTest",
+      "test": "recoveryNeedsTwoSpacedResponsesAndDoesNotResetBackoff",
+      "seconds": "0.001",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.NodeCircuitTest",
+      "test": "graceAndResidencePreventNewNodeBeingImmediatelyRejected",
+      "seconds": "0.0",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.config.NodeCircuitTest",
+      "test": "transientDisconnectResetsButPersistentDisconnectBypassesGrace",
+      "seconds": "0.0",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.Http3AutoSwitchIntegrationTest",
+      "test": "remoteFailureRecoveryAndModeRoundTripUseOriginalTransportPaths",
+      "seconds": "56.636",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.Http3ManualSwitchIntegrationTest",
+      "test": "atomicConfigSwitchDisconnectsOldFlowAndNewBrowserUsesNewNode(String, boolean)[1]",
+      "seconds": "3.628",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.Http3ManualSwitchIntegrationTest",
+      "test": "atomicConfigSwitchDisconnectsOldFlowAndNewBrowserUsesNewNode(String, boolean)[2]",
+      "seconds": "3.335",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.Http3ManualSwitchIntegrationTest",
+      "test": "atomicConfigSwitchDisconnectsOldFlowAndNewBrowserUsesNewNode(String, boolean)[3]",
+      "seconds": "3.296",
+      "result": "passed"
+    },
+    {
+      "class": "com.proxy.local.Http3ManualSwitchIntegrationTest",
+      "test": "atomicConfigSwitchDisconnectsOldFlowAndNewBrowserUsesNewNode(String, boolean)[4]",
+      "seconds": "16.561",
+      "result": "passed"
+    }
+  ],
+  "source_sha256": {
+    "proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java": "f27bd3e454fadf92867e4b4fc6b371602b820e262c1b9e2aa165389a6e5f8ec4",
+    "proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java": "cad740c247eb2c9358897d4b4ca834c4ee4f8c5a51b44524560b5c08430ad4ab",
+    "proxy-cluster/src/test/java/com/proxy/cluster/StickyClusterInvokerTest.java": "78e80a06562ab7eba4f2c5de02baa404e6caa6db292053bd6d72b9f77b52fb33",
+    "proxy-local/src/test/java/com/proxy/local/config/AutoNodeControllerTest.java": "1a9914baffc6224bb5b5034306fca9a24c26f3f1b390cff632336c5efc97f77b",
+    "proxy-local/src/test/java/com/proxy/local/Http3AutoSwitchIntegrationTest.java": "f4668cfc06cab747176487670c61741221813e0956addf9d69308d9dfe7d6dd4",
+    "proxy-local/src/test/java/com/proxy/local/Http3ManualSwitchIntegrationTest.java": "2c3493657449e2ccb0235fbc7a8e8760c11fbc81f6c0278fb1dee416471c6b0e"
+  },
+  "log": {
+    "path": ".build/current-invoker-full.log",
+    "sha256": "2a2d16326e0f797ac966589fd1a0ad512e7ee13f5c4693bd711fdcf0381366a2"
+  },
+  "first_attempt": {
+    "result": "One new mode-roundtrip assertion failed because the restart fixture reused a permanently closed SessionManager.",
+    "correction": "Create a fresh DispatchInvoker/SessionManager when restarting remote A; keep the failing business-connection assertion.",
+    "log": ".build/current-invoker-full-first-attempt.log",
+    "log_sha256": "e5e391d35a4ad57ca8cb4a3c9088fb1543d583bc6c326d951be18cb6cb2513e9"
+  },
+  "second_attempt": {
+    "result": "Auto -> manual -> auto did not reinstall preferred A because lastSelectionAt leaked across initialization epochs.",
+    "correction": "Reset lastSelectionAt in initialize(); add deterministic controller regression with delayed preferred connection and unchanged clock.",
+    "log": ".build/current-invoker-full-second-attempt.log",
+    "log_sha256": "a4f7583de4643626b83d4705fa57b85bf1f8a45e761d5e0f170b0de42c13a150"
+  },
+  "limits": [
+    "Full chain uses real loopback TCP/QUIC and a forked local JVM; no production services were stopped.",
+    "No claim of exhaustive concurrency, all platforms or production-network soak coverage.",
+    "JaCoCo warnings concern existing stale coverage data; these results are Surefire assertions, not coverage claims."
+  ],
+  "package_verification": {
+    "result": "passed",
+    "jar_path": "proxy-local/target/proxy-local-1.0.0-SNAPSHOT.jar",
+    "jar_sha256": "20d675a65ffbd4d6e49c231e4b045030c55e5cdd5e978cc45422735d732abcb6",
+    "compiled_classes_sha256": {
+      "com/proxy/cluster/StickyClusterInvoker.class": "467d3c994218900b8adb11df0f875943d94e978fd16a74a11a54fd38ff781539",
+      "com/proxy/local/config/Http3NodeController.class": "7589f568afe280b546b962f28e6c8d75717c60f9c2fe100c9b532dea4b4ab68f"
+    },
+    "bytecode_assertions": [
+      "invoke reads currentInvoker without getAvailableInvokers or LoadBalance.select",
+      "explicit selectCurrent retains LoadBalance.select",
+      "both modified production classes in packaged jar match reactor outputs"
+    ],
+    "smoke_script": "scripts/smoke-http3-node-selection.py",
+    "smoke_script_sha256": "c7b07f80868c98325264fc3238074ae1495fc26eb7f58e57877275a5f30f9d5f",
+    "smoke_checks": [
+      "fresh packaged JAR starts",
+      "real HTTP3 native transport executes",
+      "unreachable current returns bounded HTTP 502",
+      "configuration hot-switches A to B with unchanged process instance",
+      "packaged SPI registrations resolve"
+    ],
+    "package_log_sha256": "3cbaf2fa2f1efae9a37429cc157d38006bbe82bc51926ad0fc562face84fc9cc",
+    "smoke_log_sha256": "ca577553b22c3b9185bf6c79166b62d9fa45313481f0bd09f6e180d388ad35bf"
+  }
+}

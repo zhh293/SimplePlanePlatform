@@ -99,6 +99,87 @@ class AutoNodeControllerTest {
         }
     }
 
+    @Test void manualToAutoClosesOldClientAndInstallsPreferredBeforeBusinessConnect() throws Exception {
+        Map<String, FakeClient> clients = new ConcurrentHashMap<>();
+        try (Http3NodeController controller = new Http3NodeController(config("manual", "b"), node -> {
+            FakeClient client = new FakeClient(); clients.put(node.getId(), client); return client;
+        }, () -> 100000)) {
+            FakeClient oldB = clients.get("b");
+            Invocation connect = new Invocation("target", 443, null, ProxyMessage.MessageType.CONNECT);
+            connect.setAttachment("streamId", 300L);
+            assertTrue(controller.getClusterInvoker().invoke(connect).join().isSuccess());
+            controller.apply(config("auto", "b"));
+            await(() -> controller.getClusterInvoker().getAvailableInvokers().size() == 3
+                    && "a".equals(controller.getCurrentNodeId()));
+            assertTrue(oldB.closed);
+            assertNotSame(oldB, clients.get("b"));
+            assertEquals(0, controller.getBindingCount());
+            connect.setAttachment("streamId", 301L);
+            assertTrue(controller.getClusterInvoker().invoke(connect).join().isSuccess());
+            assertEquals(1, clients.get("a").connects);
+            assertEquals(0, clients.get("b").connects);
+            assertEquals(0, clients.get("c").connects);
+        }
+    }
+
+    @Test void pendingPreferredInitializationDoesNotLetConnectChooseStandby() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        Map<String, FakeClient> clients = new ConcurrentHashMap<>();
+        try (Http3NodeController controller = new Http3NodeController(config("auto", "a"), node -> {
+            if ("a".equals(node.getId())) {
+                try {
+                    if (!release.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Test release timed out");
+                } catch (InterruptedException error) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(error);
+                }
+            }
+            FakeClient client = new FakeClient(); clients.put(node.getId(), client); return client;
+        }, () -> 100000)) {
+            await(() -> controller.getClusterInvoker().getAvailableInvokers().size() == 2);
+            assertFalse(controller.getClusterInvoker().isAvailable());
+            Invocation connect = new Invocation("target", 443, null, ProxyMessage.MessageType.CONNECT);
+            connect.setAttachment("streamId", 302L);
+            assertFalse(controller.getClusterInvoker().invoke(connect).join().isSuccess());
+            assertEquals(0, clients.get("b").connects);
+            assertEquals(0, clients.get("c").connects);
+            assertEquals(0, controller.getBindingCount());
+            release.countDown();
+            await(() -> "a".equals(controller.getCurrentNodeId()));
+            assertTrue(controller.getClusterInvoker().invoke(connect).join().isSuccess());
+            assertEquals(1, clients.get("a").connects);
+        } finally { release.countDown(); }
+    }
+
+    @Test void reenteringAutoResetsSelectionEpochAndWaitsForPreferred() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicBoolean delayPreferred = new java.util.concurrent.atomic.AtomicBoolean();
+        try (Http3NodeController controller = new Http3NodeController(config("auto", "a"), node -> {
+            if (delayPreferred.get() && "a".equals(node.getId())) {
+                try {
+                    if (!release.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Test release timed out");
+                } catch (InterruptedException error) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(error);
+                }
+            }
+            return new FakeClient();
+        }, () -> 100000)) {
+            await(() -> "a".equals(controller.getCurrentNodeId()));
+            controller.apply(config("manual", "b"));
+            await(() -> controller.getClusterInvoker().isAvailable());
+            delayPreferred.set(true);
+            controller.apply(config("auto", "b"));
+            await(() -> controller.getClusterInvoker().getAvailableInvokers().size() == 2);
+            assertEquals("", controller.getCurrentNodeId());
+            assertFalse(controller.getClusterInvoker().isAvailable());
+            release.countDown();
+            // The clock has not advanced: a previous epoch's selection throttle must not block this one.
+            await(() -> "a".equals(controller.getCurrentNodeId()));
+            assertTrue(controller.getClusterInvoker().isAvailable());
+        } finally { release.countDown(); }
+    }
+
     @Test void autoToSameManualNodeStillClosesAndRecreatesClient() throws Exception {
         List<FakeClient> clients = new CopyOnWriteArrayList<>();
         try (Http3NodeController controller = new Http3NodeController(config("auto", "a"), node -> {

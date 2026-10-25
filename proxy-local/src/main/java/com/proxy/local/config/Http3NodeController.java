@@ -125,6 +125,8 @@ public final class Http3NodeController implements AutoCloseable {
 
     private void initialize(ProxyConfig config) {
         manualReady = new CompletableFuture<>();
+        // A new mode/configuration starts a fresh selection epoch, including preferred-node waiting.
+        lastSelectionAt = Long.MIN_VALUE / 2;
         currentNodeId = automatic() ? "" : config.getNodeSelection().getSelectedNodeId();
         nodeStatus = "connecting";
         cluster.setCurrentInvoker(null);
