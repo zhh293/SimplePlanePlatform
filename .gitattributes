@@ -1,0 +1,4 @@
+# Keep benchmark evidence and source hashes identical across checkouts.
+/docs/performance/proxy-comparison-2026-10-30/** -text -whitespace
+/docs/performance/proxy-comparison-2026-10-30.md -text whitespace=trailing-space,space-before-tab,cr-at-eol
+/scripts/perf/*.py -text

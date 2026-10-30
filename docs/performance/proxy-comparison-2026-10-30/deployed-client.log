@@ -1,0 +1,721 @@
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208513 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208514 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208515 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208516 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208517 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208518 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208519 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208520 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208521 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208522 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208523 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208524 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208525 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208526 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208527 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208528 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208529 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208530 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208531 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208532 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208533 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208534 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208535 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208536 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208537 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208538 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208539 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208540 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208541 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208542 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208543 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208544 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208547 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208546 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208545 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208548 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208550 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208554 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208549 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208552 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208551 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208553 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208555 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208559 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208557 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208561 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208560 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208556 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208558 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.exchange.header.ExchangeHandler - Connection disconnected reported
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 338332922006208562 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Connection - HTTP/3 QUIC connection closed: 54.172.101.190:9090
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242433 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242434 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242435 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242436 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242437 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242438 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242439 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242440 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+ERROR com.proxy.local.handler.RelayHandler - Relay DATA failed for ip-172-31-92-247.ec2.internal:18880, streamId=1554304821396242441
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.local.handler.Socks5ConnectHandler - CONNECT rejected for ip-172-31-92-247.ec2.internal:18880: Domain rate limit exceeded: ip-172-31-92-247.ec2.internal
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242574 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242575 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.exchange.header.ExchangeHandler - Connection disconnected reported
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242576 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 1554304821396242441 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Connection - HTTP/3 QUIC connection closed: 54.172.101.190:9090
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363393 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363394 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363395 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363396 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363397 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363398 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363399 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363400 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363401 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363402 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363403 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363404 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+ERROR com.proxy.local.handler.RelayHandler - Relay DATA failed for ip-172-31-92-247.ec2.internal:18880, streamId=3815956259266363405
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363406 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363407 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363408 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363410 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363409 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363411 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363412 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363413 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363414 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363415 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363416 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363417 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363418 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363419 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363420 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363421 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363422 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363423 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363424 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363425 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363426 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363427 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363428 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363429 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363430 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363431 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363432 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363433 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363434 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363435 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363436 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363437 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363438 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363439 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363440 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363441 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363442 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363444 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363446 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363443 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363445 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363449 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363448 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363447 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363450 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363451 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363452 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363453 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363454 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363455 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363456 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363457 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363458 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363459 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363461 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363460 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363462 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363464 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363465 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363463 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363466 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363467 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363469 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363468 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363470 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363471 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363472 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363473 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363474 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363476 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363475 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363478 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363477 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363479 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363480 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363482 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363481 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363484 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363483 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363487 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363486 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363488 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363490 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363489 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363485 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363492 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363494 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363496 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363498 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363491 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363495 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363493 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363497 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363499 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363500 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363501 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363504 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363503 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363502 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363505 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363506 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.crypto.ChaCha20Cipher - Legacy chacha20 is non-standard and vulnerable; migrate both endpoints to chacha20-poly1305-v2
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363507 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363510 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363509 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363508 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363511 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363512 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363514 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363513 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363516 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363515 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363517 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363519 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363518 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363521 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363522 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363520 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.cluster.filter.RateLimitFilter - Domain rate limit exceeded for ip-172-31-92-247.ec2.internal, current QPS > 50
+WARN com.proxy.exchange.header.ExchangeHandler - Connection disconnected reported
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363523 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363530 failed locally: HTTP/3 stream closed by caller
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363537 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363536 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363538 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363525 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363524 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363527 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363526 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363405 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363533 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363532 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363535 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363534 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363529 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363528 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Client - HTTP/3 stream 3815956259266363531 failed locally: HTTP/3 client closed
+WARN com.proxy.transport.http3.Http3Connection - HTTP/3 QUIC connection closed: 54.172.101.190:9090

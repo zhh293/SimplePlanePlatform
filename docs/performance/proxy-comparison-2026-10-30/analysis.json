@@ -1,0 +1,603 @@
+{
+  "status": "completed",
+  "samples": 667,
+  "public_port": 9090,
+  "internal_test_port": 18443,
+  "resources": {
+    "simpleplane": {
+      "blocks": 3,
+      "idle_rss_mib": {
+        "n": 18,
+        "median": 109.52734375,
+        "p95": 110.359375,
+        "min": 104.69140625,
+        "max": 110.359375
+      },
+      "client_peak_rss_mib": 143.3515625,
+      "client_max_swap_mib": 0.0,
+      "client_max_threads": 34,
+      "client_max_fds": 44,
+      "client_cpu_s_per_block": {
+        "n": 3,
+        "median": 7.379999999999999,
+        "p95": 7.55,
+        "min": 6.72,
+        "max": 7.55
+      },
+      "server_cpu_s_per_block_sampled": {
+        "n": 3,
+        "median": 7.725268,
+        "p95": 7.804309,
+        "min": 7.619791,
+        "max": 7.804309
+      },
+      "server_peak_cgroup_mib": 194.328125,
+      "server_peak_rss_mib": 208.15234375,
+      "server_max_swap_mib": 0.0,
+      "server_max_oom_kill_event": 0,
+      "server_max_memory_high_event": 290,
+      "server_max_memory_limit_event": 0
+    },
+    "shadowsocks": {
+      "blocks": 3,
+      "idle_rss_mib": {
+        "n": 18,
+        "median": 6.546875,
+        "p95": 6.84375,
+        "min": 6.44140625,
+        "max": 6.84375
+      },
+      "client_peak_rss_mib": 7.62109375,
+      "client_max_swap_mib": 0.0,
+      "client_max_threads": 4,
+      "client_max_fds": 75,
+      "client_cpu_s_per_block": {
+        "n": 3,
+        "median": 0.74,
+        "p95": 0.74,
+        "min": 0.45999999999999996,
+        "max": 0.74
+      },
+      "server_cpu_s_per_block_sampled": {
+        "n": 3,
+        "median": 0.295474,
+        "p95": 0.348764,
+        "min": 0.283558,
+        "max": 0.348764
+      },
+      "server_peak_cgroup_mib": 22.62109375,
+      "server_peak_rss_mib": 6.80859375,
+      "server_max_swap_mib": 0.0,
+      "server_max_oom_kill_event": 0,
+      "server_max_memory_high_event": 0,
+      "server_max_memory_limit_event": 0
+    },
+    "hysteria": {
+      "blocks": 3,
+      "idle_rss_mib": {
+        "n": 18,
+        "median": 27.11328125,
+        "p95": 28.48828125,
+        "min": 26.23046875,
+        "max": 28.48828125
+      },
+      "client_peak_rss_mib": 45.109375,
+      "client_max_swap_mib": 0.0,
+      "client_max_threads": 8,
+      "client_max_fds": 25,
+      "client_cpu_s_per_block": {
+        "n": 3,
+        "median": 1.9699999999999998,
+        "p95": 2.8200000000000003,
+        "min": 1.71,
+        "max": 2.8200000000000003
+      },
+      "server_cpu_s_per_block_sampled": {
+        "n": 3,
+        "median": 2.97534,
+        "p95": 4.948369,
+        "min": 2.760768,
+        "max": 4.948369
+      },
+      "server_peak_cgroup_mib": 41.421875,
+      "server_peak_rss_mib": 36.94140625,
+      "server_max_swap_mib": 0.0,
+      "server_max_oom_kill_event": 0,
+      "server_max_memory_high_event": 0,
+      "server_max_memory_limit_event": 0
+    }
+  },
+  "cleanup": {
+    "time": 1793339737.3492892,
+    "production_active": "active",
+    "production_pid": "2489350",
+    "available_kib": 452592,
+    "guard_triggered": false,
+    "nginx_upstream_restored": true,
+    "nginx_sha256": "fff96b6f4365be2cdc5b1e91a8ba81a92a6dfdcedc352d20675815b7f3d48975",
+    "nginx_original_sha256": "fff96b6f4365be2cdc5b1e91a8ba81a92a6dfdcedc352d20675815b7f3d48975"
+  },
+  "failure_counts": {
+    "simpleplane/upload_8mib/": 3,
+    "simpleplane/public_https/www.wikipedia.org": 6,
+    "shadowsocks/download_32mib/": 1,
+    "shadowsocks/parallel_download_4x8mib/": 2,
+    "shadowsocks/background_download_16mib/": 2,
+    "shadowsocks/public_https/www.wikipedia.org": 6,
+    "shadowsocks/public_https/www.cloudflare.com": 1,
+    "hysteria/public_https/www.wikipedia.org": 6,
+    "simpleplane/block_error/": 1,
+    "simpleplane/concurrent_small_requests/": 2
+  },
+  "minimum_server_available_mib": 248.453125,
+  "harness_verification": {
+    "passed": 7,
+    "total": 7
+  },
+  "supplement": {
+    "simpleplane": {
+      "cold_start": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 4115.737888000012,
+          "p95": 4115.737888000012,
+          "min": 4115.737888000012,
+          "max": 4115.737888000012
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.0009838947701404015,
+          "p95": 0.0009838947701404015,
+          "min": 0.0009838947701404015,
+          "max": 0.0009838947701404015
+        }
+      },
+      "download_1048576": {
+        "n": 3,
+        "successes": 3,
+        "total_ms": {
+          "n": 3,
+          "median": 1290.5219239999042,
+          "p95": 2500.026313000035,
+          "min": 1267.2322209998583,
+          "max": 2500.026313000035
+        },
+        "mib_s": {
+          "n": 3,
+          "median": 0.7748802878920128,
+          "p95": 0.7891213492117415,
+          "min": 0.3999957899643059,
+          "max": 0.7891213492117415
+        }
+      },
+      "download_8388608": {
+        "n": 3,
+        "successes": 3,
+        "total_ms": {
+          "n": 3,
+          "median": 4791.702887999918,
+          "p95": 4944.41153899993,
+          "min": 4616.144142999929,
+          "max": 4944.41153899993
+        },
+        "mib_s": {
+          "n": 3,
+          "median": 1.6695525968512714,
+          "p95": 1.7330481354511993,
+          "min": 1.6179882958565586,
+          "max": 1.7330481354511993
+        }
+      },
+      "existing_stream_after_3s_process_pause": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 2999.78910599998,
+          "p95": 2999.78910599998,
+          "min": 2999.78910599998,
+          "max": 2999.78910599998
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.00032554371840565194,
+          "p95": 0.00032554371840565194,
+          "min": 0.00032554371840565194,
+          "max": 0.00032554371840565194
+        }
+      },
+      "new_stream_after_pause": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 752.5145419999717,
+          "p95": 752.5145419999717,
+          "min": 752.5145419999717,
+          "max": 752.5145419999717
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.0012977323965123278,
+          "p95": 0.0012977323965123278,
+          "min": 0.0012977323965123278,
+          "max": 0.0012977323965123278
+        }
+      }
+    },
+    "shadowsocks": {
+      "cold_start": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 910.0271199999952,
+          "p95": 910.0271199999952,
+          "min": 910.0271199999952,
+          "max": 910.0271199999952
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.0016208470363667372,
+          "p95": 0.0016208470363667372,
+          "min": 0.0016208470363667372,
+          "max": 0.0016208470363667372
+        }
+      },
+      "download_1048576": {
+        "n": 3,
+        "successes": 3,
+        "total_ms": {
+          "n": 3,
+          "median": 2144.658502999846,
+          "p95": 3063.977469000065,
+          "min": 2064.8919650000153,
+          "max": 3063.977469000065
+        },
+        "mib_s": {
+          "n": 3,
+          "median": 0.46627469995864035,
+          "p95": 0.4842868377377761,
+          "min": 0.32637315715195253,
+          "max": 0.4842868377377761
+        }
+      },
+      "download_8388608": {
+        "n": 3,
+        "successes": 3,
+        "total_ms": {
+          "n": 3,
+          "median": 3763.695652000024,
+          "p95": 14512.921906000201,
+          "min": 3587.5747830000364,
+          "max": 14512.921906000201
+        },
+        "mib_s": {
+          "n": 3,
+          "median": 2.1255703807370314,
+          "p95": 2.2299186731684415,
+          "min": 0.5512328979523063,
+          "max": 2.2299186731684415
+        }
+      },
+      "existing_stream_after_3s_process_pause": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 3010.3910480002014,
+          "p95": 3010.3910480002014,
+          "min": 3010.3910480002014,
+          "max": 3010.3910480002014
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.00032439722429042204,
+          "p95": 0.00032439722429042204,
+          "min": 0.00032439722429042204,
+          "max": 0.00032439722429042204
+        }
+      },
+      "new_stream_after_pause": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 505.5734019997544,
+          "p95": 505.5734019997544,
+          "min": 505.5734019997544,
+          "max": 505.5734019997544
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.0019315939013747293,
+          "p95": 0.0019315939013747293,
+          "min": 0.0019315939013747293,
+          "max": 0.0019315939013747293
+        }
+      }
+    },
+    "hysteria": {
+      "cold_start": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 2034.9378569999317,
+          "p95": 2034.9378569999317,
+          "min": 2034.9378569999317,
+          "max": 2034.9378569999317
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.001877706357099989,
+          "p95": 0.001877706357099989,
+          "min": 0.001877706357099989,
+          "max": 0.001877706357099989
+        }
+      },
+      "download_1048576": {
+        "n": 3,
+        "successes": 3,
+        "total_ms": {
+          "n": 3,
+          "median": 793.1695969996326,
+          "p95": 1804.7289619998992,
+          "min": 604.8536250000325,
+          "max": 1804.7289619998992
+        },
+        "mib_s": {
+          "n": 3,
+          "median": 1.2607644112718848,
+          "p95": 1.6532925631386375,
+          "min": 0.5540998238826157,
+          "max": 1.6532925631386375
+        }
+      },
+      "download_8388608": {
+        "n": 3,
+        "successes": 3,
+        "total_ms": {
+          "n": 3,
+          "median": 1863.0147029998625,
+          "p95": 1925.3829069998574,
+          "min": 1423.7580849999176,
+          "max": 1925.3829069998574
+        },
+        "mib_s": {
+          "n": 3,
+          "median": 4.294115332057361,
+          "p95": 5.618932095476362,
+          "min": 4.155017669947868,
+          "max": 5.618932095476362
+        }
+      },
+      "existing_stream_after_3s_process_pause": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 2994.030438000209,
+          "p95": 2994.030438000209,
+          "min": 2994.030438000209,
+          "max": 2994.030438000209
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.0003261698637413558,
+          "p95": 0.0003261698637413558,
+          "min": 0.0003261698637413558,
+          "max": 0.0003261698637413558
+        }
+      },
+      "new_stream_after_pause": {
+        "n": 1,
+        "successes": 1,
+        "total_ms": {
+          "n": 1,
+          "median": 499.17560599988064,
+          "p95": 499.17560599988064,
+          "min": 499.17560599988064,
+          "max": 499.17560599988064
+        },
+        "mib_s": {
+          "n": 1,
+          "median": 0.00195635060740575,
+          "p95": 0.00195635060740575,
+          "min": 0.00195635060740575,
+          "max": 0.00195635060740575
+        }
+      }
+    }
+  },
+  "aligned_recovery_30s": [
+    {
+      "ok": true,
+      "setup_ms": 1070.1107780000712,
+      "tls_ms": 0.007439999990310753,
+      "ttfb_ms": 1359.1629210000065,
+      "total_ms": 7194.421793999936,
+      "bytes": 1024,
+      "payload_bytes": 1024,
+      "mib_s": 0.0007184670341151499,
+      "status": 200,
+      "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+      "kind": "cold_start",
+      "tool": "simpleplane",
+      "block": "aligned_30s",
+      "time": 1793339441.606167
+    },
+    {
+      "ok": false,
+      "error": "TimeoutError: timed out",
+      "kind": "old_stream_after_outage",
+      "tool": "simpleplane",
+      "block": "aligned_30s",
+      "time": 1793339450.3726354,
+      "expected_disconnect": true
+    },
+    {
+      "ok": true,
+      "setup_ms": 574.9943759997223,
+      "tls_ms": 0.006428000233427156,
+      "ttfb_ms": 824.1508040000554,
+      "total_ms": 25897.640423999746,
+      "bytes": 1024,
+      "payload_bytes": 1024,
+      "mib_s": 0.0011848437532735296,
+      "status": 200,
+      "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+      "kind": "recovery",
+      "tool": "simpleplane",
+      "block": "aligned_30s",
+      "time": 1793339482.9734888,
+      "restart_to_success_ms": 29597.350473000006,
+      "attempts": [
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": true
+        }
+      ],
+      "minimum_outage_s": 3,
+      "stop_ack_to_restart_request_s": 6.006641916999797
+    },
+    {
+      "ok": true,
+      "setup_ms": 258.80635999965307,
+      "tls_ms": 0.00577100036025513,
+      "ttfb_ms": 509.5292169999084,
+      "total_ms": 1821.6934059996674,
+      "bytes": 1024,
+      "payload_bytes": 1024,
+      "mib_s": 0.0019163891010814066,
+      "status": 200,
+      "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+      "kind": "cold_start",
+      "tool": "hysteria",
+      "block": "aligned_30s",
+      "time": 1793339496.7706997
+    },
+    {
+      "ok": false,
+      "error": "TimeoutError: timed out",
+      "kind": "old_stream_after_outage",
+      "tool": "hysteria",
+      "block": "aligned_30s",
+      "time": 1793339503.352171,
+      "expected_disconnect": true
+    },
+    {
+      "ok": true,
+      "setup_ms": 750.162568000178,
+      "tls_ms": 0.005111000064061955,
+      "ttfb_ms": 997.6112790000116,
+      "total_ms": 24753.503772000386,
+      "bytes": 1024,
+      "payload_bytes": 1024,
+      "mib_s": 0.000978859079595494,
+      "status": 200,
+      "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+      "kind": "recovery",
+      "tool": "hysteria",
+      "block": "aligned_30s",
+      "time": 1793339534.601996,
+      "restart_to_success_ms": 28246.38981199996,
+      "attempts": [
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "timed out"
+        },
+        {
+          "ok": false,
+          "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+        },
+        {
+          "ok": true
+        }
+      ],
+      "minimum_outage_s": 3,
+      "stop_ack_to_restart_request_s": 6.006569338999725
+    }
+  ]
+}

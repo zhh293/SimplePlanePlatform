@@ -1,0 +1,70 @@
+2026-10-30T04:48:09Z	[34mINFO[0m	server mode
+2026-10-30T04:48:09Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T04:48:12Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:53656", "id": "user", "tx": 0}
+2026-10-30T04:48:14Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:38824", "id": "user"}
+2026-10-30T04:48:14Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:38824", "id": "user", "reqAddr": "api.hy2.io:443", "error": "readfrom tcp4 172.31.92.247:40442->104.21.69.135:443: Application error 0x100 (remote)"}
+2026-10-30T04:48:17Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T04:48:17Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:23:26Z	[34mINFO[0m	server mode
+2026-10-30T05:23:26Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:23:29Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:52551", "id": "user", "tx": 0}
+2026-10-30T05:25:07Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:25:07Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:52551", "id": "user", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "readfrom tcp4 172.31.92.247:52572->172.31.92.247:18880: quic: transport closed"}
+2026-10-30T05:25:07Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:52551", "id": "user", "reqAddr": "api.hy2.io:443", "error": "readfrom tcp4 172.31.92.247:45280->104.21.69.135:443: quic: transport closed"}
+2026-10-30T05:25:07Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:52551", "id": "user", "error": "accepting stream failed: quic: transport closed"}
+2026-10-30T05:25:07Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:25:16Z	[34mINFO[0m	server mode
+2026-10-30T05:25:16Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:25:41Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:60157", "id": "user", "tx": 0}
+2026-10-30T05:25:45Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:60670", "id": "user"}
+2026-10-30T05:25:47Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:25:47Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:28:49Z	[34mINFO[0m	server mode
+2026-10-30T05:28:49Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:28:51Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:55931", "id": "user", "tx": 0}
+2026-10-30T05:30:28Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:30:28Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:52097", "id": "user", "reqAddr": "api.hy2.io:443", "error": "readfrom tcp4 172.31.92.247:33478->104.21.69.135:443: quic: transport closed"}
+2026-10-30T05:30:28Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:52097", "id": "user", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "readfrom tcp4 172.31.92.247:47946->172.31.92.247:18880: quic: transport closed"}
+2026-10-30T05:30:28Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:52097", "id": "user", "error": "accepting stream failed: quic: transport closed"}
+2026-10-30T05:30:28Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:30:37Z	[34mINFO[0m	server mode
+2026-10-30T05:30:37Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:31:02Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:40121", "id": "user", "tx": 0}
+2026-10-30T05:31:06Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:40121", "id": "user"}
+2026-10-30T05:31:09Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:31:09Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:32:04Z	[34mINFO[0m	server mode
+2026-10-30T05:32:04Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:32:06Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:48359", "id": "user", "tx": 0}
+2026-10-30T05:33:53Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:33:53Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:48359", "id": "user", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "readfrom tcp4 172.31.92.247:52688->172.31.92.247:18880: quic: transport closed"}
+2026-10-30T05:33:53Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:48359", "id": "user", "reqAddr": "api.hy2.io:443", "error": "readfrom tcp4 172.31.92.247:38896->172.67.208.246:443: quic: transport closed"}
+2026-10-30T05:33:53Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:48359", "id": "user", "error": "accepting stream failed: quic: transport closed"}
+2026-10-30T05:33:53Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:34:03Z	[34mINFO[0m	server mode
+2026-10-30T05:34:03Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:34:27Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:36287", "id": "user", "tx": 0}
+2026-10-30T05:34:31Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:36287", "id": "user"}
+2026-10-30T05:34:34Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:34:34Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:48:43Z	[34mINFO[0m	server mode
+2026-10-30T05:48:43Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:48:45Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:32801", "id": "user", "tx": 0}
+2026-10-30T05:49:15Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:32801", "id": "user"}
+2026-10-30T05:49:15Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:32801", "id": "user", "reqAddr": "api.hy2.io:443", "error": "readfrom tcp4 172.31.92.247:37978->172.67.208.246:443: Application error 0x100 (remote)"}
+2026-10-30T05:49:18Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:49:18Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:51:30Z	[34mINFO[0m	server mode
+2026-10-30T05:51:30Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:51:32Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:49411", "id": "user", "tx": 0}
+2026-10-30T05:51:36Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:51:36Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:47945", "id": "user", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "readfrom tcp4 172.31.92.247:48230->172.31.92.247:18880: quic: transport closed"}
+2026-10-30T05:51:36Z	[33mWARN[0m	TCP error	{"addr": "127.0.0.1:47945", "id": "user", "reqAddr": "api.hy2.io:443", "error": "readfrom tcp4 172.31.92.247:35070->172.67.208.246:443: quic: transport closed"}
+2026-10-30T05:51:36Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:47945", "id": "user", "error": "accepting stream failed: quic: transport closed"}
+2026-10-30T05:51:36Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}
+2026-10-30T05:51:46Z	[34mINFO[0m	server mode
+2026-10-30T05:51:46Z	[34mINFO[0m	server up and running	{"listen": ":18443"}
+2026-10-30T05:52:10Z	[34mINFO[0m	client connected	{"addr": "127.0.0.1:54870", "id": "user", "tx": 0}
+2026-10-30T05:52:11Z	[34mINFO[0m	client disconnected	{"addr": "127.0.0.1:39360", "id": "user"}
+2026-10-30T05:52:14Z	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T05:52:14Z	[34mINFO[0m	server stopped	{"error": "quic: server closed"}

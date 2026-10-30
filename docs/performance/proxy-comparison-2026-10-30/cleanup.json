@@ -1,0 +1,10 @@
+{
+  "time": 1793339737.3492892,
+  "production_active": "active",
+  "production_pid": "2489350",
+  "available_kib": 452592,
+  "guard_triggered": false,
+  "nginx_upstream_restored": true,
+  "nginx_sha256": "fff96b6f4365be2cdc5b1e91a8ba81a92a6dfdcedc352d20675815b7f3d48975",
+  "nginx_original_sha256": "fff96b6f4365be2cdc5b1e91a8ba81a92a6dfdcedc352d20675815b7f3d48975"
+}

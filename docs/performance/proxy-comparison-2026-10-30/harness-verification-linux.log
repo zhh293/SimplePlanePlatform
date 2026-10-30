@@ -1,0 +1,12 @@
+test_corruption_is_failure (__main__.HarnessTest) ... ok
+test_exact_download_digest (__main__.HarnessTest) ... ok
+test_keepalive_multiple_responses (__main__.HarnessTest) ... ok
+test_parallel_does_not_hide_failures (__main__.HarnessTest) ... ok
+test_request_has_overall_timeout (__main__.HarnessTest) ... ok
+test_truncation_is_failure (__main__.HarnessTest) ... ok
+test_upload_validates_remote_digest (__main__.HarnessTest) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 5.025s
+
+OK

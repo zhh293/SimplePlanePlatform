@@ -1,0 +1,1257 @@
+[
+  {
+    "ok": true,
+    "setup_ms": 495.88216600000123,
+    "tls_ms": 0.0008480000133204157,
+    "ttfb_ms": 754.484581999975,
+    "total_ms": 754.7182019999923,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0012939432193527643,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7547755830000256
+  },
+  {
+    "ok": true,
+    "setup_ms": 497.3841330000255,
+    "tls_ms": 0.0006180000013955578,
+    "ttfb_ms": 745.7806930000288,
+    "total_ms": 745.9197460000269,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0013092058565774512,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7459651629999939
+  },
+  {
+    "ok": true,
+    "setup_ms": 516.1921320000147,
+    "tls_ms": 0.0005929999815634801,
+    "ttfb_ms": 767.1933099999819,
+    "total_ms": 767.5915710000254,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.001272242344620493,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7677121930000226
+  },
+  {
+    "ok": true,
+    "setup_ms": 499.76118600000063,
+    "tls_ms": 0.000339999985499162,
+    "ttfb_ms": 746.5876119999848,
+    "total_ms": 746.6249120000157,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0013079693488716319,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7466869620000125
+  },
+  {
+    "ok": true,
+    "setup_ms": 506.6979039999637,
+    "tls_ms": 0.00040399999079454574,
+    "ttfb_ms": 759.0488039999741,
+    "total_ms": 759.0797659999566,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0012865084062852702,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.75913594900004
+  },
+  {
+    "ok": true,
+    "setup_ms": 515.2447490000327,
+    "tls_ms": 0.00029500000664484105,
+    "ttfb_ms": 763.9701780000223,
+    "total_ms": 764.0072060000307,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0012782111115323181,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7640935640000066
+  },
+  {
+    "ok": true,
+    "setup_ms": 500.66206600001806,
+    "tls_ms": 0.0005320000013853132,
+    "ttfb_ms": 745.5551940000191,
+    "total_ms": 745.5868659999965,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.001309790373909302,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7456603730000211
+  },
+  {
+    "ok": true,
+    "setup_ms": 497.78619900001786,
+    "tls_ms": 0.0004199999921183917,
+    "ttfb_ms": 745.6766720000019,
+    "total_ms": 745.7083030000149,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0013095770773521621,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7457671189999928
+  },
+  {
+    "ok": true,
+    "setup_ms": 497.0405949999872,
+    "tls_ms": 0.0003079999828514701,
+    "ttfb_ms": 756.553107000002,
+    "total_ms": 756.6193619999808,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.001290691923900336,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7566779129999759
+  },
+  {
+    "ok": true,
+    "setup_ms": 490.7712300000071,
+    "tls_ms": 0.0002969999854940397,
+    "ttfb_ms": 774.0660580000167,
+    "total_ms": 774.1238720000183,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0012615067630933061,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7742328100000009
+  },
+  {
+    "ok": true,
+    "setup_ms": 502.9441130000123,
+    "tls_ms": 0.0004269999749340059,
+    "ttfb_ms": 752.6760229999923,
+    "total_ms": 752.7363789999981,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0012973499451392962,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7528221489999964
+  },
+  {
+    "ok": true,
+    "setup_ms": 501.5632770000025,
+    "tls_ms": 0.0009679999948275508,
+    "ttfb_ms": 741.7967979999958,
+    "total_ms": 741.8346989999804,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0013164152355186957,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7419133660000057
+  },
+  {
+    "ok": true,
+    "setup_ms": 512.3475299999996,
+    "tls_ms": 0.0004799999828719592,
+    "ttfb_ms": 768.5613090000061,
+    "total_ms": 768.6129599999845,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0012705516961358807,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7686915599999793
+  },
+  {
+    "ok": true,
+    "setup_ms": 489.82599999999366,
+    "tls_ms": 0.000515000010636868,
+    "ttfb_ms": 738.721833999989,
+    "total_ms": 738.7555419999785,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0013219020968102983,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.7388127440000289
+  },
+  {
+    "ok": true,
+    "setup_ms": 508.00959600002216,
+    "tls_ms": 0.00039799999740353087,
+    "ttfb_ms": 757.0547130000023,
+    "total_ms": 757.0960060000402,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.00128987934457542,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_new",
+    "elapsed_s": 0.757161855999982
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.00094600000011269,
+    "tls_ms": 0.00014799996961301076,
+    "ttfb_ms": 283.43143500001133,
+    "total_ms": 283.608815999969,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0034433432421935245,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2836268210000412
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0006299999881775875,
+    "tls_ms": 7.099998811099795e-05,
+    "ttfb_ms": 258.8941889999887,
+    "total_ms": 258.9288759999704,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003771547287758325,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2589450300000067
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0006090000397307449,
+    "tls_ms": 0.00011599996696531889,
+    "ttfb_ms": 268.1264930000111,
+    "total_ms": 268.1676860000266,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003641611390866471,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2681846099999916
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.00066100000140068,
+    "tls_ms": 0.00023199999077405664,
+    "ttfb_ms": 248.94856399998844,
+    "total_ms": 249.00498099998458,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003921859298067858,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.24902281399999993
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0005980000423733145,
+    "tls_ms": 7.299996696019662e-05,
+    "ttfb_ms": 250.91001500004495,
+    "total_ms": 250.94526300000553,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0038915359004006323,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.25096828300002016
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.000629000055596407,
+    "tls_ms": 0.00011399998811612022,
+    "ttfb_ms": 254.44883100004745,
+    "total_ms": 254.48179500000379,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0038374552490090127,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2544968830000016
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0004070000159117626,
+    "tls_ms": 0.00011999998150713509,
+    "ttfb_ms": 250.7881259999749,
+    "total_ms": 250.81976699999586,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0038934830044715578,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.25083301400002256
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0005090000172458531,
+    "tls_ms": 0.00012900000001536682,
+    "ttfb_ms": 252.3864089999961,
+    "total_ms": 252.42374499998732,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0038687426176964813,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.25243582699999934
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0003879999894706998,
+    "tls_ms": 0.00016699999605407356,
+    "ttfb_ms": 257.5982550000049,
+    "total_ms": 257.809366999993,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003787924819659584,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.25782446799996706
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0003339999921081471,
+    "tls_ms": 6.699997356918175e-05,
+    "ttfb_ms": 242.43788499995844,
+    "total_ms": 242.46883999995816,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.004027579378860263,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.24248041900000317
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0003300000344097498,
+    "tls_ms": 7.199997753559728e-05,
+    "ttfb_ms": 248.48435800004154,
+    "total_ms": 248.5228680000091,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003929467367968585,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.248536941999987
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0006160000225463591,
+    "tls_ms": 0.0001309999788645655,
+    "ttfb_ms": 258.64811500002816,
+    "total_ms": 258.7036420000004,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0037748308931808486,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2587167959999874
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.00050199997758682,
+    "tls_ms": 0.00012200001719975262,
+    "ttfb_ms": 265.07225299997117,
+    "total_ms": 265.1058270000135,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0036836704460666203,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2651290750000044
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0004799999828719592,
+    "tls_ms": 0.00011700001323333709,
+    "ttfb_ms": 253.57211399995094,
+    "total_ms": 253.6103009999806,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003850642092018473,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.25362384099997826
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0009770000133357826,
+    "tls_ms": 0.0001749999682942871,
+    "ttfb_ms": 250.3652309999893,
+    "total_ms": 250.40511000003107,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0038999303967873454,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.25042214000001195
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0010750000001280569,
+    "tls_ms": 0.0002390000304330897,
+    "ttfb_ms": 251.09867600002644,
+    "total_ms": 251.13683600000059,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003888567346607798,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.25115452699998286
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0007760000357848185,
+    "tls_ms": 0.0002570000106061343,
+    "ttfb_ms": 244.36759299999267,
+    "total_ms": 244.4371430000274,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003995147742337549,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.24445779300003778
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0007400000185953104,
+    "tls_ms": 0.0001309999788645655,
+    "ttfb_ms": 265.699847999997,
+    "total_ms": 265.7937820000029,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0036741359886289186,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2658185140000455
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.00041499998815197614,
+    "tls_ms": 0.00014500000133921276,
+    "ttfb_ms": 251.4765010000133,
+    "total_ms": 251.55523399996582,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.003882099706182749,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2515786559999924
+  },
+  {
+    "ok": true,
+    "setup_ms": 0.0006969999617467693,
+    "tls_ms": 0.0002680000079635647,
+    "ttfb_ms": 250.7697699999767,
+    "total_ms": 250.80129299999498,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0038937697980688623,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "http_keepalive",
+    "elapsed_s": 0.2508142490000296
+  },
+  {
+    "ok": true,
+    "setup_ms": 553.4200090000354,
+    "tls_ms": 297.5120969999807,
+    "ttfb_ms": 1101.6101660000004,
+    "total_ms": 1101.9949480000264,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0008861769300960322,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "https_new",
+    "elapsed_s": 1.1021976979999977
+  },
+  {
+    "ok": true,
+    "setup_ms": 511.300206000044,
+    "tls_ms": 263.0540899999687,
+    "ttfb_ms": 1062.4772399999642,
+    "total_ms": 1062.5792640000213,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0009190490846996054,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "https_new",
+    "elapsed_s": 1.0627276430000165
+  },
+  {
+    "ok": true,
+    "setup_ms": 494.13552299995445,
+    "tls_ms": 262.661095999988,
+    "ttfb_ms": 1013.45684599994,
+    "total_ms": 1013.5842109999658,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0009634744596470761,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "https_new",
+    "elapsed_s": 1.0136843340000041
+  },
+  {
+    "ok": true,
+    "setup_ms": 490.8165749999398,
+    "tls_ms": 249.47150900004544,
+    "ttfb_ms": 989.5429780000313,
+    "total_ms": 989.9137689999407,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0009865126949255099,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "https_new",
+    "elapsed_s": 0.9899842569999464
+  },
+  {
+    "ok": true,
+    "setup_ms": 495.8754440000348,
+    "tls_ms": 254.3279320000238,
+    "ttfb_ms": 1014.3088410000018,
+    "total_ms": 1014.4595100000515,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0009626431517212061,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "https_new",
+    "elapsed_s": 1.0146983519999822
+  },
+  {
+    "ok": true,
+    "setup_ms": 509.55227500003275,
+    "tls_ms": 307.23460499996236,
+    "ttfb_ms": 1057.5458289999915,
+    "total_ms": 1066.4233420000073,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0009157362386390763,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "https_new",
+    "elapsed_s": 1.0665069359999961
+  },
+  {
+    "ok": true,
+    "total_ms": 7662.696162000088,
+    "document_ttfb_ms": 1015.6774440000618,
+    "assets": 12,
+    "bytes": 425984,
+    "kind": "synthetic_webpage",
+    "elapsed_s": 7.662722726000084
+  },
+  {
+    "ok": true,
+    "total_ms": 7834.673414000008,
+    "document_ttfb_ms": 986.5148270000645,
+    "assets": 12,
+    "bytes": 425984,
+    "kind": "synthetic_webpage",
+    "elapsed_s": 7.834697957000003
+  },
+  {
+    "ok": true,
+    "total_ms": 5501.887313999987,
+    "document_ttfb_ms": 1548.332748000007,
+    "assets": 12,
+    "bytes": 425984,
+    "kind": "synthetic_webpage",
+    "elapsed_s": 5.501945069000044
+  },
+  {
+    "ok": true,
+    "setup_ms": 495.2913870000657,
+    "tls_ms": 0.005747999921368319,
+    "ttfb_ms": 759.0221259999907,
+    "total_ms": 20327.812859000005,
+    "bytes": 33554432,
+    "payload_bytes": 33554432,
+    "mib_s": 1.5741978845418292,
+    "status": 200,
+    "sha256": "e09320c5b00b34bb704802136c599a95b3996332ba84d7c7f21112b6231b6bd0",
+    "kind": "download_32mib",
+    "elapsed_s": 20.327900274000058
+  },
+  {
+    "ok": false,
+    "error": "RemoteDisconnected('Remote end closed connection without response')",
+    "kind": "upload_8mib",
+    "elapsed_s": 0.5023117590000084
+  },
+  {
+    "ok": false,
+    "requests": [
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      }
+    ],
+    "total_ms": 13.22659000004478,
+    "mib_s": 0.0,
+    "rps": 302.42110778261497,
+    "successes": 0,
+    "count": 4,
+    "kind": "parallel_4x8mib",
+    "elapsed_s": 0.013251768999907654
+  },
+  {
+    "ok": false,
+    "requests": [
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      }
+    ],
+    "total_ms": 45.386112999949546,
+    "mib_s": 0.0,
+    "rps": 705.0614799296775,
+    "successes": 0,
+    "count": 32,
+    "kind": "concurrency_1",
+    "elapsed_s": 0.045414117000063925
+  },
+  {
+    "ok": false,
+    "requests": [
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      }
+    ],
+    "total_ms": 26.430353000023388,
+    "mib_s": 0.0,
+    "rps": 1210.7291945730608,
+    "successes": 0,
+    "count": 32,
+    "kind": "concurrency_4",
+    "elapsed_s": 0.026462658000014017
+  },
+  {
+    "ok": false,
+    "requests": [
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      }
+    ],
+    "total_ms": 22.868389999985084,
+    "mib_s": 0.0,
+    "rps": 1399.311451309903,
+    "successes": 0,
+    "count": 32,
+    "kind": "concurrency_8",
+    "elapsed_s": 0.02290000699997563
+  },
+  {
+    "ok": false,
+    "requests": [
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "AssertionError: SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      }
+    ],
+    "total_ms": 24.46726400000898,
+    "mib_s": 0.0,
+    "rps": 1307.8699767979065,
+    "successes": 0,
+    "count": 32,
+    "kind": "concurrency_16",
+    "elapsed_s": 0.024546784999984084
+  },
+  {
+    "ok": true,
+    "setup_ms": 604.1481340000701,
+    "tls_ms": 477.9052750000119,
+    "ttfb_ms": 1354.5456450000302,
+    "total_ms": 1354.6401780000679,
+    "bytes": 577,
+    "payload_bytes": 577,
+    "mib_s": 0.00040621125041396687,
+    "status": 200,
+    "sha256": "25ddf2c883e0d1958ea971d279a7e4f0fd446724ee3db7db19dadabd4a62e484",
+    "kind": "public_example.com",
+    "elapsed_s": 1.3547487820000015
+  },
+  {
+    "ok": false,
+    "error": "AssertionError(403)",
+    "kind": "public_www.wikipedia.org",
+    "elapsed_s": 1.2769021699999712
+  },
+  {
+    "ok": true,
+    "setup_ms": 502.96429499996975,
+    "tls_ms": 247.6804699999775,
+    "ttfb_ms": 1022.7779110000483,
+    "total_ms": 1568.7927850000278,
+    "bytes": 1334883,
+    "payload_bytes": 1334883,
+    "mib_s": 0.8114797853990013,
+    "status": 200,
+    "sha256": "be3c100350479cd84c56cbd2b54f61cf69b08ba71b299b899395ee42cd68baac",
+    "kind": "public_www.cloudflare.com",
+    "elapsed_s": 1.5689387160000479
+  },
+  {
+    "ok": true,
+    "VmHWM": 142912,
+    "VmRSS": 142912,
+    "VmSwap": 0,
+    "Threads": 31,
+    "cpu_s": 4.54,
+    "fds": 28,
+    "pid": 2281,
+    "kind": "client_resources",
+    "elapsed_s": 0.0002218809999021687
+  }
+]

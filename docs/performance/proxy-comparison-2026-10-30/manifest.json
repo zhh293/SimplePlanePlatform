@@ -1,0 +1,43 @@
+{
+  "status": "completed",
+  "files": {
+    "aligned-recovery-samples.json": "5d20a697cf12727d81a3b9d7551871105d587d6b752288cceabc4fbc949a7837",
+    "analysis.json": "ad2c2c17cc473e8a8a405ba56a78a13a512361ff28999bdeeb63e83385ddc744",
+    "cleanup.json": "c458486debf5505e9685e81e19fb9fee57f99711f58d3ad88be85d2953bba000",
+    "client-metrics.jsonl": "e4b9dd1732639af0d11852d3d1b188f5a0f602b55b54eff9948e03fdd15d3b6a",
+    "comparison.png": "b417ca9975779241c5c07a10e0fe107157ce67289c289c300c3c8c81f41ef8d0",
+    "comparison.svg": "1675eb36b8f45bb49ddcee7e791efed565643f5448f6c724dbfa478d73facbf5",
+    "deployed-baseline.json": "d4891c7b5a47af4be28416a34e4c6e3836255ea1b65d00f99cc77b8cd191baf7",
+    "deployed-client.log": "00415f4951c66ae8bf4e9fdf8d7d847083a21bb39308e7fcc57c703d70e4d498",
+    "deployed-diagnostic.json": "c88c48b79ed3eb05010efdffcb14e64570fb1238afd8edfb1d84d41910b74463",
+    "environment.json": "be28b342976abd4e05bc4e1bf0c55bb1d67f6a6a51567815a4ac4562db406475",
+    "final-idle-snapshot.json": "738e9893c68e986a8ae6cfbcb01f2bbb82a37dc4377b9b70fc26b0f507560828",
+    "harness-verification-linux.log": "f9659f56f488540944ca29664ab3706bacf67c59eca526fc41784d956355b049",
+    "hysteria-client.log": "b81438939abc4ce89339b9a22456d3ae850bf9f33717d18f5f1428450cc176f9",
+    "hysteria-server.log": "a5079ccfe379a5b35a85d13fa1b4e85113bb57e59d6d4e7f2e4597a440da600d",
+    "origin-server.log": "9b70b097c3027011cf2be8bda4e475c0aa100f7a1d5868a23ba8c0ef816b3917",
+    "prune.json": "f5bb4d0228585fb1e0f258423b5cfe4147d623cd85fb976e1fede414d1614463",
+    "run-summary.json": "df467364c935fb2256e5feb97a4b2109b7fcbd41ab4ff7e9c54a57edf7e5384c",
+    "samples.json": "458db9ca496771d9d3704852c04bf3bc7602cd59660aa25df559f9b1ba9b8e1e",
+    "server-metrics.jsonl": "d97042f5edcd53cc0a2448da6ecbe6c2cab70d896e3b9a88a8ebc294184d049e",
+    "shadowsocks-client.log": "cd3f428b8565c545cb82d9416f7000c82140f7781197ebcb67bb555c4c6e761a",
+    "shadowsocks-server.log": "87c9c821c86ee117ffee5a398820f89dde56bd94a81b6ee2f2eb2e171ac306ca",
+    "simpleplane-client.log": "be173c020898987b339611266e1275e46bde653c36caafed92a0f34fe16379f3",
+    "simpleplane-server.log": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+    "supplement-samples.json": "4e0b47a14d6f0a24f03744165f938e697182306e6f89d0ec3f6f5dbf812f5866",
+    "tcp-diagnostics.jsonl": "e7a58deac9e16310c23c9562ec40c31662fd13af6b5b35588652c376767fea02"
+  },
+  "source_sha256": {
+    "scripts/perf/aligned_recovery.py": "8b1d476d9b49118a832b88359682bb20c0c55097c205c785e10b5f1a6fed3c82",
+    "scripts/perf/compare_proxies.py": "1c5e96c78467563854d69d736399d9e322e97272655373d6121ec5c49da4fbd6",
+    "scripts/perf/deployed_baseline.py": "9fbd305da87c759faf889821c753a02664ad9dc52192a8447b075207e02a3b7c",
+    "scripts/perf/inspect_comparison.py": "a4258161a347a2a92830ef09ca35693fb55f6d8660cb0093f7b5203bd8e9573c",
+    "scripts/perf/network_trace.py": "fb23099b1bab673e24f24c9457a987340236d79cacfc25e1e44b0434240ae967",
+    "scripts/perf/prepare_comparison.py": "869cf06eb52089323222a54ff3f85941657601df715b27dafb06b4a637a42ebf",
+    "scripts/perf/remote_fixture.py": "dda19fe103a8ef53d5d7c0c8d4727e46200e595cfa5a4fd82287701b73aa3f1a",
+    "scripts/perf/supplement_comparison.py": "b1f09015b0cdbafb0e164b876cc93913d48b57379744b637dd220633a7751185",
+    "scripts/perf/verify_harness.py": "59562320aec63f144fb39f3352a98567c56b0d48405751e54c6cb56cd01e9dc5",
+    "scripts/perf/write_report.py": "3d8032b05c6b953e7805231586e2df7e468ef0c3160c7a1e0b4b863b94806316"
+  },
+  "report_sha256": "a2e02e256e4eb5ca08e0ec3f16c8f65b01de0685c6bd5de96f460413ef577732"
+}
