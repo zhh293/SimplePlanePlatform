@@ -1,0 +1,34 @@
+----------------------------------------
+Exception occurred during processing of request from ('172.31.92.247', 43744)
+Traceback (most recent call last):
+  File "/usr/lib64/python3.9/socketserver.py", line 683, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib64/python3.9/socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib64/python3.9/socketserver.py", line 747, in __init__
+    self.handle()
+  File "/usr/lib64/python3.9/http/server.py", line 435, in handle
+    self.handle_one_request()
+  File "/usr/lib64/python3.9/http/server.py", line 401, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+  File "/usr/lib64/python3.9/socket.py", line 716, in readinto
+    return self._sock.recv_into(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('172.31.92.247', 43746)
+Traceback (most recent call last):
+  File "/usr/lib64/python3.9/socketserver.py", line 683, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib64/python3.9/socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib64/python3.9/socketserver.py", line 747, in __init__
+    self.handle()
+  File "/usr/lib64/python3.9/http/server.py", line 435, in handle
+    self.handle_one_request()
+  File "/usr/lib64/python3.9/http/server.py", line 401, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+  File "/usr/lib64/python3.9/socket.py", line 716, in readinto
+    return self._sock.recv_into(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------

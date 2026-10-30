@@ -1,0 +1,22 @@
+{
+  "time": 1793339740.7038846,
+  "available_kib": 455676,
+  "units": [
+    {
+      "name": "origin",
+      "inactive": true
+    },
+    {
+      "name": "simpleplane",
+      "inactive": true
+    },
+    {
+      "name": "shadowsocks",
+      "inactive": true
+    },
+    {
+      "name": "hysteria",
+      "inactive": true
+    }
+  ]
+}

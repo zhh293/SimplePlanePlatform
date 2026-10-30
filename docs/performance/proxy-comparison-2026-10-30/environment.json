@@ -1,0 +1,18 @@
+{
+  "hostname": "ip-172-31-92-247.ec2.internal",
+  "origin_port": 18880,
+  "tls_port": 18881,
+  "available_kib": 465600,
+  "cpus": 2,
+  "production_pid": "2489350",
+  "server_jar_sha256": "5e193acd94d442c2693d81c3a6df12fce9c6b0ab766a99bf955918a0e14de8be",
+  "shadowsocks": "1.25.0",
+  "hysteria": "app/v2.13.0",
+  "ss_archive_sha256": "8439bf43c324b0fc273e663d0b1f8926fd8f666cbd1e0fd59b35096f0e778e92",
+  "hysteria_sha256": "sha256:907ba8c9693edb104b20582681fb7dc15639d5b64a9cbb616a7b539190a86691",
+  "client_jar_sha256": "38a6287c91463da32f67666856e940dd283455d0c2e45f62fe4ae6f0686577ee",
+  "git_head": "ad3cf591dc82f1865680fc2601963b0c320e7461",
+  "public_test_port": 9090,
+  "internal_test_port": 18443,
+  "route_reuse_authorized_by_user": true
+}

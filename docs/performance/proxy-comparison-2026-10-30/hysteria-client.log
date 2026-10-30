@@ -1,0 +1,64 @@
+2026-10-30T12:48:15+08:00	[34mINFO[0m	client mode
+2026-10-30T12:48:15+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 1}
+2026-10-30T12:48:15+08:00	[34mINFO[0m	SOCKS5 server listening	{"addr": "127.0.0.1:49695"}
+2026-10-30T12:48:17+08:00	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T13:23:31+08:00	[34mINFO[0m	client mode
+2026-10-30T13:23:32+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 1}
+2026-10-30T13:23:32+08:00	[34mINFO[0m	SOCKS5 server listening	{"addr": "127.0.0.1:49815"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:49960", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:54180", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:53118", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:58244", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:48098", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:49972", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:49988", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:48082", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:43+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:48084", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:25:44+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 2}
+2026-10-30T13:25:48+08:00	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T13:28:54+08:00	[34mINFO[0m	client mode
+2026-10-30T13:28:55+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 1}
+2026-10-30T13:28:55+08:00	[34mINFO[0m	SOCKS5 server listening	{"addr": "127.0.0.1:41323"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:49764", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:37128", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:43044", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:44712", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:43050", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:42758", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:37126", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:43030", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:04+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:37138", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:31:05+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 2}
+2026-10-30T13:31:09+08:00	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T13:32:09+08:00	[34mINFO[0m	client mode
+2026-10-30T13:32:09+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 1}
+2026-10-30T13:32:09+08:00	[34mINFO[0m	SOCKS5 server listening	{"addr": "127.0.0.1:51513"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:40840", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:59236", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:39606", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:39614", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:54158", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:39620", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:59238", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:59224", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:30+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:40830", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:34:31+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 2}
+2026-10-30T13:34:34+08:00	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T13:48:48+08:00	[34mINFO[0m	client mode
+2026-10-30T13:48:49+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 1}
+2026-10-30T13:48:49+08:00	[34mINFO[0m	SOCKS5 server listening	{"addr": "127.0.0.1:46269"}
+2026-10-30T13:49:19+08:00	[34mINFO[0m	received signal, shutting down gracefully
+2026-10-30T13:51:35+08:00	[34mINFO[0m	client mode
+2026-10-30T13:51:36+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 1}
+2026-10-30T13:51:36+08:00	[34mINFO[0m	SOCKS5 server listening	{"addr": "127.0.0.1:56055"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:48034", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:47406", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:47364", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:50528", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:48048", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:50526", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:37618", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:50530", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:13+08:00	[33mWARN[0m	SOCKS5 TCP error	{"addr": "127.0.0.1:48028", "reqAddr": "ip-172-31-92-247.ec2.internal:18880", "error": "connection closed: timeout: no recent network activity"}
+2026-10-30T13:52:14+08:00	[34mINFO[0m	connected to server	{"addr": "54.172.101.190:9090", "udpEnabled": false, "tx": 0, "ech": false, "count": 2}
+2026-10-30T13:52:14+08:00	[34mINFO[0m	received signal, shutting down gracefully

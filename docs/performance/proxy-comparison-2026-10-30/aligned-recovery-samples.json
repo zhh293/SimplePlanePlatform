@@ -1,0 +1,188 @@
+[
+  {
+    "ok": true,
+    "setup_ms": 1070.1107780000712,
+    "tls_ms": 0.007439999990310753,
+    "ttfb_ms": 1359.1629210000065,
+    "total_ms": 7194.421793999936,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0007184670341151499,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "cold_start",
+    "tool": "simpleplane",
+    "block": "aligned_30s",
+    "time": 1793339441.606167
+  },
+  {
+    "ok": false,
+    "error": "TimeoutError: timed out",
+    "kind": "old_stream_after_outage",
+    "tool": "simpleplane",
+    "block": "aligned_30s",
+    "time": 1793339450.3726354,
+    "expected_disconnect": true
+  },
+  {
+    "ok": true,
+    "setup_ms": 574.9943759997223,
+    "tls_ms": 0.006428000233427156,
+    "ttfb_ms": 824.1508040000554,
+    "total_ms": 25897.640423999746,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0011848437532735296,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "recovery",
+    "tool": "simpleplane",
+    "block": "aligned_30s",
+    "time": 1793339482.9734888,
+    "restart_to_success_ms": 29597.350473000006,
+    "attempts": [
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": true
+      }
+    ],
+    "minimum_outage_s": 3,
+    "stop_ack_to_restart_request_s": 6.006641916999797
+  },
+  {
+    "ok": true,
+    "setup_ms": 258.80635999965307,
+    "tls_ms": 0.00577100036025513,
+    "ttfb_ms": 509.5292169999084,
+    "total_ms": 1821.6934059996674,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.0019163891010814066,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "cold_start",
+    "tool": "hysteria",
+    "block": "aligned_30s",
+    "time": 1793339496.7706997
+  },
+  {
+    "ok": false,
+    "error": "TimeoutError: timed out",
+    "kind": "old_stream_after_outage",
+    "tool": "hysteria",
+    "block": "aligned_30s",
+    "time": 1793339503.352171,
+    "expected_disconnect": true
+  },
+  {
+    "ok": true,
+    "setup_ms": 750.162568000178,
+    "tls_ms": 0.005111000064061955,
+    "ttfb_ms": 997.6112790000116,
+    "total_ms": 24753.503772000386,
+    "bytes": 1024,
+    "payload_bytes": 1024,
+    "mib_s": 0.000978859079595494,
+    "status": 200,
+    "sha256": "785b0751fc2c53dc14a4ce3d800e69ef9ce1009eb327ccf458afe09c242c26c9",
+    "kind": "recovery",
+    "tool": "hysteria",
+    "block": "aligned_30s",
+    "time": 1793339534.601996,
+    "restart_to_success_ms": 28246.38981199996,
+    "attempts": [
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "timed out"
+      },
+      {
+        "ok": false,
+        "error": "SOCKS connect failed: b'\\x05\\x04\\x00\\x01'"
+      },
+      {
+        "ok": true
+      }
+    ],
+    "minimum_outage_s": 3,
+    "stop_ack_to_restart_request_s": 6.006569338999725
+  }
+]
