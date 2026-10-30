@@ -42,7 +42,12 @@ pub async fn proxy_tcp_stream<S>(
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-    tracing::info!("SOCKS5 connecting to {}:{} via {}", target, port, socks5_addr);
+    tracing::info!(
+        "SOCKS5 connecting to {}:{} via {}",
+        target,
+        port,
+        socks5_addr
+    );
 
     // 1. TCP connect 到 SOCKS5 代理
     let mut proxy_stream = tokio::time::timeout(AUTH_TIMEOUT, TcpStream::connect(socks5_addr))
@@ -61,91 +66,94 @@ where
 
     tracing::info!("SOCKS5 tunnel established to {}:{}", target, port);
 
-    // 5. 双向转发 — 使用分离的两个方向以便精确诊断哪侧先 EOF
-    let (mut proxy_read, mut proxy_write) = tokio::io::split(proxy_stream);
-    let (mut app_read, mut app_write) = tokio::io::split(app_stream);
-
-    let target_a = format!("{}:{}", target, port);
-    let target_b = target_a.clone();
-
-    // app → proxy 方向（应用数据发往远端）
-    let a2p = tokio::spawn(async move {
-        let mut buf = vec![0u8; 32768];
-        let mut total: u64 = 0;
-        loop {
-            let n = match tokio::time::timeout(
-                Duration::from_secs(120),
-                tokio::io::AsyncReadExt::read(&mut app_read, &mut buf),
-            ).await {
-                Ok(Ok(0)) => {
-                    tracing::info!("[{}] app->proxy: app read EOF after {} bytes", target_a, total);
-                    break;
-                }
-                Ok(Ok(n)) => n,
-                Ok(Err(e)) => {
-                    tracing::warn!("[{}] app->proxy: app read error after {} bytes: {}", target_a, total, e);
-                    break;
-                }
-                Err(_) => {
-                    tracing::warn!("[{}] app->proxy: app read timeout after {} bytes", target_a, total);
-                    break;
-                }
-            };
-            if total == 0 {
-                tracing::info!("[{}] app->proxy: first chunk {} bytes", target_a, n);
-            }
-            total += n as u64;
-            if let Err(e) = tokio::io::AsyncWriteExt::write_all(&mut proxy_write, &buf[..n]).await {
-                tracing::warn!("[{}] app->proxy: proxy write error after {} bytes: {}", target_a, total, e);
-                break;
-            }
-        }
-        let _ = tokio::io::AsyncWriteExt::shutdown(&mut proxy_write).await;
-        total
-    });
-
-    // proxy → app 方向（远端数据返回给应用）
-    let p2a = tokio::spawn(async move {
-        let mut buf = vec![0u8; 32768];
-        let mut total: u64 = 0;
-        loop {
-            let n = match tokio::time::timeout(
-                Duration::from_secs(120),
-                tokio::io::AsyncReadExt::read(&mut proxy_read, &mut buf),
-            ).await {
-                Ok(Ok(0)) => {
-                    tracing::info!("[{}] proxy->app: proxy read EOF after {} bytes", target_b, total);
-                    break;
-                }
-                Ok(Ok(n)) => n,
-                Ok(Err(e)) => {
-                    tracing::warn!("[{}] proxy->app: proxy read error after {} bytes: {}", target_b, total, e);
-                    break;
-                }
-                Err(_) => {
-                    tracing::warn!("[{}] proxy->app: proxy read timeout after {} bytes", target_b, total);
-                    break;
-                }
-            };
-            if total == 0 {
-                tracing::info!("[{}] proxy->app: first chunk {} bytes", target_b, n);
-            }
-            total += n as u64;
-            if let Err(e) = tokio::io::AsyncWriteExt::write_all(&mut app_write, &buf[..n]).await {
-                tracing::warn!("[{}] proxy->app: app write error after {} bytes: {}", target_b, total, e);
-                break;
-            }
-        }
-        let _ = tokio::io::AsyncWriteExt::shutdown(&mut app_write).await;
-        total
-    });
-
-    let (sent, recv) = tokio::join!(a2p, p2a);
-    let sent = sent.unwrap_or(0);
-    let recv = recv.unwrap_or(0);
-    tracing::info!("SOCKS5 tunnel closed: {}:{} (sent: {}, recv: {})", target, port, sent, recv);
-
+    let (sent, recv) =
+        relay_with_idle_timeout(app_stream, proxy_stream, Duration::from_secs(120)).await?;
+    tracing::info!(
+        "SOCKS5 tunnel closed: {}:{} (sent: {}, recv: {})",
+        target,
+        port,
+        sent,
+        recv
+    );
     Ok(())
+}
+
+/// Both directions share one idle deadline; cancelling this future drops both streams.
+async fn relay_with_idle_timeout<A, B>(
+    mut app: A,
+    proxy: B,
+    idle: Duration,
+) -> Result<(u64, u64), Socks5Error>
+where
+    A: AsyncRead + AsyncWrite + Unpin,
+    B: AsyncRead + AsyncWrite + Unpin,
+{
+    let activity = std::sync::Arc::new(std::sync::Mutex::new(tokio::time::Instant::now()));
+    let mut proxy = ActivityStream {
+        inner: proxy,
+        activity: activity.clone(),
+    };
+    let copy = tokio::io::copy_bidirectional(&mut app, &mut proxy);
+    tokio::pin!(copy);
+    loop {
+        let deadline = *activity.lock().unwrap() + idle;
+        tokio::select! {
+            // Process available I/O at the deadline before deciding the stream is idle.
+            biased;
+            result = &mut copy => return result.map_err(Socks5Error::Io),
+            _ = tokio::time::sleep_until(deadline) => {
+                if activity.lock().unwrap().elapsed() >= idle {
+                    return Err(Socks5Error::Timeout);
+                }
+            }
+        }
+    }
+}
+
+struct ActivityStream<S> {
+    inner: S,
+    activity: std::sync::Arc<std::sync::Mutex<tokio::time::Instant>>,
+}
+
+impl<S: AsyncRead + Unpin> AsyncRead for ActivityStream<S> {
+    fn poll_read(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        let before = buf.filled().len();
+        let result = std::pin::Pin::new(&mut self.inner).poll_read(cx, buf);
+        if matches!(result, std::task::Poll::Ready(Ok(()))) && buf.filled().len() > before {
+            *self.activity.lock().unwrap() = tokio::time::Instant::now();
+        }
+        result
+    }
+}
+
+impl<S: AsyncWrite + Unpin> AsyncWrite for ActivityStream<S> {
+    fn poll_write(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        let result = std::pin::Pin::new(&mut self.inner).poll_write(cx, buf);
+        if matches!(result, std::task::Poll::Ready(Ok(n)) if n > 0) {
+            *self.activity.lock().unwrap() = tokio::time::Instant::now();
+        }
+        result
+    }
+    fn poll_flush(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        std::pin::Pin::new(&mut self.inner).poll_flush(cx)
+    }
+    fn poll_shutdown(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        std::pin::Pin::new(&mut self.inner).poll_shutdown(cx)
+    }
 }
 
 /// SOCKS5 认证握手（NO AUTH）
@@ -195,7 +203,9 @@ async fn socks5_connect_request(
         request.push(ATYP_DOMAIN);
         let domain_bytes = target.as_bytes();
         if domain_bytes.len() > 255 {
-            return Err(Socks5Error::ProtocolError("domain name too long".to_string()));
+            return Err(Socks5Error::ProtocolError(
+                "domain name too long".to_string(),
+            ));
         }
         request.push(domain_bytes.len() as u8);
         request.extend_from_slice(domain_bytes);
@@ -285,6 +295,89 @@ mod tests {
     use tokio::io::duplex;
     use tokio::net::TcpListener;
 
+    #[tokio::test(start_paused = true)]
+    async fn one_way_traffic_survives_for_five_minutes_in_both_directions() {
+        for download in [false, true] {
+            let (mut app, app_side) = duplex(64);
+            let (mut remote, remote_side) = duplex(64);
+            let relay = tokio::spawn(relay_with_idle_timeout(
+                app_side,
+                remote_side,
+                Duration::from_secs(120),
+            ));
+            for n in 0..10 {
+                tokio::time::advance(Duration::from_secs(30)).await;
+                let (sender, receiver) = if download {
+                    (&mut remote, &mut app)
+                } else {
+                    (&mut app, &mut remote)
+                };
+                sender.write_all(&[n]).await.unwrap();
+                let mut byte = [0];
+                receiver.read_exact(&mut byte).await.unwrap();
+                assert_eq!(byte, [n]);
+                assert!(!relay.is_finished());
+            }
+            drop(app);
+            drop(remote);
+            relay.await.unwrap().unwrap();
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn idle_timeout_releases_both_streams() {
+        let (mut app, app_side) = duplex(64);
+        let (mut remote, remote_side) = duplex(64);
+        let relay = tokio::spawn(relay_with_idle_timeout(
+            app_side,
+            remote_side,
+            Duration::from_secs(120),
+        ));
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(121)).await;
+        assert!(matches!(relay.await.unwrap(), Err(Socks5Error::Timeout)));
+        assert_eq!(app.read(&mut [0]).await.unwrap(), 0);
+        assert_eq!(remote.read(&mut [0]).await.unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn half_close_preserves_delayed_response() {
+        let (mut app, app_side) = duplex(64);
+        let (mut remote, remote_side) = duplex(64);
+        let relay = tokio::spawn(relay_with_idle_timeout(
+            app_side,
+            remote_side,
+            Duration::from_secs(120),
+        ));
+        app.write_all(b"request").await.unwrap();
+        app.shutdown().await.unwrap();
+        let mut request = vec![];
+        remote.read_to_end(&mut request).await.unwrap();
+        assert_eq!(request, b"request");
+        remote.write_all(b"response").await.unwrap();
+        remote.shutdown().await.unwrap();
+        let mut response = vec![];
+        app.read_to_end(&mut response).await.unwrap();
+        assert_eq!(response, b"response");
+        assert_eq!(relay.await.unwrap().unwrap(), (7, 8));
+    }
+
+    #[tokio::test]
+    async fn cancellation_releases_both_directions_without_detached_tasks() {
+        let (mut app, app_side) = duplex(1);
+        let (mut remote, remote_side) = duplex(1);
+        let relay = tokio::spawn(relay_with_idle_timeout(
+            app_side,
+            remote_side,
+            Duration::from_secs(120),
+        ));
+        tokio::task::yield_now().await;
+        relay.abort();
+        let _ = relay.await;
+        assert_eq!(app.read(&mut [0]).await.unwrap(), 0);
+        assert_eq!(remote.read(&mut [0]).await.unwrap(), 0);
+    }
+
     /// 简单的 mock SOCKS5 server，接受连接后做认证和 CONNECT 响应
     async fn mock_socks5_server(listener: TcpListener) {
         let (mut stream, _) = listener.accept().await.unwrap();
@@ -297,7 +390,10 @@ mod tests {
         assert_eq!(buf[2], AUTH_NO_AUTH);
 
         // 响应认证成功
-        stream.write_all(&[SOCKS5_VERSION, AUTH_NO_AUTH]).await.unwrap();
+        stream
+            .write_all(&[SOCKS5_VERSION, AUTH_NO_AUTH])
+            .await
+            .unwrap();
 
         // 读取 CONNECT 请求头
         let mut header = [0u8; 4];
@@ -324,9 +420,16 @@ mod tests {
 
         // 发送 CONNECT 成功响应
         let response = [
-            SOCKS5_VERSION, 0x00, 0x00, ATYP_IPV4,
-            0x00, 0x00, 0x00, 0x00, // 绑定地址
-            0x00, 0x00, // 绑定端口
+            SOCKS5_VERSION,
+            0x00,
+            0x00,
+            ATYP_IPV4,
+            0x00,
+            0x00,
+            0x00,
+            0x00, // 绑定地址
+            0x00,
+            0x00, // 绑定端口
         ];
         stream.write_all(&response).await.unwrap();
 
@@ -442,10 +545,14 @@ mod tests {
             assert_eq!(port, 443, "port must be 443");
 
             // 回复成功
-            stream.write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]).await.unwrap();
+            stream
+                .write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0])
+                .await
+                .unwrap();
         });
 
-        let (_client, server_side) = duplex(4096);
+        let (mut client, server_side) = duplex(4096);
+        client.shutdown().await.unwrap();
         let _ = proxy_tcp_stream("www.example.com", 443, server_side, addr).await;
         server_task.await.unwrap();
     }
@@ -479,10 +586,14 @@ mod tests {
             assert_eq!(u16::from_be_bytes(port_buf), 8080);
 
             // 回复成功
-            stream.write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0]).await.unwrap();
+            stream
+                .write_all(&[0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0])
+                .await
+                .unwrap();
         });
 
-        let (_client, server_side) = duplex(4096);
+        let (mut client, server_side) = duplex(4096);
+        client.shutdown().await.unwrap();
         let _ = proxy_tcp_stream("93.184.216.34", 8080, server_side, addr).await;
         server_task.await.unwrap();
     }
@@ -509,7 +620,10 @@ mod tests {
             let _ = stream.read(&mut buf).await;
 
             // 回复 host unreachable (0x04)
-            stream.write_all(&[0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0]).await.unwrap();
+            stream
+                .write_all(&[0x05, 0x04, 0x00, 0x01, 0, 0, 0, 0, 0, 0])
+                .await
+                .unwrap();
         });
 
         let (_client, server_side) = duplex(4096);
@@ -519,7 +633,10 @@ mod tests {
         match err {
             Socks5Error::ConnectRejected(msg) => {
                 assert!(msg.contains("0x04"), "should contain reply code 0x04");
-                assert!(msg.contains("host unreachable"), "should contain reason text");
+                assert!(
+                    msg.contains("host unreachable"),
+                    "should contain reason text"
+                );
             }
             other => panic!("expected ConnectRejected, got: {:?}", other),
         }
@@ -591,7 +708,10 @@ mod tests {
             let _ = stream.read(&mut buf).await;
 
             // 回复成功但使用非法 ATYP (0xFF)
-            stream.write_all(&[0x05, 0x00, 0x00, 0xFF, 0, 0, 0, 0, 0, 0]).await.unwrap();
+            stream
+                .write_all(&[0x05, 0x00, 0x00, 0xFF, 0, 0, 0, 0, 0, 0])
+                .await
+                .unwrap();
         });
 
         let (_client, server_side) = duplex(4096);

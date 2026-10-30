@@ -63,6 +63,9 @@ pub async fn connect(
             match process::start_tun_adapter(&mut s).await {
                 Ok(_) => {}
                 Err(e) => {
+                    if s.tun_process.is_some() {
+                        return Err(format!("TUN 启动失败且尚未退出，请先停止 TUN：{}", e));
+                    }
                     // TUN 失败，降级到系统代理模式
                     log::warn!("TUN failed, falling back to system proxy: {}", e);
                     s.proxy_mode = ProxyMode::System;
@@ -108,6 +111,7 @@ pub async fn disconnect(state: tauri::State<'_, Arc<Mutex<AppState>>>) -> Result
 #[tauri::command]
 pub async fn status(state: tauri::State<'_, Arc<Mutex<AppState>>>) -> Result<StatusResponse, String> {
     let mut s = state.lock().await;
+    process::refresh_tun_status(&mut s).await;
 
     let port = s.proxy_port;
     let proxy_port_listening = process::is_port_listening(port);

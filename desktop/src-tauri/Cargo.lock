@@ -3480,6 +3480,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-shell",
  "tauri-plugin-updater",
+ "tempfile",
  "tokio",
  "toml 0.8.2",
  "url",
