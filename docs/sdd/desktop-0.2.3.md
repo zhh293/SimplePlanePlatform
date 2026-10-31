@@ -22,3 +22,9 @@ Update `desktop/src-tauri/tauri.conf.json`, `Cargo.toml`, and the desktop packag
 - Desktop Rust tests: 13 passed, 0 failed (compiled as simple-plane-desktop 0.2.3).
 - `node desktop/tests/tun-status.cjs`: passed.
 - `git diff --check`: passed.
+
+## CI regression investigation
+
+The preceding commit's `tests` run (41081303379) failed four cases of `Http3ManualSwitchIntegrationTest`: remote sessions were asserted to be zero immediately after local switch status changed. The current controller closes the old client rather than waiting for individual DISCONNECT acknowledgements, so remote cleanup is asynchronous. Verify local tunnel closure and bounded remote cleanup separately; retain all cipher variants and the separate-JVM case. A timeout must still fail the test.
+
+Desktop changes must trigger the Java/TUN/dashboard test workflow. The desktop packaging workflow must run all desktop Rust tests, TUN tests, and the TUN status UI check on both supported operating systems, rather than only the node configuration subset.
