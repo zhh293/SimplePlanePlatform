@@ -1,6 +1,6 @@
 [package]
 name = "simple-plane-desktop"
-version = "0.2.2"
+version = "0.2.3"
 description = "SimplePlanePlatform Desktop Client"
 authors = ["zhanghonghao"]
 edition = "2021"
@@ -32,3 +32,6 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+[dev-dependencies]
+tempfile = "3"

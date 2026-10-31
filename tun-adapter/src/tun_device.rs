@@ -33,7 +33,11 @@ pub struct TunWriter {
 
 impl TunManager {
     /// 创建 TUN 设备并配置路由
-    pub async fn new(config: &TunConfig, bypass: &BypassConfig, intranet_dns: &IntranetDnsConfig) -> Result<Self, TunError> {
+    pub async fn new(
+        config: &TunConfig,
+        bypass: &BypassConfig,
+        intranet_dns: &IntranetDnsConfig,
+    ) -> Result<Self, TunError> {
         tracing::info!("Creating TUN device: {}", config.name);
 
         let mut tun_config = tun2::Configuration::default();
@@ -58,6 +62,7 @@ impl TunManager {
 
         #[cfg(target_os = "windows")]
         {
+            tun_config.tun_name(&config.name);
             // Windows 使用 Wintun 驱动，不存在 macOS 的 4 字节 PI 头，无需 packet_information。
             // 这里设置一个点对点的目标地址（TUN 子网内的对端 IP），
             // 让 tun2/Wintun 建立 point-to-point 链路。
@@ -69,9 +74,9 @@ impl TunManager {
             .map_err(|e| TunError::TunDevice(format!("failed to create TUN device: {}", e)))?;
 
         // 获取系统分配的实际接口名
-        let actual_name = device.tun_name().map_err(|e| {
-            TunError::TunDevice(format!("failed to get TUN device name: {}", e))
-        })?;
+        let actual_name = device
+            .tun_name()
+            .map_err(|e| TunError::TunDevice(format!("failed to get TUN device name: {}", e)))?;
         tracing::info!("TUN device created successfully: {}", actual_name);
 
         // 设置路由（使用实际接口名）
@@ -88,7 +93,11 @@ impl TunManager {
     /// 返回 (reader, writer, route_guard)，调用者需持有 route_guard 直到程序退出
     pub fn split(self) -> (TunReader, TunWriter, RouteGuard) {
         let (reader, writer) = tokio::io::split(self.device);
-        (TunReader { reader }, TunWriter { writer }, self._route_guard)
+        (
+            TunReader { reader },
+            TunWriter { writer },
+            self._route_guard,
+        )
     }
 }
 

@@ -47,6 +47,44 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Native QUIC/TLS loopback smoke test. */
 class Http3LoopbackIntegrationTest {
     @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void closingConnectionNotifiesPeerBeforeIdleTimeout(boolean fromEventLoop) throws Exception {
+        TestCertificates certificate = TestCertificates.create();
+        int port;
+        try (DatagramSocket socket = new DatagramSocket(0)) { port = socket.getLocalPort(); }
+        URL serverUrl = new URL("proxy", "localhost", port)
+                .addParameter("http3.certificateFile", certificate.certificate().getAbsolutePath())
+                .addParameter("http3.privateKeyFile", certificate.privateKey().getAbsolutePath());
+        Http3Server server = new Http3Server(serverUrl, new EchoHandler());
+        try {
+            server.start();
+            for (int attempt = 0; attempt < 5; attempt++) {
+                Http3Connection connection = new Http3Connection(new URL("proxy", "localhost", port)
+                        .addParameter("http3.caFile", certificate.ca().getAbsolutePath()));
+                try {
+                    connection.connect();
+                    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                    while (server.getActiveConnectionCount() != 1 && System.nanoTime() < deadline) Thread.sleep(10);
+                    org.junit.jupiter.api.Assertions.assertEquals(1, server.getActiveConnectionCount());
+                    if (fromEventLoop) {
+                        connection.channel().eventLoop().submit(connection::close).get(5, TimeUnit.SECONDS);
+                    } else {
+                        connection.close();
+                    }
+                    deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                    while (server.getActiveConnectionCount() != 0 && System.nanoTime() < deadline) Thread.sleep(10);
+                    org.junit.jupiter.api.Assertions.assertEquals(0, server.getActiveConnectionCount(),
+                            "Peer must receive QUIC close without waiting for its 60-second idle timeout");
+                } finally {
+                    connection.close();
+                }
+            }
+        } finally {
+            server.close();
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"none", "chacha20-poly1305-v2", "aes-gcm-v2"})
     void clientAndServerExchangeProxyMessageOverUdp(String suite) throws Exception {
         TestCertificates certificate = TestCertificates.create();

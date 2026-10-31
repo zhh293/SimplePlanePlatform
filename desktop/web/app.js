@@ -177,9 +177,9 @@ const App = (function () {
         : `${node.mode === 'auto' ? '自动模式 · 首选：' + node.preferredNodeId : '手动模式'} · 当前生效节点：${node.currentNodeId || '无'} · ${nodeStateLabel(node.nodeStatus)} · 活跃流：${node.activeStreams} · 配置已应用${(node.nodes || []).map(n => ' · ' + n.nodeId + '：' + (n.connecting ? '连接中' : n.circuit === 'OPEN' ? '熔断，约 ' + Math.ceil(n.retryAfterMs / 1000) + ' 秒后检查' : n.circuit === 'HALF_OPEN' ? '恢复检查中' : n.available ? '连接可用' : '未连接') + (n.reason ? '（' + n.reason + '）' : '')).join('')}`);
 
       // 系统代理状态
-      const proxyRunning = st.proxy_status === 'running';
-      $('#systemProxyToggle').checked = proxyRunning && st.proxy_mode === 'system';
-      $('#systemProxyStatus').textContent = proxyRunning ? '已开启' : '已关闭';
+      const systemProxyRunning = st.proxy_status === 'running' && st.proxy_mode === 'system';
+      $('#systemProxyToggle').checked = systemProxyRunning;
+      $('#systemProxyStatus').textContent = systemProxyRunning ? '已开启' : '已关闭';
     } catch (e) {
       // 静默
     }

@@ -107,9 +107,8 @@ class Http3ManualSwitchIntegrationTest {
             Files.write(next, yaml(localPort, portA, portB, certificate, "b", suite).getBytes(StandardCharsets.UTF_8));
             Files.move(next, config, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             awaitStatus(config, "\"currentNodeId\":\"b\"");
-            assertEquals(0, dispatchA.getSessionManager().activeCount(),
-                    "Old node sessions must be released before publishing the switch");
             assertEquals(-1, browserA.getInputStream().read(), "Old browser tunnel must be closed");
+            awaitSessionsReleased(dispatchA);
             browserB = forkProcess ? connectSocks5(localPort, targetPort) : connect(localPort, targetPort);
             echo(browserB, "after-switch");
             assertEquals(1, connectsA.get());
@@ -131,7 +130,7 @@ class Http3ManualSwitchIntegrationTest {
             Files.write(config, changedCurrent.getBytes(StandardCharsets.UTF_8));
             awaitStatus(config, "\"appliedRevision\":\"" + digest(changedCurrent) + "\"");
             assertEquals(-1, browserB.getInputStream().read(), "Changed current-node parameters retire its flows");
-            assertEquals(0, dispatchB.getSessionManager().activeCount());
+            awaitSessionsReleased(dispatchB);
             browserB = connect(localPort, targetPort);
             echo(browserB, "reconnected-after-current-node-edit");
             browserB.close();
@@ -238,6 +237,17 @@ class Http3ManualSwitchIntegrationTest {
             byte[] expected = ("GET /plain" + headers).getBytes(StandardCharsets.US_ASCII);
             assertArrayEquals(expected, readBytes(browser.getInputStream(), expected.length));
         }
+    }
+
+    static void awaitSessionsReleased(DispatchInvoker dispatch) throws Exception {
+        // Local close is synchronous, but the peer processes QUIC stream/connection closure
+        // asynchronously. No per-stream DISCONNECT acknowledgement gates switch publication.
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (dispatch.getSessionManager().activeCount() != 0 && System.nanoTime() < deadline) {
+            Thread.sleep(25);
+        }
+        assertEquals(0, dispatch.getSessionManager().activeCount(),
+                "Retired node sessions must be released within 10 seconds of local tunnel closure");
     }
 
     static void awaitStatus(Path config, String text) throws Exception {
