@@ -1,7 +1,6 @@
 package com.proxy.cluster.filter;
 
 import com.proxy.common.filter.*;
-import com.proxy.common.spi.Activate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * - 按域名限流：每个域名每秒最多 50 个请求
  * </p>
  */
-@Activate(group = "client", order = 200)
+// Kept as an explicit SPI extension; not activated in client Invoker chains.
 public class RateLimitFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);

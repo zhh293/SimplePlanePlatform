@@ -26,8 +26,10 @@ pub enum ProxyMode {
 
 /// 应用全局状态
 pub struct AppState {
+    pub installing_update: bool,
     pub proxy_process: Option<Child>,
-    pub tun_process: Option<Child>,
+    pub tun_process: Option<crate::tun_process::TunProcess>,
+    pub tun_run: Option<crate::tun_process::TunRun>,
     pub proxy_status: ServiceStatus,
     pub tun_status: ServiceStatus,
     pub proxy_mode: ProxyMode,
@@ -58,8 +60,10 @@ pub struct OriginalProxyState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
+            installing_update: false,
             proxy_process: None,
             tun_process: None,
+            tun_run: None,
             proxy_status: ServiceStatus::Stopped,
             tun_status: ServiceStatus::Stopped,
             proxy_mode: ProxyMode::System,
@@ -74,34 +78,34 @@ impl Default for AppState {
 
 impl AppState {
     /// 退出时清理所有子进程和系统代理设置
-    pub async fn cleanup(&mut self) {
+    pub async fn cleanup(&mut self) -> Result<(), String> {
         log::info!("Cleaning up: stopping all processes and restoring proxy settings");
+
+        // Keep the application alive if its privileged adapter could not be stopped.
+        if self.tun_process.is_some() || self.tun_status != ServiceStatus::Stopped {
+            crate::process::stop_tun_adapter(self).await?;
+        }
 
         // 停止代理进程（外部进程不管）
         if !self.proxy_external {
             if let Some(ref mut child) = self.proxy_process {
-                let _ = child.kill();
-                let _ = child.wait();
+                if child.try_wait().map_err(|e| format!("检查 Java 进程失败：{e}"))?.is_none() {
+                    child.kill().map_err(|e| format!("停止 Java 进程失败：{e}"))?;
+                }
+                child.wait().map_err(|e| format!("等待 Java 退出失败：{e}"))?;
             }
         }
         self.proxy_process = None;
         self.proxy_status = ServiceStatus::Stopped;
 
-        // 停止 TUN 进程
-        if let Some(ref mut child) = self.tun_process {
-            let _ = child.kill();
-            let _ = child.wait();
-        }
-        self.tun_process = None;
-        self.tun_status = ServiceStatus::Stopped;
-
         // 还原系统代理
         if self.original_proxy_state.is_some() {
-            let _ = crate::proxy::restore_system_proxy(self).await;
+            crate::proxy::restore_system_proxy(self).await?;
         }
 
         // DNS 兜底恢复（等待 tun-adapter 的 Drop handler 完成）
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         crate::dns::restore_dns_if_needed();
+        Ok(())
     }
 }

@@ -37,6 +37,10 @@ pub async fn connect(
 ) -> Result<String, String> {
     let mut s = state.lock().await;
 
+    if s.installing_update {
+        return Err("正在安装更新，请等待应用重启后再连接。".into());
+    }
+
     let proxy_mode = match mode.as_str() {
         "tun" => ProxyMode::Tun,
         _ => ProxyMode::System,
@@ -63,6 +67,9 @@ pub async fn connect(
             match process::start_tun_adapter(&mut s).await {
                 Ok(_) => {}
                 Err(e) => {
+                    if s.tun_process.is_some() {
+                        return Err(format!("TUN 启动失败且尚未退出，请先停止 TUN：{}", e));
+                    }
                     // TUN 失败，降级到系统代理模式
                     log::warn!("TUN failed, falling back to system proxy: {}", e);
                     s.proxy_mode = ProxyMode::System;
@@ -108,6 +115,7 @@ pub async fn disconnect(state: tauri::State<'_, Arc<Mutex<AppState>>>) -> Result
 #[tauri::command]
 pub async fn status(state: tauri::State<'_, Arc<Mutex<AppState>>>) -> Result<StatusResponse, String> {
     let mut s = state.lock().await;
+    process::refresh_tun_status(&mut s).await;
 
     let port = s.proxy_port;
     let proxy_port_listening = process::is_port_listening(port);
@@ -613,6 +621,21 @@ pub enum UpdateProgress {
         chunk_length: usize,
     },
     Finished,
+    Preparing,
+    Installing,
+}
+
+#[cfg(test)]
+mod updater_progress_tests {
+    use super::*;
+
+    #[test]
+    fn progress_wire_contract_uses_camel_case_fields() {
+        assert_eq!(serde_json::to_value(UpdateProgress::Started { content_length: Some(100) }).unwrap(),
+            serde_json::json!({"event":"Started","data":{"contentLength":100}}));
+        assert_eq!(serde_json::to_value(UpdateProgress::Progress { chunk_length: 50 }).unwrap(),
+            serde_json::json!({"event":"Progress","data":{"chunkLength":50}}));
+    }
 }
 
 /// Download and install an update via the endpoint returned by `check_update_via_bootstrap`.
@@ -620,9 +643,13 @@ pub enum UpdateProgress {
 #[tauri::command]
 pub async fn install_update(
     app: tauri::AppHandle,
+    state: tauri::State<'_, Arc<Mutex<AppState>>>,
+    updates: tauri::State<'_, crate::update::UpdateState>,
     endpoint: String,
     on_event: tauri::ipc::Channel<UpdateProgress>,
 ) -> Result<(), String> {
+    let _exclusive = updates.begin()?;
+    let _file_lock = crate::update::lock_installation(&config::get_config_dir())?;
     log::info!("[updater] installing via endpoint: {}", endpoint);
     let endpoint_url = Url::parse(&endpoint)
         .map_err(|e| format!("invalid endpoint URL: {e}"))?;
@@ -638,8 +665,8 @@ pub async fn install_update(
         .ok_or_else(|| "no update available at the given endpoint".to_string())?;
 
     let mut first_chunk = true;
-    update
-        .download_and_install(
+    let bytes = update
+        .download(
             |chunk_length, content_length| {
                 if first_chunk {
                     first_chunk = !first_chunk;
@@ -652,7 +679,33 @@ pub async fn install_update(
             },
         )
         .await
-        .map_err(|e| format!("download_and_install failed: {e}"))?;
+        .map_err(|e| format!("下载或签名校验失败：{e}"))?;
+
+    // download() verifies the signature before returning. Keep networking alive
+    // until that point, then await child exit before the installer touches JRE DLLs.
+    let _ = on_event.send(UpdateProgress::Preparing);
+    {
+        let mut s = state.lock().await;
+        s.installing_update = true;
+        if let Err(error) = s.cleanup().await {
+            s.installing_update = false;
+            return Err(format!("安装前清理失败，未启动安装程序：{error}"));
+        }
+    }
+    let _ = on_event.send(UpdateProgress::Installing);
+    let result = tauri::async_runtime::spawn_blocking(move || update.install(bytes)).await;
+    let error = match result {
+        Ok(Ok(())) => None,
+        Ok(Err(error)) => Some(format!("启动安装失败：{error}")),
+        Err(error) => Some(format!("安装任务失败：{error}")),
+    };
+    if let Some(error) = error {
+        state.lock().await.installing_update = false;
+        return Err(error);
+    }
+    // Windows updater launches NSIS and exits itself. Other platforms need a restart.
+    #[cfg(not(target_os = "windows"))]
+    app.restart();
     Ok(())
 }
 

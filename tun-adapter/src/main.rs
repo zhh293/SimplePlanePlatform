@@ -8,6 +8,7 @@
 mod config;
 mod error;
 mod fake_dns;
+mod logging;
 mod route_guard;
 mod router;
 mod socks5;
@@ -31,7 +32,6 @@ use crate::router::{ConnectionInfo, Protocol, RouteAction, Router};
 use crate::socks5::proxy_tcp_stream;
 use crate::stack::{SmolTcpStream, TcpEvent};
 
-
 /// TUN 透明代理适配器 - 系统级流量劫持与转发
 #[derive(Parser, Debug)]
 #[command(name = "tun-adapter", version, about)]
@@ -39,19 +39,26 @@ struct Args {
     /// 配置文件路径
     #[arg(short, long, default_value = "config/tun.toml")]
     config: PathBuf,
+    /// Written with the real PID only after initialization succeeds.
+    #[arg(long)]
+    ready_file: Option<PathBuf>,
+    /// A desktop-owned per-run file requests graceful shutdown.
+    #[arg(long)]
+    stop_file: Option<PathBuf>,
+    /// Override persistent diagnostics for elevated launches.
+    #[arg(long)]
+    log_file: Option<PathBuf>,
 }
 
 /// 初始化 tracing 日志系统（输出到终端 + 日志文件）
 fn init_tracing(log_config: &config::LogConfig) {
-    use tracing_subscriber::{fmt, EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+    use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&log_config.level));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&log_config.level));
 
     // 终端输出层 - compact 格式方便查看
-    let stdout_layer = fmt::layer()
-        .compact()
-        .with_target(true);
+    let stdout_layer = fmt::layer().compact().with_target(true);
 
     // 文件输出层 - 仅当配置了 log.file 时才尝试写文件。
     // 注意：以 root/sudo 启动时，相对路径或已存在文件的属主可能导致创建失败；
@@ -60,12 +67,12 @@ fn init_tracing(log_config: &config::LogConfig) {
     let file_layer = if log_config.file.trim().is_empty() {
         None
     } else {
-        match std::fs::File::create(&log_config.file) {
+        match logging::RollingLog::open(std::path::Path::new(&log_config.file), 5 * 1024 * 1024) {
             Ok(f) => Some(
                 fmt::layer()
                     .with_ansi(false)
                     .with_target(true)
-                    .with_writer(f),
+                    .with_writer(move || f.clone()),
             ),
             Err(e) => {
                 eprintln!(
@@ -86,6 +93,14 @@ fn init_tracing(log_config: &config::LogConfig) {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let result = run().await;
+    if let Err(error) = &result {
+        tracing::error!("TUN adapter failed: {:#}", error);
+    }
+    result
+}
+
+async fn run() -> anyhow::Result<()> {
     // 0. 提升文件描述符限制（TUN 代理会产生大量并发连接）
     raise_fd_limit();
 
@@ -93,7 +108,10 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     // 2. 加载并校验配置
-    let config = Config::load(&args.config)?;
+    let mut config = Config::load(&args.config)?;
+    if let Some(path) = &args.log_file {
+        config.log.file = path.to_string_lossy().into_owned();
+    }
 
     // 3. 初始化日志
     init_tracing(&config.log);
@@ -104,7 +122,8 @@ async fn main() -> anyhow::Result<()> {
 
     // 5. 创建 TUN 设备（包括路由设置和回环防护）
     tracing::info!("Creating TUN device...");
-    let tun_mgr = tun_device::TunManager::new(&config.tun, &config.bypass, &config.intranet_dns).await?;
+    let tun_mgr =
+        tun_device::TunManager::new(&config.tun, &config.bypass, &config.intranet_dns).await?;
     let (tun_reader, tun_writer, _route_guard) = tun_mgr.split();
     tracing::info!("TUN device ready (route guard active)");
 
@@ -117,8 +136,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 7. 初始化路由引擎
     let router = Arc::new(
-        Router::from_config(&config.routing)
-            .map_err(|e| TunError::Route(format!("{}", e)))?,
+        Router::from_config(&config.routing).map_err(|e| TunError::Route(format!("{}", e)))?,
     );
     tracing::info!("Router initialized");
 
@@ -147,17 +165,36 @@ async fn main() -> anyhow::Result<()> {
 
     // 构建内网 DNS 配置（用于 DNS 查询真实转发判断）
     let intranet_dns_info = stack::IntranetDnsInfo {
-        servers: config.intranet_dns.servers.iter()
+        servers: config
+            .intranet_dns
+            .servers
+            .iter()
             .filter_map(|s| s.parse::<Ipv4Addr>().ok())
             .collect(),
-        domain_suffixes: config.intranet_dns.domains.iter()
+        domain_suffixes: config
+            .intranet_dns
+            .domains
+            .iter()
             .map(|d| d.to_lowercase())
             .collect(),
     };
-    tracing::info!("Intranet DNS: servers={:?}, domains={:?}", intranet_dns_info.servers, intranet_dns_info.domain_suffixes);
+    tracing::info!(
+        "Intranet DNS: servers={:?}, domains={:?}",
+        intranet_dns_info.servers,
+        intranet_dns_info.domain_suffixes
+    );
 
-    let stack_handle = tokio::spawn(async move {
-        stack::stack_loop(tun_reader, tun_writer, fake_dns_clone, tcp_event_tx, notify_tx_stack, notify_rx, intranet_dns_info).await
+    let mut stack_handle = tokio::spawn(async move {
+        stack::stack_loop(
+            tun_reader,
+            tun_writer,
+            fake_dns_clone,
+            tcp_event_tx,
+            notify_tx_stack,
+            notify_rx,
+            intranet_dns_info,
+        )
+        .await
     });
 
     // 12. 启动连接调度器
@@ -165,7 +202,7 @@ async fn main() -> anyhow::Result<()> {
     let router_dispatch = router.clone();
     let health_dispatch = health_state.clone();
     let notify_tx_dispatch = notify_tx.clone();
-    let conn_handle = tokio::spawn(connection_dispatcher(
+    let mut conn_handle = tokio::spawn(connection_dispatcher(
         tcp_event_rx,
         fake_dns_dispatch,
         router_dispatch,
@@ -176,6 +213,10 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("All modules started, TUN adapter is running");
     tracing::info!("Press Ctrl+C to stop");
+    if let Some(path) = &args.ready_file {
+        std::fs::write(path, std::process::id().to_string())?;
+    }
+    let mut failure = None;
 
     // 12. 等待退出信号或任一核心任务异常
     #[cfg(unix)]
@@ -191,11 +232,16 @@ async fn main() -> anyhow::Result<()> {
             _ = sigterm.recv() => {
                 tracing::info!("Received SIGTERM, shutting down...");
             }
-            res = stack_handle => {
-                tracing::error!("Stack loop exited unexpectedly: {:?}", res);
+            _ = wait_for_stop(args.stop_file.as_deref()) => {
+                tracing::info!("Desktop requested graceful shutdown");
             }
-            res = conn_handle => {
+            res = &mut stack_handle => {
+                tracing::error!("Stack loop exited unexpectedly: {:?}", res);
+                failure = Some(format!("Stack loop exited unexpectedly: {:?}", res));
+            }
+            res = &mut conn_handle => {
                 tracing::error!("Connection dispatcher exited unexpectedly: {:?}", res);
+                failure = Some(format!("Connection dispatcher exited unexpectedly: {:?}", res));
             }
         }
     }
@@ -207,11 +253,16 @@ async fn main() -> anyhow::Result<()> {
             _ = tokio::signal::ctrl_c() => {
                 tracing::info!("Received Ctrl+C, shutting down...");
             }
-            res = stack_handle => {
-                tracing::error!("Stack loop exited unexpectedly: {:?}", res);
+            _ = wait_for_stop(args.stop_file.as_deref()) => {
+                tracing::info!("Desktop requested graceful shutdown");
             }
-            res = conn_handle => {
+            res = &mut stack_handle => {
+                tracing::error!("Stack loop exited unexpectedly: {:?}", res);
+                failure = Some(format!("Stack loop exited unexpectedly: {:?}", res));
+            }
+            res = &mut conn_handle => {
                 tracing::error!("Connection dispatcher exited unexpectedly: {:?}", res);
+                failure = Some(format!("Connection dispatcher exited unexpectedly: {:?}", res));
             }
         }
     }
@@ -219,10 +270,51 @@ async fn main() -> anyhow::Result<()> {
     // 13. 优雅关闭
     tracing::info!("Shutting down gracefully...");
     health_handle.abort();
+    stack_handle.abort();
+    conn_handle.abort();
+    if let Some(path) = &args.ready_file {
+        let _ = std::fs::remove_file(path);
+    }
 
     // Drop Guard 会自动恢复路由表
     tracing::info!("TUN adapter stopped");
-    Ok(())
+    match failure {
+        Some(error) => Err(anyhow::anyhow!(error)),
+        None => Ok(()),
+    }
+}
+
+async fn wait_for_stop(path: Option<&std::path::Path>) {
+    match path {
+        Some(path) => loop {
+            if path.is_file() {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        },
+        None => std::future::pending::<()>().await,
+    }
+}
+
+#[cfg(test)]
+mod lifecycle_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn stop_request_is_scoped_to_this_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let stop = dir.path().join("stop");
+        std::fs::write(dir.path().join("other-stop"), b"stop").unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), wait_for_stop(Some(&stop)))
+                .await
+                .is_err()
+        );
+        std::fs::write(&stop, b"stop").unwrap();
+        tokio::time::timeout(Duration::from_secs(1), wait_for_stop(Some(&stop)))
+            .await
+            .unwrap();
+    }
 }
 
 /// 连接调度器：消费 TCP 事件，为每个新连接 spawn 转发任务
@@ -269,7 +361,9 @@ async fn connection_dispatcher(
                 if action == RouteAction::Proxy && !health_state.load(Ordering::Relaxed) {
                     tracing::warn!(
                         "Degraded mode: routing {}:{} (domain={:?}) to Direct",
-                        dst_ip, dst_port, domain
+                        dst_ip,
+                        dst_port,
+                        domain
                     );
                     action = RouteAction::Direct;
                 }
@@ -278,8 +372,12 @@ async fn connection_dispatcher(
                 let permit = match semaphore.clone().try_acquire_owned() {
                     Ok(p) => p,
                     Err(_) => {
-                        tracing::warn!("Connection limit reached, rejecting {}:{} ({})",
-                            dst_ip, dst_port, domain.as_deref().unwrap_or("no-domain"));
+                        tracing::warn!(
+                            "Connection limit reached, rejecting {}:{} ({})",
+                            dst_ip,
+                            dst_port,
+                            domain.as_deref().unwrap_or("no-domain")
+                        );
                         drop(stream_tx);
                         drop(stream_rx);
                         continue;
@@ -288,9 +386,17 @@ async fn connection_dispatcher(
 
                 // 5. 根据决策 spawn 转发任务
                 let target = domain.clone().unwrap_or_else(|| dst_ip.to_string());
-                tracing::info!("Dispatching: {} {}:{} ({})",
-                    match action { RouteAction::Proxy => "PROXY", RouteAction::Direct => "DIRECT", RouteAction::Reject => "REJECT" },
-                    dst_ip, dst_port, target);
+                tracing::info!(
+                    "Dispatching: {} {}:{} ({})",
+                    match action {
+                        RouteAction::Proxy => "PROXY",
+                        RouteAction::Direct => "DIRECT",
+                        RouteAction::Reject => "REJECT",
+                    },
+                    dst_ip,
+                    dst_port,
+                    target
+                );
 
                 match action {
                     RouteAction::Proxy => {
@@ -298,8 +404,15 @@ async fn connection_dispatcher(
                         tokio::spawn(async move {
                             let _permit = permit;
                             let stream = SmolTcpStream::new(stream_tx, stream_rx, notify);
-                            if let Err(e) = proxy_tcp_stream(&target, dst_port, stream, socks5_addr).await {
-                                tracing::warn!("Proxy connection error for {}:{}: {}", target, dst_port, e);
+                            if let Err(e) =
+                                proxy_tcp_stream(&target, dst_port, stream, socks5_addr).await
+                            {
+                                tracing::warn!(
+                                    "Proxy connection error for {}:{}: {}",
+                                    target,
+                                    dst_port,
+                                    e
+                                );
                             }
                         });
                     }
@@ -310,8 +423,15 @@ async fn connection_dispatcher(
                         tokio::spawn(async move {
                             let _permit = permit;
                             let stream = SmolTcpStream::new(stream_tx, stream_rx, notify);
-                            if let Err(e) = direct_tcp_stream(stream, &target_owned, dst_port, socks5).await {
-                                tracing::warn!("Direct connection error for {}:{}: {}", target_owned, dst_port, e);
+                            if let Err(e) =
+                                direct_tcp_stream(stream, &target_owned, dst_port, socks5).await
+                            {
+                                tracing::warn!(
+                                    "Direct connection error for {}:{}: {}",
+                                    target_owned,
+                                    dst_port,
+                                    e
+                                );
                             }
                         });
                     }
@@ -343,7 +463,12 @@ async fn direct_tcp_stream(
     target_port: u16,
     socks5_addr: SocketAddr,
 ) -> Result<(), TunError> {
-    tracing::debug!("Direct (via proxy): {}:{} through {}", target_domain, target_port, socks5_addr);
+    tracing::debug!(
+        "Direct (via proxy): {}:{} through {}",
+        target_domain,
+        target_port,
+        socks5_addr
+    );
     proxy_tcp_stream(target_domain, target_port, app_stream, socks5_addr)
         .await
         .map_err(|e| TunError::Socks5(e))?;
@@ -359,7 +484,9 @@ async fn health_check_loop(
 ) {
     tracing::info!(
         "Health checker started: checking {} every {:?}, threshold: {}",
-        socks5_addr, interval, failure_threshold
+        socks5_addr,
+        interval,
+        failure_threshold
     );
 
     let mut consecutive_failures: u32 = 0;
@@ -370,7 +497,10 @@ async fn health_check_loop(
         match check_proxy_health(socks5_addr).await {
             Ok(()) => {
                 if consecutive_failures > 0 {
-                    tracing::info!("proxy-local recovered after {} failures", consecutive_failures);
+                    tracing::info!(
+                        "proxy-local recovered after {} failures",
+                        consecutive_failures
+                    );
                 }
                 consecutive_failures = 0;
                 let was_degraded = !state.load(Ordering::Relaxed);
@@ -383,7 +513,9 @@ async fn health_check_loop(
                 consecutive_failures += 1;
                 tracing::warn!(
                     "Health check failed ({}/{}): {}",
-                    consecutive_failures, failure_threshold, e
+                    consecutive_failures,
+                    failure_threshold,
+                    e
                 );
                 if consecutive_failures >= failure_threshold {
                     let was_healthy = state.load(Ordering::Relaxed);
@@ -437,7 +569,10 @@ fn raise_fd_limit() {
                         eprintln!("FD limit raised: {} -> 10240", old_soft);
                     } else {
                         let err = io::Error::last_os_error();
-                        eprintln!("Warning: failed to raise FD limit (current: {}): {}", old_soft, err);
+                        eprintln!(
+                            "Warning: failed to raise FD limit (current: {}): {}",
+                            old_soft, err
+                        );
                     }
                 }
             }

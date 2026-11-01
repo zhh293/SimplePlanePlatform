@@ -14,8 +14,8 @@ use smoltcp::phy::{Device, DeviceCapabilities, Medium, RxToken, TxToken};
 use smoltcp::socket::tcp::{self, Socket as TcpSocket, State as TcpState};
 use smoltcp::time::Instant as SmolInstant;
 use smoltcp::wire::{
-    HardwareAddress, IpAddress, IpCidr, IpListenEndpoint, Ipv4Packet, IpProtocol,
-    TcpPacket, UdpPacket,
+    HardwareAddress, IpAddress, IpCidr, IpListenEndpoint, IpProtocol, Ipv4Packet, TcpPacket,
+    UdpPacket,
 };
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, Mutex};
@@ -98,7 +98,9 @@ pub async fn stack_loop(
     iface.set_any_ip(true);
 
     // 配置默认路由
-    iface.routes_mut().add_default_ipv4_route(smoltcp::wire::Ipv4Address::new(198, 18, 0, 1))
+    iface
+        .routes_mut()
+        .add_default_ipv4_route(smoltcp::wire::Ipv4Address::new(198, 18, 0, 1))
         .ok();
 
     let mut sockets = SocketSet::new(Vec::new());
@@ -298,7 +300,7 @@ pub async fn stack_loop(
         let mut established_handles: Vec<usize> = Vec::new();
         for (idx, &(handle, _)) in pending_handles.iter().enumerate() {
             let socket = sockets.get_mut::<TcpSocket>(handle);
-            if socket.state() == TcpState::Established {
+            if matches!(socket.state(), TcpState::Established | TcpState::CloseWait) {
                 // 从 socket 读取实际建立的四元组
                 let local_ep = socket.local_endpoint();
                 let remote_ep = socket.remote_endpoint();
@@ -318,6 +320,8 @@ pub async fn stack_loop(
 
                     // 去重
                     if accepted_connections.contains(&conn_tuple) {
+                        socket.abort();
+                        sockets.remove(handle);
                         established_handles.push(idx);
                         continue;
                     }
@@ -325,7 +329,10 @@ pub async fn stack_loop(
 
                     tracing::info!(
                         "New TCP connection ESTABLISHED: {}:{} -> {}:{}",
-                        src_ip, src_port, dst_ip, dst_port
+                        src_ip,
+                        src_port,
+                        dst_ip,
+                        dst_port
                     );
 
                     // channel 容量 512
@@ -347,10 +354,13 @@ pub async fn stack_loop(
 
                     active_connections.push(ActiveConnection {
                         handle,
-                        tx: app_tx,
+                        tx: Some(app_tx),
                         rx: app_rx,
                         conn_tuple,
                         notify: notify_tx.clone(),
+                        pending_write: None,
+                        write_closed: false,
+                        closing_since: None,
                     });
 
                     established_handles.push(idx);
@@ -364,136 +374,66 @@ pub async fn stack_loop(
             pending_handles.swap_remove(idx);
         }
 
-        // 清理 pending 中已失败的 socket
-        pending_handles.retain(|(handle, created_at)| {
-            let socket = sockets.get_mut::<TcpSocket>(*handle);
-            let state = socket.state();
-            let age_ms = created_at.elapsed().as_millis();
-            match state {
-                TcpState::Closed => {
-                    tracing::debug!("Pending socket (handle) state=Closed after {}ms, removing", age_ms);
-                    return false;
-                }
-                TcpState::SynReceived => {
-                    if age_ms > 15000 {
-                        tracing::warn!("Pending socket STUCK in SynReceived for {}ms, removing", age_ms);
-                        return false;
-                    }
-                }
-                TcpState::Listen => {
-                    // 不应出现在 pending 中（但可能有极端时序），给予一些宽容
-                    if age_ms > 5000 {
-                        tracing::warn!("Pending socket still Listen after {}ms, removing", age_ms);
-                        return false;
-                    }
-                }
-                _ => {
-                    if age_ms > 30000 {
-                        tracing::info!("Pending socket unexpected state {:?} after {}ms, removing", state, age_ms);
-                        return false;
-                    }
-                }
-            }
-            true
-        });
-
-        // ======== 处理活跃连接数据传输 ========
-        let mut had_data_transfer = false;
-        let mut closed_tuples: Vec<(Ipv4Addr, u16, Ipv4Addr, u16)> = Vec::new();
-
+        let mut retired = retire_pending(
+            &mut sockets,
+            &mut pending_handles,
+            std::time::Instant::now(),
+        );
         active_connections.retain_mut(|conn| {
-            let socket = sockets.get_mut::<TcpSocket>(conn.handle);
-            let state = socket.state();
-
-            // 检查 socket 是否仍然健康
-            if state == TcpState::Closed || state == TcpState::TimeWait {
-                tracing::info!("Connection {:?} closing: socket state {:?}", conn.conn_tuple, state);
-                closed_tuples.push(conn.conn_tuple);
-                return false;
+            if conn.pump(
+                sockets.get_mut::<TcpSocket>(conn.handle),
+                std::time::Instant::now(),
+            ) {
+                true
+            } else {
+                accepted_connections.remove(&conn.conn_tuple);
+                retired.push(conn.handle);
+                false
             }
-
-            // smoltcp -> app (通过 SOCKS5 代理发出)
-            while socket.can_recv() {
-                let mut buf = vec![0u8; 16384];
-                match socket.recv_slice(&mut buf) {
-                    Ok(n) if n > 0 => {
-                        buf.truncate(n);
-                        match conn.tx.try_send(StreamCommand::Data(buf)) {
-                            Ok(()) => { had_data_transfer = true; }
-                            Err(mpsc::error::TrySendError::Full(_)) => break,
-                            Err(mpsc::error::TrySendError::Closed(_)) => {
-                                tracing::warn!("Connection {:?} closing: app rx channel closed (SmolTcpStream dropped)", conn.conn_tuple);
-                                socket.close();
-                                closed_tuples.push(conn.conn_tuple);
-                                return false;
-                            }
-                        }
-                    }
-                    _ => break,
-                }
-            }
-
-            // app (SOCKS5 返回数据) -> smoltcp
-            while socket.can_send() {
-                match conn.rx.try_recv() {
-                    Ok(StreamCommand::Data(data)) => {
-                        let written = socket.send_slice(&data);
-                        if had_data_transfer == false {
-                            tracing::debug!("Connection {:?}: wrote {} bytes to smoltcp", conn.conn_tuple, written.unwrap_or(0));
-                        }
-                        had_data_transfer = true;
-                    }
-                    Ok(StreamCommand::Close) => {
-                        tracing::info!("Connection {:?} closing: received Close command from app", conn.conn_tuple);
-                        socket.close();
-                        closed_tuples.push(conn.conn_tuple);
-                        return false;
-                    }
-                    Err(mpsc::error::TryRecvError::Disconnected) => {
-                        tracing::warn!("Connection {:?} closing: app tx channel disconnected (SmolTcpStream dropped)", conn.conn_tuple);
-                        socket.close();
-                        closed_tuples.push(conn.conn_tuple);
-                        return false;
-                    }
-                    Err(mpsc::error::TryRecvError::Empty) => break,
-                }
-            }
-
-            true
         });
 
-        for tuple in &closed_tuples {
-            accepted_connections.remove(tuple);
+        // Drive newly queued data/FIN/RST before releasing socket ownership.
+        iface.poll(SmolInstant::now(), &mut device, &mut sockets);
+        for handle in retired {
+            sockets.remove(handle);
         }
 
-        // 数据传输后再 poll 一次生成输出包
-        if had_data_transfer {
-            let timestamp = SmolInstant::now();
-            iface.poll(timestamp, &mut device, &mut sockets);
-        }
-
-        // 写回 TUN
         while let Some(packet) = device.tx_queue.pop_front() {
             // 诊断：打印前几个输出包的信息
             if pkt_count <= 20 && packet.len() >= 20 {
                 let proto = packet[9];
-                let src = format!("{}.{}.{}.{}", packet[12], packet[13], packet[14], packet[15]);
-                let dst = format!("{}.{}.{}.{}", packet[16], packet[17], packet[18], packet[19]);
+                let src = format!(
+                    "{}.{}.{}.{}",
+                    packet[12], packet[13], packet[14], packet[15]
+                );
+                let dst = format!(
+                    "{}.{}.{}.{}",
+                    packet[16], packet[17], packet[18], packet[19]
+                );
                 if proto == 6 && packet.len() >= 34 {
                     // TCP — 解析 flags
                     let ihl = (packet[0] & 0x0F) as usize * 4;
                     if packet.len() > ihl + 13 {
                         let flags = packet[ihl + 13];
-                        let flag_str = format!("{}{}{}{}",
+                        let flag_str = format!(
+                            "{}{}{}{}",
                             if flags & 0x02 != 0 { "SYN " } else { "" },
                             if flags & 0x10 != 0 { "ACK " } else { "" },
                             if flags & 0x01 != 0 { "FIN " } else { "" },
                             if flags & 0x04 != 0 { "RST " } else { "" },
                         );
-                        let src_port = u16::from_be_bytes([packet[ihl], packet[ihl+1]]);
-                        let dst_port = u16::from_be_bytes([packet[ihl+2], packet[ihl+3]]);
-                        tracing::info!("TX: TCP {} {}:{} -> {}:{} [{}] ({} bytes)",
-                            flag_str, src, src_port, dst, dst_port, flags, packet.len());
+                        let src_port = u16::from_be_bytes([packet[ihl], packet[ihl + 1]]);
+                        let dst_port = u16::from_be_bytes([packet[ihl + 2], packet[ihl + 3]]);
+                        tracing::info!(
+                            "TX: TCP {} {}:{} -> {}:{} [{}] ({} bytes)",
+                            flag_str,
+                            src,
+                            src_port,
+                            dst,
+                            dst_port,
+                            flags,
+                            packet.len()
+                        );
                     }
                 }
             }
@@ -505,7 +445,12 @@ pub async fn stack_loop(
         // 清理 listening_ports 中已关闭的 socket
         listening_ports.retain(|_port, handle| {
             let socket = sockets.get_mut::<TcpSocket>(*handle);
-            socket.state() != TcpState::Closed
+            if socket.state() == TcpState::Closed {
+                sockets.remove(*handle);
+                false
+            } else {
+                true
+            }
         });
     }
 }
@@ -574,37 +519,51 @@ async fn try_handle_dns_packet(
             match intranet_dns.servers.iter().next() {
                 Some(&server) => server,
                 None => {
-                    tracing::warn!("Intranet domain {} matched but no DNS server configured", query_domain);
+                    tracing::warn!(
+                        "Intranet domain {} matched but no DNS server configured",
+                        query_domain
+                    );
                     // 降级到 FakeDNS
-                    return handle_with_fake_dns(fake_dns, dns_payload, &query_domain, src_ip, dst_ip, src_port, dst_port).await;
+                    return handle_with_fake_dns(
+                        fake_dns,
+                        dns_payload,
+                        &query_domain,
+                        src_ip,
+                        dst_ip,
+                        src_port,
+                        dst_port,
+                    )
+                    .await;
                 }
             }
         };
 
         tracing::info!(
             "DNS forward: {} -> real DNS {} (domain_match={}, dns_target_match={})",
-            query_domain, forward_server, is_intranet_domain, is_intranet_dns_target
+            query_domain,
+            forward_server,
+            is_intranet_domain,
+            is_intranet_dns_target
         );
 
         match forward_dns_to_real_server(dns_payload, forward_server).await {
             Ok(real_response) => {
                 tracing::info!(
                     "Real DNS response for {}: {} bytes from {}",
-                    query_domain, real_response.len(), forward_server
+                    query_domain,
+                    real_response.len(),
+                    forward_server
                 );
-                let response_packet = build_udp_response(
-                    dst_ip.0,
-                    src_ip.0,
-                    dst_port,
-                    src_port,
-                    &real_response,
-                );
+                let response_packet =
+                    build_udp_response(dst_ip.0, src_ip.0, dst_port, src_port, &real_response);
                 return Some(response_packet);
             }
             Err(e) => {
                 tracing::warn!(
                     "DNS forward failed for {} -> {}: {}. Falling back to FakeDNS.",
-                    query_domain, forward_server, e
+                    query_domain,
+                    forward_server,
+                    e
                 );
                 // 降级到 FakeDNS
             }
@@ -612,7 +571,16 @@ async fn try_handle_dns_packet(
     }
 
     // FakeDNS 处理（默认路径，或内网 DNS 转发失败时的降级）
-    handle_with_fake_dns(fake_dns, dns_payload, &query_domain, src_ip, dst_ip, src_port, dst_port).await
+    handle_with_fake_dns(
+        fake_dns,
+        dns_payload,
+        &query_domain,
+        src_ip,
+        dst_ip,
+        src_port,
+        dst_port,
+    )
+    .await
 }
 
 /// FakeDNS 处理辅助函数
@@ -627,7 +595,9 @@ async fn handle_with_fake_dns(
 ) -> Option<Vec<u8>> {
     tracing::info!(
         "DNS query intercepted: {} (from {} -> DNS server {})",
-        query_domain, src_ip, dst_ip
+        query_domain,
+        src_ip,
+        dst_ip
     );
 
     let mut dns_engine = fake_dns.lock().await;
@@ -641,16 +611,13 @@ async fn handle_with_fake_dns(
 
     tracing::info!(
         "DNS response sent: {} -> {}:{} ({} bytes)",
-        dst_ip, src_ip, src_port, dns_response.len()
+        dst_ip,
+        src_ip,
+        src_port,
+        dns_response.len()
     );
 
-    let response_packet = build_udp_response(
-        dst_ip.0,
-        src_ip.0,
-        dst_port,
-        src_port,
-        &dns_response,
-    );
+    let response_packet = build_udp_response(dst_ip.0, src_ip.0, dst_port, src_port, &dns_response);
 
     Some(response_packet)
 }
@@ -804,12 +771,16 @@ fn extract_tcp_syn_info(packet: &[u8]) -> Option<(Ipv4Addr, u16, Ipv4Addr, u16)>
 
     if tcp.syn() && !tcp.ack() {
         let src_ip = Ipv4Addr::new(
-            ipv4.src_addr().0[0], ipv4.src_addr().0[1],
-            ipv4.src_addr().0[2], ipv4.src_addr().0[3],
+            ipv4.src_addr().0[0],
+            ipv4.src_addr().0[1],
+            ipv4.src_addr().0[2],
+            ipv4.src_addr().0[3],
         );
         let dst_ip = Ipv4Addr::new(
-            ipv4.dst_addr().0[0], ipv4.dst_addr().0[1],
-            ipv4.dst_addr().0[2], ipv4.dst_addr().0[3],
+            ipv4.dst_addr().0[0],
+            ipv4.dst_addr().0[1],
+            ipv4.dst_addr().0[2],
+            ipv4.dst_addr().0[3],
         );
         Some((src_ip, tcp.src_port(), dst_ip, tcp.dst_port()))
     } else {
@@ -852,16 +823,130 @@ fn is_tcp_packet(packet: &[u8]) -> bool {
     packet[9] == 6 // protocol field = TCP
 }
 
-
 /// 活跃 TCP 连接追踪
 struct ActiveConnection {
     handle: SocketHandle,
-    tx: mpsc::Sender<StreamCommand>,
+    tx: Option<mpsc::Sender<StreamCommand>>,
     rx: mpsc::Receiver<StreamCommand>,
     conn_tuple: (Ipv4Addr, u16, Ipv4Addr, u16),
     /// 通知 stack_loop 有数据需要处理（未使用但保留用于 SmolTcpStream 通知机制）
     #[allow(dead_code)]
     notify: mpsc::Sender<()>,
+    pending_write: Option<(Vec<u8>, usize)>,
+    write_closed: bool,
+    closing_since: Option<std::time::Instant>,
+}
+
+impl ActiveConnection {
+    /// Returns false only when the socket can be reclaimed after one final poll.
+    fn pump(&mut self, socket: &mut TcpSocket, now: std::time::Instant) -> bool {
+        if socket.state() == TcpState::Closed {
+            return false;
+        }
+
+        // Reserve before consuming acknowledged TCP bytes (TS-01).
+        if let Some(tx) = &self.tx {
+            if tx.is_closed() {
+                socket.abort();
+                return false;
+            }
+            while socket.can_recv() {
+                let permit = match tx.try_reserve() {
+                    Ok(permit) => permit,
+                    Err(mpsc::error::TrySendError::Full(_)) => break,
+                    Err(mpsc::error::TrySendError::Closed(_)) => {
+                        socket.abort();
+                        return false;
+                    }
+                };
+                let mut buf = vec![0; 16384];
+                match socket.recv_slice(&mut buf) {
+                    Ok(n) if n > 0 => {
+                        buf.truncate(n);
+                        permit.send(StreamCommand::Data(buf));
+                    }
+                    _ => break,
+                }
+            }
+            if !socket.may_recv() {
+                // Drop sender only after draining the socket: queued bytes precede EOF.
+                self.tx = None;
+            }
+        }
+
+        while !self.write_closed {
+            if let Some((data, offset)) = &mut self.pending_write {
+                if !socket.can_send() {
+                    break;
+                }
+                match socket.send_slice(&data[*offset..]) {
+                    Ok(0) => break,
+                    Ok(n) => *offset += n,
+                    Err(_) => {
+                        socket.abort();
+                        return false;
+                    }
+                }
+                if *offset < data.len() {
+                    break;
+                }
+                self.pending_write = None;
+            }
+            match self.rx.try_recv() {
+                Ok(StreamCommand::Data(data)) if !data.is_empty() => {
+                    self.pending_write = Some((data, 0));
+                }
+                Ok(StreamCommand::Data(_)) => {}
+                Ok(StreamCommand::Close) => {
+                    // FIN follows all bytes already accepted by smoltcp.
+                    socket.close();
+                    self.write_closed = true;
+                }
+                Err(mpsc::error::TryRecvError::Disconnected) => {
+                    // Graceful shutdown must enqueue Close; a drop without it is failure.
+                    socket.abort();
+                    return false;
+                }
+                Err(mpsc::error::TryRecvError::Empty) => break,
+            }
+        }
+
+        // Keep half-open streams alive while the opposite direction is still active.
+        // Once both application halves ended, bound FIN/ACK cleanup (TS-02).
+        if self.write_closed && self.tx.is_none() {
+            let since = self.closing_since.get_or_insert(now);
+            if now.duration_since(*since) >= std::time::Duration::from_secs(30) {
+                socket.abort();
+                return false;
+            }
+        }
+        true
+    }
+}
+
+fn retire_pending(
+    sockets: &mut SocketSet<'_>,
+    pending: &mut Vec<(SocketHandle, std::time::Instant)>,
+    now: std::time::Instant,
+) -> Vec<SocketHandle> {
+    let mut retired = Vec::new();
+    pending.retain(|(handle, created)| {
+        let socket = sockets.get_mut::<TcpSocket>(*handle);
+        let limit = match socket.state() {
+            TcpState::Closed => 0,
+            TcpState::Listen => 5,
+            TcpState::SynReceived => 15,
+            _ => 30,
+        };
+        if now.duration_since(*created) >= std::time::Duration::from_secs(limit) {
+            socket.abort();
+            retired.push(*handle);
+            false
+        } else {
+            true
+        }
+    });
+    retired
 }
 
 /// smoltcp 虚拟设备：桥接 TUN 设备与 smoltcp
@@ -942,7 +1027,13 @@ impl<'a> TxToken for VirtualTxToken<'a> {
 }
 
 /// reserve future 类型别名
-type ReserveFuture = std::pin::Pin<Box<dyn std::future::Future<Output = Result<mpsc::OwnedPermit<StreamCommand>, mpsc::error::SendError<()>>> + Send>>;
+type ReserveFuture = std::pin::Pin<
+    Box<
+        dyn std::future::Future<
+                Output = Result<mpsc::OwnedPermit<StreamCommand>, mpsc::error::SendError<()>>,
+            > + Send,
+    >,
+>;
 
 /// 异步 TCP 流封装 - 将 smoltcp 的 TCP 连接包装为 AsyncRead + AsyncWrite
 ///
@@ -953,6 +1044,8 @@ pub struct SmolTcpStream {
     rx: mpsc::Receiver<StreamCommand>,
     read_buf: Vec<u8>,
     pending_reserve: Option<ReserveFuture>,
+    read_eof: bool,
+    write_closed: bool,
     /// 通知 stack_loop 有数据写入 channel
     notify: mpsc::Sender<()>,
 }
@@ -969,7 +1062,28 @@ impl SmolTcpStream {
             rx,
             read_buf: Vec::new(),
             pending_reserve: None,
+            read_eof: false,
+            write_closed: false,
             notify,
+        }
+    }
+
+    fn poll_permit(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<mpsc::OwnedPermit<StreamCommand>>> {
+        if self.pending_reserve.is_none() {
+            let tx = self.tx.clone();
+            self.pending_reserve = Some(Box::pin(async move { tx.reserve_owned().await }));
+        }
+        match self.pending_reserve.as_mut().unwrap().as_mut().poll(cx) {
+            std::task::Poll::Ready(result) => {
+                self.pending_reserve = None;
+                std::task::Poll::Ready(result.map_err(|_| {
+                    std::io::Error::new(std::io::ErrorKind::BrokenPipe, "stream closed")
+                }))
+            }
+            std::task::Poll::Pending => std::task::Poll::Pending,
         }
     }
 }
@@ -980,6 +1094,9 @@ impl tokio::io::AsyncRead for SmolTcpStream {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
+        if buf.remaining() == 0 || self.read_eof {
+            return std::task::Poll::Ready(Ok(()));
+        }
         if !self.read_buf.is_empty() {
             let n = std::cmp::min(buf.remaining(), self.read_buf.len());
             buf.put_slice(&self.read_buf[..n]);
@@ -997,6 +1114,7 @@ impl tokio::io::AsyncRead for SmolTcpStream {
                 std::task::Poll::Ready(Ok(()))
             }
             std::task::Poll::Ready(Some(StreamCommand::Close)) | std::task::Poll::Ready(None) => {
+                self.read_eof = true;
                 std::task::Poll::Ready(Ok(())) // EOF
             }
             std::task::Poll::Pending => std::task::Poll::Pending,
@@ -1010,49 +1128,19 @@ impl tokio::io::AsyncWrite for SmolTcpStream {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> std::task::Poll<std::io::Result<usize>> {
-        // 先尝试非阻塞发送
-        match self.tx.try_send(StreamCommand::Data(buf.to_vec())) {
-            Ok(()) => {
-                // 成功发送，通知 stack_loop 有数据需要处理
-                let _ = self.notify.try_send(());
-                return std::task::Poll::Ready(Ok(buf.len()));
-            }
-            Err(mpsc::error::TrySendError::Closed(_)) => {
-                return std::task::Poll::Ready(Err(std::io::Error::new(
-                    std::io::ErrorKind::BrokenPipe,
-                    "stream closed",
-                )));
-            }
-            Err(mpsc::error::TrySendError::Full(_)) => {
-                // Channel 满，异步等待
-            }
+        if self.write_closed {
+            return std::task::Poll::Ready(Err(std::io::Error::new(
+                std::io::ErrorKind::BrokenPipe,
+                "write half closed",
+            )));
         }
-
-        if self.pending_reserve.is_none() {
-            let tx = self.tx.clone();
-            self.pending_reserve = Some(Box::pin(async move {
-                tx.reserve_owned().await
-            }));
+        if buf.is_empty() {
+            return std::task::Poll::Ready(Ok(0));
         }
-
-        let reserve_fut = self.pending_reserve.as_mut().unwrap();
-        match reserve_fut.as_mut().poll(cx) {
-            std::task::Poll::Ready(Ok(permit)) => {
-                self.pending_reserve = None;
-                permit.send(StreamCommand::Data(buf.to_vec()));
-                // 通知 stack_loop
-                let _ = self.notify.try_send(());
-                std::task::Poll::Ready(Ok(buf.len()))
-            }
-            std::task::Poll::Ready(Err(_)) => {
-                self.pending_reserve = None;
-                std::task::Poll::Ready(Err(std::io::Error::new(
-                    std::io::ErrorKind::BrokenPipe,
-                    "stream closed",
-                )))
-            }
-            std::task::Poll::Pending => std::task::Poll::Pending,
-        }
+        let permit = std::task::ready!(self.poll_permit(cx))?;
+        permit.send(StreamCommand::Data(buf.to_vec()));
+        let _ = self.notify.try_send(());
+        std::task::Poll::Ready(Ok(buf.len()))
     }
 
     fn poll_flush(
@@ -1064,11 +1152,19 @@ impl tokio::io::AsyncWrite for SmolTcpStream {
 
     fn poll_shutdown(
         mut self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
-        let _ = self.tx.try_send(StreamCommand::Close);
+        if self.write_closed {
+            return std::task::Poll::Ready(Ok(()));
+        }
+        let permit = std::task::ready!(self.poll_permit(cx))?;
+        permit.send(StreamCommand::Close);
+        self.write_closed = true;
         let _ = self.notify.try_send(());
-        self.pending_reserve = None;
         std::task::Poll::Ready(Ok(()))
     }
 }
+
+#[cfg(test)]
+#[path = "stack_tests.rs"]
+mod tests;

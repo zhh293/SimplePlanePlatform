@@ -7,6 +7,8 @@ mod logs;
 mod process;
 mod proxy;
 mod state;
+mod tun_process;
+mod update;
 
 use state::AppState;
 use std::sync::Arc;
@@ -22,6 +24,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(app_state)
+        .manage(update::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
             commands::connect,
             commands::disconnect,
@@ -53,12 +56,28 @@ fn main() {
             commands::set_update_config,
         ])
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                if window.state::<update::UpdateState>().is_busy() {
+                    log::info!("Close deferred while an update is running");
+                    return;
+                }
+                let app = window.app_handle().clone();
                 let state = window.state::<Arc<Mutex<AppState>>>();
                 let state_clone = state.inner().clone();
                 tauri::async_runtime::spawn(async move {
                     let mut s = state_clone.lock().await;
-                    s.cleanup().await;
+                    match s.cleanup().await {
+                        Ok(()) => app.exit(0),
+                        Err(error) => {
+                            log::error!("Application cleanup failed: {}", error);
+                            s.log_manager.lock().await.push(
+                                "error",
+                                "tun-adapter",
+                                &format!("退出前清理失败，应用保持打开：{}", error),
+                            );
+                        }
+                    }
                 });
             }
         })

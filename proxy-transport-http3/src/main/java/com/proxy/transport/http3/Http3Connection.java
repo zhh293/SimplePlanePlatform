@@ -92,11 +92,11 @@ public final class Http3Connection {
         datagramChannel = bootstrap.bind(0).sync().channel();
         QuicChannelBootstrapHelper helper = new QuicChannelBootstrapHelper(datagramChannel, url, sslContext);
         quicChannel = helper.connect();
+        Channel connectedDatagram = datagramChannel;
         quicChannel.closeFuture().addListener(f -> {
             log.warn("HTTP/3 QUIC connection closed: {}", url.getAddress());
-            if (datagramChannel != null) {
-                datagramChannel.close();
-            }
+            // Capture this connection's socket: a late close must not close a replacement.
+            connectedDatagram.close();
         });
         log.info("HTTP/3 QUIC handshake established to {}:{}", url.getHost(), url.getPort());
     }
@@ -309,13 +309,24 @@ public final class Http3Connection {
     public void close() {
         if (closed.compareAndSet(false, true)) {
             QuicChannel current = quicChannel;
+            Channel datagram = datagramChannel;
+            Runnable stopEventLoop = () -> eventLoop.shutdownGracefully(0, 5, TimeUnit.SECONDS);
+            Runnable closeDatagram = () -> {
+                if (datagram != null) datagram.close().addListener(ignored -> stopEventLoop.run());
+                else stopEventLoop.run();
+            };
             if (current != null) {
-                current.close();
+                // QUIC emits CONNECTION_CLOSE through its UDP parent. Closing UDP in
+                // parallel can discard that packet and leave peer sessions until idle timeout.
+                current.close().addListener(ignored -> closeDatagram.run());
+            } else {
+                closeDatagram.run();
             }
-            if (datagramChannel != null) {
-                datagramChannel.close();
+            boolean inEventLoop = false;
+            for (io.netty.util.concurrent.EventExecutor executor : eventLoop) {
+                if (executor.inEventLoop()) { inEventLoop = true; break; }
             }
-            eventLoop.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
+            if (!inEventLoop) eventLoop.terminationFuture().syncUninterruptibly();
         }
     }
 
