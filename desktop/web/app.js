@@ -955,9 +955,10 @@ const App = (function () {
   // Auto Updater
   // ============================================================
   let isCheckingUpdate = false;
+  let isInstallingUpdate = false;
 
   async function checkForUpdates(manual = false) {
-    if (isCheckingUpdate) return;
+    if (isCheckingUpdate || isInstallingUpdate) return;
     isCheckingUpdate = true;
     const button = $('#btnCheckUpdate');
     const status = $('#updateCheckStatus');
@@ -984,7 +985,7 @@ const App = (function () {
       console.log('[updater] Check failed:', e);
     } finally {
       isCheckingUpdate = false;
-      button.disabled = updateConfigBusy;
+      button.disabled = updateConfigBusy || isInstallingUpdate;
       button.textContent = '检查更新';
     }
   }
@@ -1014,7 +1015,7 @@ const App = (function () {
           <p class="update-notes">${body}</p>
         </div>
         <div class="update-dialog-progress" id="updateProgress" hidden>
-          <div class="update-progress-bar">
+          <div class="update-progress-bar" role="progressbar" aria-label="安装包下载进度" aria-valuemin="0" aria-valuemax="100">
             <div class="update-progress-fill" id="updateProgressFill"></div>
           </div>
           <span class="update-progress-text" id="updateProgressText">0%</span>
@@ -1029,43 +1030,89 @@ const App = (function () {
     document.body.appendChild(overlay);
 
     $('#btnUpdateLater').addEventListener('click', () => {
+      if (isInstallingUpdate) return;
       overlay.remove();
     });
 
     $('#btnUpdateNow').addEventListener('click', async () => {
+      if (isInstallingUpdate) return;
+      isInstallingUpdate = true;
+      $('#btnUpdateNow').disabled = true;
+      $('#btnUpdateLater').disabled = true;
+      $('#btnCheckUpdate').disabled = true;
       $('#updateActions').hidden = true;
       $('#updateProgress').hidden = false;
+      const text = $('#updateProgressText');
+      const fill = $('#updateProgressFill');
+      text.textContent = '正在连接下载服务器…';
+      fill.style.width = '30%';
+      fill.classList.add('indeterminate');
+      let lastActivity = Date.now();
+      let phase = 'connecting';
+      let lastSummary = '';
+      const stallTimer = setInterval(() => {
+        if (['connecting', 'downloading'].includes(phase) && Date.now() - lastActivity > 15000) {
+          text.textContent = `${lastSummary} 等待网络数据，请勿重复更新…`.trim();
+        }
+      }, 1000);
 
       try {
         const { invoke, Channel } = window.__TAURI__.core;
         const channel = new Channel();
         let contentLength = 0;
         let downloaded = 0;
+        let startedAt = Date.now();
+        const mb = bytes => (bytes / 1024 / 1024).toFixed(1);
         channel.onmessage = (msg) => {
           if (msg.event === 'Started') {
-            contentLength = msg.data?.content_length || 0;
-            $('#updateProgressText').textContent = '开始下载...';
+            contentLength = msg.data?.contentLength ?? msg.data?.content_length ?? 0;
+            startedAt = Date.now();
+            lastActivity = startedAt;
+            phase = 'downloading';
+            fill.classList.toggle('indeterminate', contentLength <= 0);
+            fill.style.width = contentLength > 0 ? '0%' : '30%';
+            fill.parentElement?.removeAttribute('aria-valuenow');
+            text.textContent = '开始下载…';
           } else if (msg.event === 'Progress') {
-            downloaded += msg.data?.chunk_length || 0;
-            const percent = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
-            $('#updateProgressFill').style.width = percent + '%';
-            $('#updateProgressText').textContent = percent + '%';
+            downloaded += msg.data?.chunkLength ?? msg.data?.chunk_length ?? 0;
+            lastActivity = Date.now();
+            const speed = downloaded / Math.max((lastActivity - startedAt) / 1000, 0.1);
+            const percent = contentLength > 0 ? Math.min(100, Math.floor(downloaded / contentLength * 100)) : null;
+            fill.style.width = percent === null ? '30%' : percent + '%';
+            if (percent !== null) fill.parentElement?.setAttribute('aria-valuenow', String(percent));
+            const remaining = contentLength > downloaded && speed > 0
+              ? ` · 约 ${Math.ceil((contentLength - downloaded) / speed)} 秒` : '';
+            lastSummary = `${percent === null ? '' : percent + '% · '}${mb(downloaded)}${contentLength > 0 ? ' / ' + mb(contentLength) : ''} MB · ${Math.round(speed / 1024)} KB/s${remaining}`;
+            text.textContent = lastSummary;
           } else if (msg.event === 'Finished') {
-            $('#updateProgressFill').style.width = '100%';
-            $('#updateProgressText').textContent = '下载完成，准备安装...';
+            phase = 'verifying';
+            fill.classList.remove('indeterminate');
+            fill.style.width = '100%';
+            text.textContent = '下载完成，正在校验安装包签名…';
+          } else if (msg.event === 'Preparing') {
+            phase = 'preparing';
+            text.textContent = '校验通过，正在停止代理与 TUN、释放运行库…';
+          } else if (msg.event === 'Installing') {
+            phase = 'installing';
+            text.textContent = '正在启动安装程序，请留意 Windows 权限确认窗口…';
           }
         };
         await invoke('install_update', {
           endpoint: update.endpoint,
           onEvent: channel,
         });
-        const { relaunch } = window.__TAURI__.process;
-        await relaunch();
       } catch (e) {
         console.error('[updater] Download/install failed:', e);
         $('#updateProgress').hidden = true;
         $('#updateActions').hidden = false;
+        isInstallingUpdate = false;
+        $('#btnUpdateNow').disabled = false;
+        $('#btnUpdateLater').disabled = false;
+        $('#btnCheckUpdate').disabled = updateConfigBusy;
+        $('#updateCheckStatus').textContent = `更新失败：${e}。可重试。`;
         toast(`更新失败: ${e}`, 'error');
+      } finally {
+        clearInterval(stallTimer);
       }
     });
   }

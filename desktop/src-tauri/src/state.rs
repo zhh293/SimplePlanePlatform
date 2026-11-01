@@ -26,6 +26,7 @@ pub enum ProxyMode {
 
 /// 应用全局状态
 pub struct AppState {
+    pub installing_update: bool,
     pub proxy_process: Option<Child>,
     pub tun_process: Option<crate::tun_process::TunProcess>,
     pub tun_run: Option<crate::tun_process::TunRun>,
@@ -59,6 +60,7 @@ pub struct OriginalProxyState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
+            installing_update: false,
             proxy_process: None,
             tun_process: None,
             tun_run: None,
@@ -87,8 +89,10 @@ impl AppState {
         // 停止代理进程（外部进程不管）
         if !self.proxy_external {
             if let Some(ref mut child) = self.proxy_process {
-                let _ = child.kill();
-                let _ = child.wait();
+                if child.try_wait().map_err(|e| format!("检查 Java 进程失败：{e}"))?.is_none() {
+                    child.kill().map_err(|e| format!("停止 Java 进程失败：{e}"))?;
+                }
+                child.wait().map_err(|e| format!("等待 Java 退出失败：{e}"))?;
             }
         }
         self.proxy_process = None;
@@ -96,7 +100,7 @@ impl AppState {
 
         // 还原系统代理
         if self.original_proxy_state.is_some() {
-            let _ = crate::proxy::restore_system_proxy(self).await;
+            crate::proxy::restore_system_proxy(self).await?;
         }
 
         // DNS 兜底恢复（等待 tun-adapter 的 Drop handler 完成）
