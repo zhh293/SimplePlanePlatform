@@ -308,16 +308,32 @@ impl OutboundConnection {
     }
 
     pub async fn open_proxy_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
-        tokio::time::timeout(CONNECT_TIMEOUT, self.open_proxy_stream_inner(host, port))
-            .await
-            .map_err(|_| {
-                CoreError::Protocol(format!(
-                    "HTTP/3 CONNECT {host}:{port} timed out after 15s; check node protocol and key"
-                ))
-            })?
+        self.open_stream(host, port, false).await
     }
 
-    async fn open_proxy_stream_inner(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+    pub async fn open_udp_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+        self.open_stream(host, port, true).await
+    }
+
+    async fn open_stream(&mut self, host: &str, port: u16, udp: bool) -> Result<OutboundStream> {
+        tokio::time::timeout(
+            CONNECT_TIMEOUT,
+            self.open_proxy_stream_inner(host, port, udp),
+        )
+        .await
+        .map_err(|_| {
+            CoreError::Protocol(format!(
+                "HTTP/3 CONNECT {host}:{port} timed out after 15s; check node protocol and key"
+            ))
+        })?
+    }
+
+    async fn open_proxy_stream_inner(
+        &mut self,
+        host: &str,
+        port: u16,
+        udp: bool,
+    ) -> Result<OutboundStream> {
         let cipher = self.cipher.fresh_session()?;
         let authority = format_authority(&self.config.server_host, self.config.server_port);
         let uri = format!("https://{authority}/proxy");
@@ -361,7 +377,11 @@ impl OutboundConnection {
         // session. The process-unique positive namespace also remains stable
         // across QUIC reconnects within this process.
         let stream_id = next_stream_id();
-        let connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
+        let mut connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
+        if udp {
+            connect_msg.type_ = MessageType::UdpConnect;
+            connect_msg.data = b"udp-v1".to_vec();
+        }
         let frame = encode_encrypted_frame(&cipher, &connect_msg)?;
         stream
             .send_data(Bytes::from(frame))
@@ -404,6 +424,11 @@ impl OutboundConnection {
                             "{host}:{port}, status={}",
                             message.status
                         )));
+                    }
+                    if udp && message.data != b"udp-v1" {
+                        return Err(CoreError::TargetRejected(
+                            "remote does not confirm UDP capability udp-v1".into(),
+                        ));
                     }
                     connected = true;
                 } else {
@@ -661,7 +686,7 @@ pub(crate) mod tests {
                         };
                         for message in messages {
                             let response = match message.type_ {
-                                MessageType::Connect => {
+                                MessageType::Connect | MessageType::UdpConnect => {
                                     if message.host == "reset.test" {
                                         stream.stop_stream(h3::error::Code::H3_REQUEST_REJECTED);
                                         return;
@@ -897,6 +922,17 @@ pub(crate) mod tests {
             assert!(result.is_err(), "HTTP 200 alone must not mean connected");
             server.abort();
         }
+    }
+
+    #[tokio::test]
+    async fn udp_requires_capability_confirmation_even_after_success_ack() {
+        let (addr, ca, server) = mock_proxy(200, Some(200)).await;
+        let mut connection = connect(addr, ca).await.unwrap();
+        let result = connection.open_udp_stream("example.test", 443).await;
+        assert!(
+            matches!(result, Err(CoreError::TargetRejected(ref e)) if e.contains("UDP capability"))
+        );
+        server.abort();
     }
 
     #[tokio::test]

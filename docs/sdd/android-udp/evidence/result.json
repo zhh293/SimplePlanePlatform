@@ -1,0 +1,149 @@
+{
+  "recorded_utc": "2026-11-01T08:52:44.205290+00:00",
+  "environment": "WSL Ubuntu/Linux; loopback; actual AndroidTun and production stack; AF_UNIX SOCK_DGRAM substitutes only the system TUN fd",
+  "rust_core": {
+    "passed": 104,
+    "failed": 0,
+    "ignored": 2
+  },
+  "rust_tun": {
+    "passed": 5,
+    "failed": 0,
+    "ignored": 1
+  },
+  "java_regression": [
+    {
+      "module": "proxy-common",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "proxy-exchange",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "proxy-crypto",
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    {
+      "module": "proxy-transport-netty",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "proxy-transport-http3",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "proxy-cluster",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "proxy-remote",
+      "tests": 38,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    }
+  ],
+  "java_excluded": [
+    "BaiduProxyTest: initial run failed expecting active session after HTTP Connection: close; test unchanged and not counted as passed"
+  ],
+  "matrix": [
+    {
+      "transport": "http2",
+      "cipher": "chacha20",
+      "passed": true,
+      "java_sessions_after_stop": 0,
+      "seconds": 11.9
+    },
+    {
+      "transport": "http2",
+      "cipher": "chacha20-poly1305-v2",
+      "passed": true,
+      "java_sessions_after_stop": 0,
+      "seconds": 11.11
+    },
+    {
+      "transport": "http2",
+      "cipher": "aes-gcm-v2",
+      "passed": true,
+      "java_sessions_after_stop": 0,
+      "seconds": 10.36
+    },
+    {
+      "transport": "http3",
+      "cipher": "chacha20",
+      "passed": true,
+      "java_sessions_after_stop": 0,
+      "seconds": 9.1
+    },
+    {
+      "transport": "http3",
+      "cipher": "chacha20-poly1305-v2",
+      "passed": true,
+      "java_sessions_after_stop": 0,
+      "seconds": 8.7
+    },
+    {
+      "transport": "http3",
+      "cipher": "aes-gcm-v2",
+      "passed": true,
+      "java_sessions_after_stop": 0,
+      "seconds": 11.46
+    }
+  ],
+  "matrix_datagrams_per_case": 92,
+  "matrix_associations_per_case": 33,
+  "matrix_total_echoed_datagrams": 552,
+  "server_sessions_after_stop": 0,
+  "empty_reply_race": "Confirmed reconnect drains already-arrived reply; resolved using a bound unconnected socket with fixed peer filtering; 101 consecutive empty datagrams covered by Java test",
+  "android_device_test": "NOT RUN: user has no device and authorized implementation plus runnable tests first",
+  "android_cross_compile_and_apk": "NOT RUN",
+  "proxy_local_modified": false,
+  "limitations": [
+    "IPv4 TUN only",
+    "no IP fragmentation/reassembly",
+    "UDP payload <=1472 bytes",
+    "reliable H2/H3 streams, not QUIC DATAGRAM",
+    "no physical VPN/protect or mobile network verification",
+    "no throughput or long-duration stability claim"
+  ],
+  "service_jar_sha256": "dac59c3c3036ee55d11b71f0ea356698e2765a4336af8d78ab4ed02d0ac18903",
+  "source_sha256": {
+    "plane-core/Cargo.toml": "72e7abf66305e69309094e2806636e70a1420f4dad02fb1242bbb059e7d6af76",
+    "plane-core/src/dispatcher.rs": "fd2d2e37d2584716796946c0c16e0a0d446745fa1a26437ab93aae53b8da7353",
+    "plane-core/src/jni_bridge.rs": "9b069bb9d1eb6e1a2dc83054395f9914bd16851ad73adcb5cb1606226d80fb48",
+    "plane-core/src/lib.rs": "97c74072fbe56e9b3caccd7765ea6bedad2c165d3e2116631b12bdcdc4f2b836",
+    "plane-core/src/outbound.rs": "4cab7c60c84b1a2502e586c5846aa0acc7af78cfe3edf9ed218360b80725e9ff",
+    "plane-core/src/outbound_h3.rs": "88a9ab0cd840a960dd875f44ad82e1b35815ba19a2bc26f8685031765790c2af",
+    "plane-core/src/proxy_proto.rs": "a577d4b762e3bfe773230a9f70395c6ca22508b5d8df0638a01008e05e5c823b",
+    "plane-core/src/tcp_stack.rs": "b258f4f43d82e66508312967290f2e72388e41a96bac5f0beaa965f66331c0b9",
+    "plane-core/src/transport.rs": "436eaf0241c6ae83b3650634fee09c399da3c8e2d3821f1c266e029b0e3cdd70",
+    "plane-core/src/udp.rs": "54257bb32ec6880d361f5435803715cd25fe7f3c4d145162783718d86e9f0543",
+    "plane-core/tests/udp_data_plane.rs": "66863091d2944587d32ff01b1d738b9b6b73d824db33995de94076a7474d1f01",
+    "plane-core/examples/android_udp_probe.rs": "b0445a6fb664f52982ac2f46da7aa6c7521fe761c3fedbcc648278867aa8c496",
+    "proxy-common/src/main/java/com/proxy/common/model/ProxyMessage.java": "243cc5b4841275d3d6dbd131ce5e63fb78e57cbebade76d832203d2ba1567230",
+    "proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java": "4f4315b049cb399ff10a81e6242c457d2771c65da4dba9639dd0e39cb0aa3769",
+    "proxy-remote/src/main/java/com/proxy/remote/dispatch/DispatchInvoker.java": "8521afb073e1798beb71ff2f722af150f91732f280786f2b32b8fb985bc22a07",
+    "proxy-remote/src/main/java/com/proxy/remote/outbound/OutboundConnector.java": "cc33d9cfdf726f6ec2ea2b2f73c7bbcdd66c8a18376a6fea5bd23cd75e3f8ece",
+    "proxy-remote/src/main/java/com/proxy/remote/outbound/OutboundSession.java": "7d31b2d9ef3929b299964b7f98e3551ac16eb805cc4667e726ca4dee4d2b5a1f",
+    "proxy-remote/src/main/java/com/proxy/remote/outbound/UdpOutboundChannel.java": "87d63d076f14b7e23b29cfc90a21955fbc0de60bd43dc1dbfc7470788d12d64c"
+  }
+}

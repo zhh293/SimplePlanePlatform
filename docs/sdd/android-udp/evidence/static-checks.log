@@ -1,0 +1,7 @@
+cargo fmt --check: PASS
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Checking plane-core v0.1.0 (/mnt/e/SimplePlanePlatform/plane-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 41s

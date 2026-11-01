@@ -76,6 +76,29 @@ pub enum StreamCommand {
 ///
 /// 移植自桌面 `stack_loop`，删除内网 DNS 转发；DNS 一律走 FakeDNS（FakeIP）。
 pub async fn stack_loop(
+    tun_reader: TunReader,
+    tun_writer: TunWriter,
+    fake_dns: Arc<Mutex<FakeDnsEngine>>,
+    tcp_event_tx: mpsc::Sender<TcpEvent>,
+    notify_tx: mpsc::Sender<()>,
+    notify_rx: mpsc::Receiver<()>,
+    shutdown_rx: tokio::sync::watch::Receiver<bool>,
+) -> Result<(), CoreError> {
+    stack_loop_with_udp(
+        tun_reader,
+        tun_writer,
+        fake_dns,
+        tcp_event_tx,
+        notify_tx,
+        notify_rx,
+        shutdown_rx,
+        None,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn stack_loop_with_udp(
     mut tun_reader: TunReader,
     mut tun_writer: TunWriter,
     fake_dns: Arc<Mutex<FakeDnsEngine>>,
@@ -83,7 +106,23 @@ pub async fn stack_loop(
     notify_tx: mpsc::Sender<()>,
     mut notify_rx: mpsc::Receiver<()>,
     mut shutdown_rx: tokio::sync::watch::Receiver<bool>,
+    udp_config: Option<(
+        crate::dispatcher::DispatcherConfig,
+        Arc<dyn crate::outbound::SocketProtector>,
+    )>,
 ) -> Result<(), CoreError> {
+    let (udp_reply_tx, mut udp_reply_rx) = mpsc::channel::<Vec<u8>>(128);
+    let mut udp = udp_config
+        .map(|(config, protector)| {
+            crate::udp::UdpForwarder::new(
+                config,
+                protector,
+                fake_dns.clone(),
+                udp_reply_tx,
+                shutdown_rx.clone(),
+            )
+        })
+        .transpose()?;
     tracing::info!("用户态 TCP/IP 栈启动");
 
     let mut device = VirtualDevice::new();
@@ -125,8 +164,6 @@ pub async fn stack_loop(
         };
 
         tokio::select! {
-            biased;
-
             // 优雅停止：watch 置 true 即退出主循环。
             res = shutdown_rx.changed() => {
                 if res.is_err() || *shutdown_rx.borrow() {
@@ -150,12 +187,25 @@ pub async fn stack_loop(
                             last_stats = std::time::Instant::now();
                         }
 
+                        // Validate all UDP before DNS parsing too (fragments/checksums/MTU).
+                        let mut udp_handled = false;
+                        if packet_data.len() >= 20 && packet_data[0] >> 4 == 4 && packet_data[9] == 17 {
+                            match crate::udp::parse_packet(packet_data) {
+                                Ok(datagram) if datagram.dst.port() != 53 => {
+                                    if let Some(udp) = udp.as_mut() { udp.forward(datagram); }
+                                    udp_handled = true;
+                                }
+                                Err(reason) => { tracing::debug!(reason, "UDP packet dropped"); udp_handled = true; }
+                                _ => {}
+                            }
+                        }
                         // DNS 拦截：dst port 53 → FakeDNS 分配 FakeIP，原路写回响应。
-                        if let Some(dns_response) = try_handle_dns_packet(packet_data, &fake_dns).await {
+                        let dns_response = if udp_handled { None } else { try_handle_dns_packet(packet_data, &fake_dns).await };
+                        if let Some(dns_response) = dns_response {
                             if let Err(e) = tun_writer.write_all(&dns_response).await {
                                 tracing::warn!("写回 DNS 响应到 TUN 失败: {}", e);
                             }
-                        } else {
+                        } else if !udp_handled {
                             // TCP 包处理：过滤未知连接的非 SYN 包，避免 smoltcp 回 RST。
                             let should_feed = if is_tcp_packet(packet_data) {
                                 if let Some((_s_ip, _s_port, _d_ip, dst_port)) = extract_tcp_syn_info(packet_data) {
@@ -222,6 +272,10 @@ pub async fn stack_loop(
                         return Err(CoreError::Io(e));
                     }
                 }
+            }
+
+            Some(packet) = udp_reply_rx.recv() => {
+                tun_writer.write_all(&packet).await?;
             }
 
             _ = notify_rx.recv() => {

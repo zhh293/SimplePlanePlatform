@@ -1,0 +1,12 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.65s
+     Running tests/udp_data_plane.rs (.build/crypto-rust-linux/debug/deps/udp_data_plane-22047a6eecfc4cfb)
+
+running 1 test
+UDP E2E payload_length=1
+UDP E2E payload_length=0
+UDP E2E payload_length=17
+UDP E2E payload_length=1472
+ANDROID_UDP_JAVA_E2E_OK fakeip=true concurrent_associations=33 datagrams=92 empty=true max_payload=1472 checksums=valid
+test java_remote_udp_actual_tun_end_to_end ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.85s

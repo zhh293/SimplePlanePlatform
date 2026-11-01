@@ -353,7 +353,15 @@ impl OutboundConnection {
     ///
     /// 返回 [`OutboundStream`]，后续用它收发该 stream 上的 [`ProxyMessage`]。
     pub async fn open_proxy_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
-        tokio::time::timeout(PROXY_CONNECT_TIMEOUT, self.open_proxy_stream_inner(host, port))
+        self.open_stream(host, port, false).await
+    }
+
+    pub async fn open_udp_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+        self.open_stream(host, port, true).await
+    }
+
+    async fn open_stream(&mut self, host: &str, port: u16, udp: bool) -> Result<OutboundStream> {
+        tokio::time::timeout(PROXY_CONNECT_TIMEOUT, self.open_proxy_stream_inner(host, port, udp))
             .await
             .map_err(|_| {
                 CoreError::Protocol(format!(
@@ -363,7 +371,12 @@ impl OutboundConnection {
             })?
     }
 
-    async fn open_proxy_stream_inner(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+    async fn open_proxy_stream_inner(
+        &mut self,
+        host: &str,
+        port: u16,
+        udp: bool,
+    ) -> Result<OutboundStream> {
         let cipher = self.cipher.fresh_session()?;
         // 等待连接就绪（h2 流控 / SETTINGS）。
         let mut send_request = self
@@ -388,7 +401,11 @@ impl OutboundConnection {
         // 首个 CONNECT 消息（加密 DATA 帧）。
         let request_id = self.req_id_gen.next_id();
         let stream_id = next_stream_id();
-        let connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
+        let mut connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
+        if udp {
+            connect_msg.type_ = MessageType::UdpConnect;
+            connect_msg.data = b"udp-v1".to_vec();
+        }
         let frame = encode_encrypted_frame(&cipher, &connect_msg)?;
         send_stream
             .send_data(Bytes::from(frame), false)
@@ -436,6 +453,11 @@ impl OutboundConnection {
                             "{host}:{port}, status={}",
                             message.status
                         )));
+                    }
+                    if udp && message.data != b"udp-v1" {
+                        return Err(CoreError::TargetRejected(
+                            "remote does not confirm UDP capability udp-v1".into(),
+                        ));
                     }
                     connected = true;
                 } else {
@@ -487,6 +509,27 @@ impl OutboundStream {
         self.send_stream
             .send_data(Bytes::from(frame), false)
             .map_err(|e| CoreError::Protocol(format!("send DATA failed: {e}")))?;
+        Ok(())
+    }
+
+    /// UDP cannot accumulate an unbounded H2 body when the peer stops reading.
+    /// Split encrypted blocks across DATA frames according to actual flow credit.
+    pub async fn send_datagram(&mut self, payload: &[u8]) -> Result<()> {
+        let msg = ProxyMessage::data(self.stream_id, payload);
+        let mut frame = Bytes::from(encode_encrypted_frame(&self.cipher, &msg)?);
+        while !frame.is_empty() {
+            self.send_stream.reserve_capacity(frame.len());
+            while self.send_stream.capacity() == 0 {
+                futures_util::future::poll_fn(|cx| self.send_stream.poll_capacity(cx))
+                    .await
+                    .ok_or_else(|| CoreError::Protocol("UDP H2 send stream closed".into()))?
+                    .map_err(|e| CoreError::Protocol(format!("UDP H2 capacity failed: {e}")))?;
+            }
+            let size = self.send_stream.capacity().min(frame.len());
+            self.send_stream
+                .send_data(frame.split_to(size), false)
+                .map_err(|e| CoreError::Protocol(format!("UDP H2 send failed: {e}")))?;
+        }
         Ok(())
     }
 
@@ -736,6 +779,87 @@ mod tests {
         let (mut connection, server) = mock_proxy(403, None, false).await;
         let result = connection.open_proxy_stream("example.test", 443).await;
         assert!(matches!(result, Err(e) if e.to_string().contains("403")));
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn udp_requires_capability_confirmation_even_after_success_ack() {
+        let (mut connection, server) = mock_proxy(200, Some(200), false).await;
+        let result = connection.open_udp_stream("example.test", 443).await;
+        assert!(
+            matches!(result, Err(CoreError::TargetRejected(ref e)) if e.contains("UDP capability"))
+        );
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn udp_stops_sending_when_http2_peer_exhausts_flow_credit() {
+        let (client_io, server_io) = tokio::io::duplex(4096);
+        let server = tokio::spawn(async move {
+            let mut connection = h2::server::Builder::new()
+                .initial_window_size(128)
+                .handshake::<_, Bytes>(server_io)
+                .await
+                .unwrap();
+            while let Some(request) = connection.accept().await {
+                let (request, mut response) = request.unwrap();
+                tokio::spawn(async move {
+                    let mut body = request.into_body();
+                    let cipher = Cipher::test_server("chacha20", b"udp-test-key").unwrap();
+                    let mut decoder = InboundReassembler::new(cipher.clone());
+                    let connect = loop {
+                        let data = body.data().await.unwrap().unwrap();
+                        body.flow_control().release_capacity(data.len()).unwrap();
+                        if let Some(message) = decoder
+                            .push_encrypted_frame(&data)
+                            .unwrap()
+                            .into_iter()
+                            .next()
+                        {
+                            break message;
+                        }
+                    };
+                    let mut send = response
+                        .send_response(http::Response::new(()), false)
+                        .unwrap();
+                    let ack = ProxyMessage {
+                        type_: MessageType::ConnectResponse,
+                        status: 200,
+                        request_id: connect.request_id,
+                        stream_id: connect.stream_id,
+                        host: String::new(),
+                        port: 0,
+                        data: b"udp-v1".to_vec(),
+                    };
+                    send.send_data(
+                        Bytes::from(encode_encrypted_frame(&cipher, &ack).unwrap()),
+                        false,
+                    )
+                    .unwrap();
+                    // Keep the stream open while deliberately consuming no further body data.
+                    let _owners = (body, send);
+                    std::future::pending::<()>().await;
+                });
+            }
+        });
+        let mut connection = OutboundConnection::handshake(
+            client_io,
+            Cipher::new(b"udp-test-key").unwrap(),
+            OutboundConfig {
+                server_host: "localhost".into(),
+                server_port: 80,
+                tls: false,
+            },
+        )
+        .await
+        .unwrap();
+        let mut stream = connection.open_udp_stream("udp.test", 443).await.unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), stream.send_datagram(&[1; 1472]))
+                .await
+                .is_err(),
+            "UDP must wait for H2 window credit instead of buffering unlimited DATA"
+        );
         server.abort();
     }
 

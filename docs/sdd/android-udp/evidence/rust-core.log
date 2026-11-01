@@ -1,0 +1,131 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling plane-core v0.1.0 (/mnt/e/SimplePlanePlatform/plane-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 45.13s
+     Running unittests src/lib.rs (.build/crypto-rust-linux/debug/deps/plane_core-c2605b312f8942fa)
+
+running 106 tests
+test crypto_interop_tests::crypto_remote_echo ... ignored, requires CRYPTO_TEST_PORT, CRYPTO_TEST_SUITE and CRYPTO_TEST_KEY_FILE
+test dispatcher::tests::configured_node_http_probe ... ignored, requires PLANE_NODE_HOST, PLANE_NODE_PORT and PLANE_NODE_KEY
+test crypto::legacy::tests::empty_plaintext_returns_empty ... ok
+test crypto::legacy::tests::empty_key_rejected ... ok
+test crypto::legacy::tests::too_short_ciphertext_fails ... ok
+test crypto::legacy::tests::ciphertext_keystream_starts_at_counter_zero ... ok
+test dispatcher::tests::protected_resolver_address_is_used ... ok
+test dispatcher::tests::resolve_ip_literal ... ok
+test crypto::legacy::tests::roundtrip_basic ... ok
+test crypto::legacy::tests::tamper_tag_fails_auth ... ok
+test crypto::legacy::tests::roundtrip_with_fixed_nonce_is_deterministic ... ok
+test crypto::tests::suite_selection_is_explicit ... ok
+test crypto::v2::tests::rfc5869_known_answer ... ok
+test jni_bridge::tests::catch_unwind_returns_value_on_ok ... ok
+test crypto::legacy::tests::tamper_ciphertext_fails_auth ... ok
+test crypto::legacy::tests::non_32_byte_key_uses_sha256 ... ok
+test crypto::legacy::tests::cross_language_vectors_match_java ... ok
+test jni_bridge::tests::catch_unwind_returns_zero_on_err ... ok
+test mobile_config::tests::desktop_route_lists_become_ordered_rules ... ok
+test mobile_config::tests::legacy_single_node_still_works ... ok
+test mobile_config::tests::empty_json_uses_defaults ... ok
+test mobile_config::tests::desktop_remote_servers_are_accepted ... ok
+test mobile_config::tests::smart_cn_routing_can_be_disabled_explicitly ... ok
+test crypto::v2::tests::all_bytes_authenticated_and_rejected_records_do_not_change_state ... ok
+test crypto::tests::clones_share_nonce_sequence_but_sessions_have_fresh_salts ... ok
+test dispatcher::tests::protected_resolver_does_not_fall_back_into_vpn_dns ... ok
+test net_probe::tests::classify_ipv6_or_short_is_other ... ok
+test mobile_config::tests::http3_node_transport_and_certificate_are_preserved ... ok
+test net_probe::tests::classify_tcp_syn ... ok
+test dispatcher::tests::protected_ipv6_nodes_keep_their_address_family ... ok
+test crypto::v2::tests::independent_vectors_encrypt_and_decrypt_exactly ... ok
+test net_probe::tests::classify_tcp_synack_is_other ... ok
+test net_probe::tests::classify_udp_non53_is_other ... ok
+test crypto::v2::tests::key_limits_and_concurrent_counters ... ok
+test dispatcher::tests::resolve_localhost ... ok
+test net_probe::tests::test_handle_dns_query_a_record ... ok
+test net_probe::tests::classify_dns_query ... ok
+test net_probe::tests::run_stack_answers_dns_and_logs_tcp ... ok
+test net_probe::tests::test_allocate_ip_for_domain ... ok
+test net_probe::tests::test_different_domains_return_different_ips ... ok
+test net_probe::tests::test_handle_dns_query_aaaa_returns_empty ... ok
+test net_probe::tests::test_is_fake_ip ... ok
+test net_probe::tests::test_lookup_domain ... ok
+test net_probe::tests::build_response_packet_valid_checksums ... ok
+[2m2026-11-01T08:37:58.603704Z[0m [32m INFO[0m [2mplane_core::logging::tests[0m[2m:[0m logging init smoke test
+test net_probe::tests::test_same_domain_returns_same_ip ... ok
+test android_tun::tests::read_write_roundtrip ... ok
+test outbound::tests::config_roundtrip ... ok
+test net_probe::tests::test_skips_dot_zero_and_255 ... ok
+test outbound::tests::encode_encrypted_frame_is_decryptable ... ok
+[2m2026-11-01T08:37:58.623429Z[0m [32m INFO[0m [2mplane_core::routing[0m[2m:[0m router initialized with 1 rules, default=Proxy
+test outbound::tests::noop_protector_always_true ... ok
+test jni_bridge::tests::catch_unwind_returns_zero_on_panic ... ok
+[2m2026-11-01T08:37:58.626594Z[0m [31mERROR[0m [2mplane_core::jni_bridge[0m[2m:[0m JNI call isolated a panic [3mpanic[0m[2m=[0mboom
+[2m2026-11-01T08:37:58.630920Z[0m [31mERROR[0m [2mplane_core::jni_bridge[0m[2m:[0m JNI call failed [3merror[0m[2m=[0m非法参数: x
+test outbound::tests::reassembler_ciphertext_block_split_across_two_frames ... ok
+[2m2026-11-01T08:37:58.626218Z[0m [32m INFO[0m [2mplane_core::dispatcher[0m[2m:[0m dispatcher started with 1 node(s), default route=proxy
+[2m2026-11-01T08:37:58.630622Z[0m [33m WARN[0m [2mplane_core::outbound[0m[2m:[0m h2 connection driver ended: broken pipe
+test outbound::tests::reassembler_multiple_messages_in_one_frame ... ok
+test logging::tests::init_is_idempotent ... ok
+[2m2026-11-01T08:37:58.636056Z[0m [32m INFO[0m [2mplane_core::dispatcher[0m[2m:[0m connection 127.0.0.1 -> 127.0.0.1:443 domain=None route=Proxy
+test outbound::tests::reassembler_rejects_tampered_frame ... ok[2m2026-11-01T08:37:58.637675Z[0m [32m INFO[0m [2mplane_core::dispatcher[0m[2m:[0m connection 127.0.0.1 -> 127.0.0.1:35139 domain=None route=Direct
+
+[2m2026-11-01T08:37:58.639426Z[0m [32m INFO[0m [2mplane_core::dispatcher[0m[2m:[0m dispatcher received shutdown
+test outbound::tests::reassembler_single_frame_one_message ... ok
+test outbound::tests::reassembler_two_blocks_coalesced_in_one_frame ... ok
+test outbound::tests::request_id_gen_is_monotonic ... ok
+test outbound::tests::stream_id_gen_matches_java_layout ... ok
+test outbound::tests::udp_requires_capability_confirmation_even_after_success_ack ... ok
+test outbound::tests::proxy_connect_rejects_encrypted_failure_after_http_200 ... ok
+test outbound::tests::proxy_connect_times_out_when_http_200_has_no_proxy_acknowledgement ... ok
+test outbound::tests::proxy_connect_preserves_data_coalesced_with_acknowledgement ... ok
+test jni_bridge::tests::catch_unwind_unit_swallows_panic ... ok
+test outbound_h3::tests::closed_connection_is_visible_to_late_subscribers ... ok
+test outbound::tests::http2_v2_sessions_are_independent_per_stream ... ok
+test dispatcher::tests::stalled_proxy_does_not_block_direct_connections_or_shutdown ... ok
+test outbound::tests::proxy_connect_rejects_http_error ... ok
+test outbound_h3::tests::http3_requires_socket_protection_before_connecting ... ok
+test proxy_proto::tests::control_and_data_ids_match_java_protocol ... ok
+test proxy_proto::tests::decode_rejects_trailing_bytes ... ok
+test proxy_proto::tests::encode_decode_roundtrip_connect ... ok
+test proxy_proto::tests::encode_decode_roundtrip_data ... ok
+[2m2026-11-01T08:37:58.668419Z[0m [32m INFO[0m [2mplane_core::routing[0m[2m:[0m router initialized with 1 rules, default=Proxy
+test outbound_h3::tests::http3_does_not_trust_an_unrelated_certificate ... ok
+[2m2026-11-01T08:37:58.670920Z[0m [32m INFO[0m [2mplane_core::routing[0m[2m:[0m router initialized with 2 rules, default=Proxy
+test proxy_proto::tests::header_offsets_are_big_endian ... ok
+[2m2026-11-01T08:37:58.672489Z[0m [32m INFO[0m [2mplane_core::routing[0m[2m:[0m router initialized with 1 rules, default=Proxy
+test proxy_proto::tests::message_type_ordinals_match_java ... [2m2026-11-01T08:37:58.673796Z[0m [32m INFO[0m [2mplane_core::routing[0m[2m:[0m router initialized with 0 rules, default=Proxy
+ok
+test proxy_proto::tests::try_decode_one_concatenated_messages ... ok
+test proxy_proto::tests::try_decode_one_partial_returns_none ... ok
+test outbound_h3::tests::http3_active_stream_survives_connection_owner_drop ... ok
+test proxy_proto::tests::try_decode_one_streamed_in_two_parts ... ok
+test outbound_h3::tests::udp_requires_capability_confirmation_even_after_success_ack ... ok
+test routing::tests::cn_ipv4_data_is_sorted_and_well_formed ... ok
+test outbound_h3::tests::http3_stream_reset_does_not_mark_the_shared_connection_dead ... ok
+test routing::tests::cidr_rule_matches_without_domain ... ok
+test routing::tests::direct_rule_has_priority_by_order ... ok
+test routing::tests::explicit_user_rule_overrides_smart_cn_direct ... ok
+test outbound_h3::tests::http3_rejects_http_error_and_encrypted_connect_failure ... [2m2026-11-01T08:37:58.685233Z[0m [32m INFO[0m [2mplane_core::net_probe[0m[2m:[0m FakeDNS initialized: pool 198.18.0.0-198.19.255.255, capacity 8
+ok
+[2m2026-11-01T08:37:58.685872Z[0m [32m INFO[0m [2mplane_core::routing[0m[2m:[0m router initialized with 0 rules, default=Proxy
+test routing::tests::smart_cn_direct_uses_domain_then_geoip ... ok
+test stats::tests::end_connection_saturates_at_zero ... ok
+test stats::tests::concurrent_connection_updates_preserve_counts ... ok
+test tcp_stack::tests::build_udp_response_has_valid_ip_header ... ok
+test tcp_stack::tests::extract_tcp_4tuple_parses_ports ... ok
+test tcp_stack::tests::extract_tcp_syn_info_only_matches_pure_syn ... ok
+test tcp_stack::tests::ip_checksum_matches_known_header ... ok
+test tcp_stack::tests::is_tcp_packet_detects_protocol ... ok
+test tcp_stack::tests::pending_stack_write_retains_partial_tail ... ok
+test tcp_stack::tests::stream_write_waits_for_channel_capacity ... ok
+test tests::crate_version_is_not_empty ... ok
+test udp::tests::association_and_datagram_queues_are_bounded ... ok
+test dispatcher::tests::slow_or_rejected_target_does_not_block_or_replace_other_proxy_streams ... ok
+test outbound::tests::udp_stops_sending_when_http2_peer_exhausts_flow_credit ... ok
+test outbound_h3::tests::http3_v2_sessions_are_independent_per_stream ... ok
+test crypto::legacy::tests::large_payload_roundtrip ... ok
+test outbound_h3::tests::http3_connect_and_data_survive_repeated_streams_and_split_frames ... ok
+test crypto::v2::tests::boundary_lengths_and_stream_isolation ... ok
+test outbound_h3::tests::http3_connect_requires_acknowledgement_before_timeout ... ok
+
+test result: ok. 104 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 15.27s

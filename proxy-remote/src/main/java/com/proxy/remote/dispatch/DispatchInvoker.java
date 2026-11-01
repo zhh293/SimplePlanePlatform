@@ -115,6 +115,7 @@ public class DispatchInvoker implements Invoker {
 
         switch (type) {
             case CONNECT:
+            case UDP_CONNECT:
                 return handleConnect(invocation);
             case DATA:
                 return handleData(invocation);
@@ -139,6 +140,14 @@ public class DispatchInvoker implements Invoker {
     private Response handleConnect(Invocation invocation) {
         String targetHost = invocation.getTargetHost();
         int targetPort = invocation.getTargetPort();
+        boolean udp = invocation.getType() == ProxyMessage.MessageType.UDP_CONNECT;
+        if (udp && (connector == null || !java.util.Arrays.equals(invocation.getData(),
+                "udp-v1".getBytes(java.nio.charset.StandardCharsets.US_ASCII)))) {
+            return Response.error("UDP capability udp-v1 required");
+        }
+        if (udp && (targetHost == null || targetHost.isEmpty() || targetPort < 1 || targetPort > 65535)) {
+            return Response.error("Invalid UDP target");
+        }
 
         log.info("Handle CONNECT: target={}:{}", targetHost, targetPort);
 
@@ -153,16 +162,18 @@ public class DispatchInvoker implements Invoker {
         if (!inboundCtx.channel().isActive()) return Response.error("Inbound stream already closed");
 
         // 创建出站会话（sessionKey 用于 SessionManager 查找，rawStreamId 用于回写消息）
-        OutboundSession session = new OutboundSession(inboundCtx, targetHost, targetPort, sessionKey, rawStreamId);
+        OutboundSession session = new OutboundSession(inboundCtx, targetHost, targetPort, sessionKey, rawStreamId, udp);
         sessionManager.register(sessionKey, session);
 
         // 同步等待出站连接建立（在 bizExecutor 线程中阻塞，不影响 IO 线程）
-        CompletableFuture<Channel> connecting = connector.connect(targetHost, targetPort, session);
+        CompletableFuture<Channel> connecting = udp
+                ? connector.connectUdp(targetHost, targetPort, session)
+                : connector.connect(targetHost, targetPort, session);
         try {
             Channel channel = connecting.get(activeWaitTimeoutMs, TimeUnit.MILLISECONDS);
             if (!session.setOutboundChannel(channel)) return Response.error("Stream closed during CONNECT");
             log.info("CONNECT success: target={}:{}, sessionKey={}", targetHost, targetPort, sessionKey);
-            return Response.ok();
+            return udp ? Response.ok("udp-v1".getBytes(java.nio.charset.StandardCharsets.US_ASCII)) : Response.ok();
         } catch (Exception e) {
             connecting.cancel(true);
             log.error("CONNECT failed: target={}:{}, sessionKey={}", targetHost, targetPort, sessionKey, e);

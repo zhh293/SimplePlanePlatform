@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 出站会话 —— 绑定一个客户端 Stream 到一条目标 TCP 连接
+ * 出站会话 —— 绑定一个客户端 Stream 到一条目标 TCP 连接或固定目标 UDP 关联
  * <p>
  * 每个 OutboundSession 代表一个从客户端发起的 CONNECT 请求所建立的隧道：
  * 客户端 Stream ←→ OutboundSession ←→ 目标服务器 TCP 连接
@@ -36,6 +36,8 @@ public class OutboundSession {
     private final int targetPort;
     private final String sessionKey;
     private final long rawStreamId;
+    private final boolean udp;
+    public static final int MAX_UDP_PAYLOAD = 1472;
 
     private final AtomicReference<SessionState> state = new AtomicReference<>(SessionState.CONNECTING);
     private final CompletableFuture<Void> activeFuture = new CompletableFuture<>();
@@ -55,11 +57,16 @@ public class OutboundSession {
      * @param rawStreamId 原始数字 streamId，用于回写推送消息时设置到 ProxyMessage
      */
     public OutboundSession(ChannelHandlerContext inboundCtx, String targetHost, int targetPort, String sessionKey, long rawStreamId) {
+        this(inboundCtx, targetHost, targetPort, sessionKey, rawStreamId, false);
+    }
+
+    public OutboundSession(ChannelHandlerContext inboundCtx, String targetHost, int targetPort, String sessionKey, long rawStreamId, boolean udp) {
         this.inboundCtx = inboundCtx;
         this.targetHost = targetHost;
         this.targetPort = targetPort;
         this.sessionKey = sessionKey;
         this.rawStreamId = rawStreamId;
+        this.udp = udp;
     }
 
     /**
@@ -89,6 +96,13 @@ public class OutboundSession {
      * @param data 待转发的数据
      */
     public void forward(byte[] data) {
+        // ProxyCodec represents a wire dataLength of zero as null.
+        if (udp && data == null) data = new byte[0];
+        if (udp && (data.length > MAX_UDP_PAYLOAD
+                || outboundChannel == null || !outboundChannel.isWritable())) {
+            log.debug("UDP drop: invalid size or outbound backpressure, sessionKey={}", sessionKey);
+            return;
+        }
         if (state.get() != SessionState.ACTIVE) {
             log.warn("Cannot forward data, session not active: sessionKey={}, state={}", sessionKey, state.get());
             return;
@@ -114,6 +128,10 @@ public class OutboundSession {
      * @param data 目标服务器返回的数据
      */
     public void writeBack(byte[] data) {
+        if (udp && (data.length > MAX_UDP_PAYLOAD || !inboundCtx.channel().isWritable())) {
+            log.debug("UDP drop: oversized response or inbound backpressure, sessionKey={}", sessionKey);
+            return;
+        }
         if (state.get() == SessionState.CLOSED) {
             log.debug("Session closed, ignoring writeBack: sessionKey={}", sessionKey);
             return;

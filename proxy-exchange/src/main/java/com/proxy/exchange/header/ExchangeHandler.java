@@ -65,6 +65,7 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
      */
     private volatile ConcurrentHashMap<Long, ChannelHandlerContext> streamRegistry;
     private static final AttributeKey<Long> STREAM_ID = AttributeKey.valueOf("proxy.logical.streamId");
+    private static final AttributeKey<Boolean> UDP_ASSOCIATION = AttributeKey.valueOf("proxy.udp.association");
     private final ConcurrentHashMap<Long, PendingRequest> pendingRequests = new ConcurrentHashMap<>();
     // CONNECT futures finish before established streams; retain stream ownership until closure.
     private final java.util.Set<Long> ownedStreams = ConcurrentHashMap.newKeySet();
@@ -205,7 +206,8 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
             if (ctx.channel().isActive()) {
                 io.netty.channel.ChannelFuture write = ctx.writeAndFlush(reply);
                 if (message.getType() == ProxyMessage.MessageType.DISCONNECT
-                        || (message.getType() == ProxyMessage.MessageType.CONNECT && !response.isSuccess())) {
+                        || ((message.getType() == ProxyMessage.MessageType.CONNECT
+                        || message.getType() == ProxyMessage.MessageType.UDP_CONNECT) && !response.isSuccess())) {
                     write.addListener(done -> {
                         if (done.isSuccess()) finishOutput(ctx);
                         else ctx.close();
@@ -399,6 +401,12 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         );
         invocation.setAttachment("requestId", message.getRequestId());
         String sessionKey = String.valueOf(message.getStreamId());
+        if (message.getType() == ProxyMessage.MessageType.UDP_CONNECT) {
+            ctx.channel().attr(UDP_ASSOCIATION).set(true);
+        }
+        if (Boolean.TRUE.equals(ctx.channel().attr(UDP_ASSOCIATION).get())) {
+            sessionKey = "udp:" + ctx.channel().id().asLongText() + ":" + sessionKey;
+        }
         invocation.setAttachment("streamId", sessionKey);
         invocation.setAttachment("rawStreamId", message.getStreamId());
         invocation.setAttachment("inboundCtx", ctx);

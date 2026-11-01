@@ -1,0 +1,48 @@
+Explicit selection: -Dtest=*,!BaiduProxyTest -Dsurefire.failIfNoSpecifiedTests=false
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.218 s -- in com.proxy.common.model.UrlSecretTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.078 s -- in com.proxy.common.transport.FlowPermitTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.383 s -- in com.proxy.exchange.header.ConnectionOwnershipTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.835 s -- in com.proxy.crypto.AeadRecordCipherTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in com.proxy.crypto.AeadStandardVectorTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 s -- in com.proxy.crypto.CipherRoundTripTest$AesCtrHmac
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 s -- in com.proxy.crypto.CipherRoundTripTest$AesGcm
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in com.proxy.crypto.CipherRoundTripTest$ChaCha20
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.096 s -- in com.proxy.crypto.CipherRoundTripTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.004 s -- in com.proxy.crypto.CryptoVectorGenTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in com.proxy.crypto.CryptoVectorReplayTest
+[WARNING] Tests run: 39, Failures: 0, Errors: 0, Skipped: 1
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.170 s -- in com.proxy.transport.netty.codec.ProxyCodecTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.563 s -- in com.proxy.transport.netty.handler.CipherFramingTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in com.proxy.transport.netty.integration.CryptoChannelIntegrationTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.426 s -- in com.proxy.transport.http3.Http3CodecHandlerTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.385 s -- in com.proxy.transport.http3.Http3ExchangeIntegrationTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.47 s -- in com.proxy.transport.http3.Http3LoopbackIntegrationTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.85 s -- in com.proxy.transport.http3.Http3PendingConnectLifecycleTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in com.proxy.transport.http3.Http3SpiTest
+[INFO] Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.282 s -- in com.proxy.cluster.FilterActivationTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.144 s -- in com.proxy.cluster.StickyClusterInvokerTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.880 s -- in com.proxy.remote.integration.AeadAesGcmOutboundIntegrationTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.678 s -- in com.proxy.remote.integration.AeadChaChaOutboundIntegrationTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.234 s -- in com.proxy.remote.integration.ClientServerIntegrationTest
+[WARNING] Tests run: 5, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 5.626 s -- in com.proxy.remote.integration.Http3OutboundIntegrationTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.568 s -- in com.proxy.remote.integration.OutboundIntegrationTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.proxy.remote.integration.StreamFailureIsolationTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.102 s -- in com.proxy.remote.integration.UdpAssociationIsolationTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.210 s -- in com.proxy.remote.outbound.SessionLifecycleTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.726 s -- in com.proxy.remote.outbound.UdpOutboundTest
+[WARNING] Tests run: 38, Failures: 0, Errors: 0, Skipped: 1
+[INFO] Netty Proxy ........................................ SUCCESS [  2.301 s]
+[INFO] Proxy Common ....................................... SUCCESS [ 13.852 s]
+[INFO] Proxy Exchange ..................................... SUCCESS [  5.454 s]
+[INFO] Proxy Crypto ....................................... SUCCESS [  4.456 s]
+[INFO] Proxy Transport Netty .............................. SUCCESS [  8.667 s]
+[INFO] Proxy Transport HTTP/3 ............................. SUCCESS [ 35.069 s]
+[INFO] Proxy Cluster ...................................... SUCCESS [  5.989 s]
+[INFO] Proxy Remote ....................................... SUCCESS [ 41.856 s]
+[INFO] BUILD SUCCESS
+[INFO] Total time:  01:58 min

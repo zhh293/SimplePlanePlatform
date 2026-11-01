@@ -65,5 +65,6 @@ tokio-rustls = { version = "0.26", default-features = false, features = ["ring",
 tracing-android = "0.2"
 
 [dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
 tokio-test = "0.4"
 rcgen = "0.13"

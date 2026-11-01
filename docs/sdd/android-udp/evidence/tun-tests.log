@@ -1,0 +1,16 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling plane-core v0.1.0 (/mnt/e/SimplePlanePlatform/plane-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 22s
+     Running tests/udp_data_plane.rs (.build/crypto-rust-linux/debug/deps/udp_data_plane-22047a6eecfc4cfb)
+
+running 6 tests
+test java_remote_udp_actual_tun_end_to_end ... ignored, run scripts/test-android-udp.py: requires real Java proxy-remote
+test udp_packet_boundaries_and_rejections ... ok
+test idle_association_expires_and_next_packet_reopens_it ... ok
+test dns_remains_in_tun_and_fakeip_udp_uses_the_domain ... ok
+test direct_udp_actual_tun_roundtrip_empty_maximum_and_isolation ... ok
+test reject_and_failed_protect_never_send_udp ... ok
+
+test result: ok. 5 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.38s

@@ -20,9 +20,9 @@ use crate::transport::{proxy_via_remote_counted, ProxyConnection, ProxyStream};
 
 const PROXY_READ_BUF: usize = 16 * 1024;
 const NODE_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
-type ConnectionPool = Vec<Mutex<Option<Arc<ProxyConnection>>>>;
+pub(crate) type ConnectionPool = Vec<Mutex<Option<Arc<ProxyConnection>>>>;
 
-fn new_connection_pool(node_count: usize) -> ConnectionPool {
+pub(crate) fn new_connection_pool(node_count: usize) -> ConnectionPool {
     (0..node_count).map(|_| Mutex::new(None)).collect()
 }
 
@@ -200,6 +200,17 @@ async fn open_proxy_with_failover<P>(
 where
     P: SocketProtector,
 {
+    open_with_failover(config, protector, pool, host, port, false).await
+}
+
+pub(crate) async fn open_with_failover<P: SocketProtector>(
+    config: &DispatcherConfig,
+    protector: &P,
+    pool: &ConnectionPool,
+    host: &str,
+    port: u16,
+    udp: bool,
+) -> Result<(ProxyStream, String)> {
     let mut last_error: Option<CoreError> = None;
     for (idx, node) in config.nodes.iter().enumerate() {
         // Serialize only connection creation. Waiting for a target's CONNECT
@@ -224,7 +235,12 @@ where
             }
         };
         let mut sender = connection.as_ref().clone();
-        match sender.open_proxy_stream(host, port).await {
+        let opened = if udp {
+            sender.open_udp_stream(host, port).await
+        } else {
+            sender.open_proxy_stream(host, port).await
+        };
+        match opened {
             Ok(stream) => return Ok((stream, node.name.clone())),
             // The node decrypted and answered CONNECT. A destination refusal
             // is not a broken node and must not tear down unrelated flows.
@@ -461,7 +477,11 @@ fn resolve_server_addr(host: &str, port: u16) -> Result<SocketAddr> {
         .ok_or_else(|| CoreError::Internal(format!("no IP address for {host}:{port}")))
 }
 
-fn resolve_server_addr_with_protector<P>(host: &str, port: u16, protector: &P) -> Result<SocketAddr>
+pub(crate) fn resolve_server_addr_with_protector<P>(
+    host: &str,
+    port: u16,
+    protector: &P,
+) -> Result<SocketAddr>
 where
     P: SocketProtector,
 {

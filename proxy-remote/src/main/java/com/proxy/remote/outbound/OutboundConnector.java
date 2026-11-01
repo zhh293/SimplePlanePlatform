@@ -23,6 +23,82 @@ public class OutboundConnector {
 
     private final EventLoopGroup workerGroup;
     private final int connectTimeoutMs;
+    private final java.util.concurrent.Semaphore udpPermits = new java.util.concurrent.Semaphore(1024);
+
+    /** One UDP socket per association; enforce its resolved fixed peer in both directions. */
+    public CompletableFuture<Channel> connectUdp(String host, int port, OutboundSession session) {
+        CompletableFuture<Channel> result = new CompletableFuture<>();
+        if (!udpPermits.tryAcquire()) {
+            result.completeExceptionally(new IllegalStateException("UDP association limit reached"));
+            return result;
+        }
+        ChannelFuture connecting;
+        try {
+            connecting = new Bootstrap().group(workerGroup)
+                    .channelFactory(UdpOutboundChannel::create)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(65535))
+                    .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(32768, 65536))
+                    .handler(new ChannelInitializer<io.netty.channel.socket.DatagramChannel>() {
+                        @Override protected void initChannel(io.netty.channel.socket.DatagramChannel ch) {
+                            ch.pipeline().addLast(new io.netty.handler.timeout.IdleStateHandler(0, 0, 60));
+                            ch.pipeline().addLast(new SimpleChannelInboundHandler<io.netty.channel.socket.DatagramPacket>() {
+                                @Override protected void channelRead0(ChannelHandlerContext ctx, io.netty.channel.socket.DatagramPacket packet) {
+                                    if (!packet.sender().equals(UdpOutboundChannel.peer(ctx.channel()))) return;
+                                    byte[] bytes = new byte[packet.content().readableBytes()];
+                                    packet.content().readBytes(bytes);
+                                    session.writeBack(bytes);
+                                }
+                                @Override public void userEventTriggered(ChannelHandlerContext ctx, Object event) {
+                                    if (event instanceof io.netty.handler.timeout.IdleStateEvent) session.closeFromTarget();
+                                    else ctx.fireUserEventTriggered(event);
+                                }
+                                @Override public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    log.debug("UDP outbound failed: {}", session.getSessionKey(), cause);
+                                    session.closeFromTarget();
+                                }
+                                @Override public void channelInactive(ChannelHandlerContext ctx) {
+                                    session.closeFromTarget();
+                                }
+                            });
+                        }
+                    }).connect(host, port);
+        } catch (RuntimeException error) {
+            udpPermits.release();
+            result.completeExceptionally(error);
+            return result;
+        }
+        connecting.channel().closeFuture().addListener(f -> udpPermits.release());
+        ChannelFutureListener inboundClosed = f -> result.cancel(false);
+        session.getInboundCtx().channel().closeFuture().addListener(inboundClosed);
+        result.whenComplete((channel, error) -> {
+            session.getInboundCtx().channel().closeFuture().removeListener(inboundClosed);
+            if (result.isCancelled()) {
+                connecting.cancel(false);
+                connecting.channel().close();
+            }
+        });
+        connecting.addListener((ChannelFutureListener) f -> {
+            if (!f.isSuccess()) {
+                f.channel().close();
+                result.completeExceptionally(f.cause());
+            } else {
+                try {
+                    UdpOutboundChannel.prepare(f.channel());
+                } catch (java.io.IOException error) {
+                    f.channel().close();
+                    result.completeExceptionally(error);
+                    return;
+                }
+                if (!session.getInboundCtx().channel().isActive()
+                    || session.getState() == OutboundSession.SessionState.CLOSED
+                    || !result.complete(f.channel())) {
+                    f.channel().close();
+                    result.completeExceptionally(new java.nio.channels.ClosedChannelException());
+                }
+            }
+        });
+        return result;
+    }
 
     /**
      * @param workerGroup     复用自 NettyServer 的 worker 线程组

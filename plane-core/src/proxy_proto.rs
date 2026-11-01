@@ -43,6 +43,8 @@ pub enum MessageType {
     HeartbeatRequest = 4,
     /// 心跳响应。
     HeartbeatResponse = 5,
+    /// Fixed-target UDP association, capability token `udp-v1`.
+    UdpConnect = 6,
 }
 
 impl MessageType {
@@ -56,6 +58,7 @@ impl MessageType {
             3 => Some(Self::Disconnect),
             4 => Some(Self::HeartbeatRequest),
             5 => Some(Self::HeartbeatResponse),
+            6 => Some(Self::UdpConnect),
             _ => None,
         }
     }
@@ -400,5 +403,6 @@ mod tests {
         assert_eq!(MessageType::Disconnect as u8, 3);
         assert_eq!(MessageType::HeartbeatRequest as u8, 4);
         assert_eq!(MessageType::HeartbeatResponse as u8, 5);
+        assert_eq!(MessageType::UdpConnect as u8, 6);
     }
 }

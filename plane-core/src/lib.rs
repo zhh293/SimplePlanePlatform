@@ -2,7 +2,7 @@
 //!
 //! 本 crate 承担桌面 `tun-adapter` + `proxy-local` 在手机端的等价职责：
 //! 接收系统 `VpnService` 递交的 TUN fd，运行用户态协议栈、FakeDNS、路由与加密
-//! HTTP/2 出站，与 Java `proxy-remote` 二进制兼容。
+//! HTTP/2、HTTP/3 出站，与 Java `proxy-remote` 二进制兼容；支持 IPv4 TCP 和 UDP。
 //!
 //! ## 当前进度
 //!
@@ -41,6 +41,7 @@ pub mod routing;
 pub mod stats;
 pub mod tcp_stack;
 pub mod transport;
+pub mod udp;
 
 use jni::objects::JClass;
 use jni::sys::jstring;

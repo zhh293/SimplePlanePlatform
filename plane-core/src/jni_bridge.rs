@@ -14,7 +14,7 @@ use crate::mobile_config::AndroidConfig;
 use crate::net_probe::FakeDnsEngine;
 use crate::outbound::SocketProtector;
 use crate::stats::CoreStats;
-use crate::tcp_stack::{stack_loop, TcpEvent};
+use crate::tcp_stack::TcpEvent;
 
 const FAKE_IP_CIDR: &str = "198.18.0.0/15";
 const FAKE_DNS_CAPACITY: usize = 4096;
@@ -283,8 +283,10 @@ fn spawn_data_plane(
     let stack_shutdown_rx = handle.shutdown.subscribe();
     let stack_cb = Arc::clone(cb);
     let stack_stats = Arc::clone(&handle.stats);
+    let udp_config = dispatcher_cfg.clone();
+    let udp_protector: Arc<dyn SocketProtector> = protector.clone();
     handle.rt.spawn(async move {
-        let res = stack_loop(
+        let res = crate::tcp_stack::stack_loop_with_udp(
             tun_reader,
             tun_writer,
             stack_fake_dns,
@@ -292,6 +294,7 @@ fn spawn_data_plane(
             stack_notify_tx,
             notify_rx,
             stack_shutdown_rx,
+            Some((udp_config, udp_protector)),
         )
         .await;
         match res {
