@@ -364,8 +364,8 @@ impl RouteGuard {
 
         // 使用 PowerShell 设置 DNS（比 netsh 更可靠，支持接口名含空格）
         let ps_cmd = format!(
-            "Set-DnsClientServerAddress -InterfaceAlias '{}' -ServerAddresses ('198.18.0.2')",
-            interface_name
+            "$ErrorActionPreference='Stop'; Set-DnsClientServerAddress -InterfaceAlias '{}' -ServerAddresses ('198.18.0.2'); Set-DnsClientServerAddress -InterfaceAlias '{}' -ServerAddresses ('198.18.0.2')",
+            interface_name.replace('\'', "''"), self._tun_name.replace('\'', "''")
         );
 
         let output = Command::new("powershell")

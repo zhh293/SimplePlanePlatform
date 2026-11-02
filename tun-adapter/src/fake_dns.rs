@@ -89,7 +89,11 @@ impl FakeDnsEngine {
 
             // 跳过 .0 和 .255 地址
             let octets = ip.octets();
-            if octets[3] == 0 || octets[3] == 255 {
+            // Reserve the interface, FakeDNS endpoint and Windows peer address.
+            if octets[3] == 0 || octets[3] == 255
+                || ip == Ipv4Addr::new(198, 18, 0, 1)
+                || ip == Ipv4Addr::new(198, 18, 0, 2)
+                || ip == Ipv4Addr::new(198, 18, 255, 254) {
                 continue;
             }
 
@@ -182,6 +186,19 @@ mod tests {
         msg.add_query(query);
 
         msg.to_vec().unwrap()
+    }
+
+    #[test]
+    fn test_reserved_endpoints_never_allocated_after_wraparound() {
+        let mut engine = FakeDnsEngine::new("198.18.0.0/24", 256);
+        for i in 0..600 {
+            let ip = engine.allocate_ip(&format!("site{i}.example.com"));
+            assert_ne!(ip, Ipv4Addr::new(198, 18, 0, 1));
+            assert_ne!(ip, Ipv4Addr::new(198, 18, 0, 2));
+        }
+        let mut engine = FakeDnsEngine::new("198.18.0.0/15", 256);
+        engine.next_ip = u32::from(Ipv4Addr::new(198, 18, 255, 254));
+        assert_eq!(engine.allocate_ip("peer.example.com"), Ipv4Addr::new(198, 19, 0, 1));
     }
 
     #[test]

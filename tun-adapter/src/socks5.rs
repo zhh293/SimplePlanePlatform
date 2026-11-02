@@ -50,10 +50,12 @@ where
     );
 
     // 1. TCP connect 到 SOCKS5 代理
-    let mut proxy_stream = tokio::time::timeout(AUTH_TIMEOUT, TcpStream::connect(socks5_addr))
+    let mut proxy_stream = tokio::time::timeout(AUTH_TIMEOUT, connect_proxy(socks5_addr))
         .await
         .map_err(|_| Socks5Error::Timeout)?
         .map_err(|_| Socks5Error::Unreachable(socks5_addr))?;
+
+    proxy_stream.set_nodelay(true)?;
 
     // 2. SOCKS5 认证握手
     socks5_auth(&mut proxy_stream).await?;
@@ -78,8 +80,20 @@ where
     Ok(())
 }
 
+// A dedicated loopback source tells proxy-local this connection is already
+// routed by TUN. Local DIRECT would resolve FakeDNS and re-enter the adapter.
+async fn connect_proxy(addr: SocketAddr) -> std::io::Result<TcpStream> {
+    if addr.ip().is_loopback() && addr.is_ipv4() {
+        let socket = tokio::net::TcpSocket::new_v4()?;
+        socket.bind("127.0.0.2:0".parse().unwrap())?;
+        socket.connect(addr).await
+    } else {
+        TcpStream::connect(addr).await
+    }
+}
+
 /// Both directions share one idle deadline; cancelling this future drops both streams.
-async fn relay_with_idle_timeout<A, B>(
+pub(crate) async fn relay_with_idle_timeout<A, B>(
     mut app: A,
     proxy: B,
     idle: Duration,

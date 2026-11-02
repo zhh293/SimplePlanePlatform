@@ -112,3 +112,20 @@ dns_bypass_ips = ["114.114.114.114", "223.5.5.5"]
 servers = ["11.11.11.11", "11.11.11.12"]
 # 需要走内网 DNS 解析的域名后缀（会在 /etc/resolver/ 下创建分流规则）
 domains = ["sankuai.com", "meituan.com", "sankuai.info", "neixin.cn", "dianping.com", "meituan.net"]
+
+# Direct egress uses the original physical interface and DNS.
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "baidu.com"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "bdstatic.com"
+action = "direct"
+
+[[routing.rules]]
+type = "domain_suffix"
+value = "bdimg.com"
+action = "direct"
