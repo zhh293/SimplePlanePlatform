@@ -6,6 +6,7 @@
 #![allow(dead_code)]
 
 mod config;
+mod direct;
 mod error;
 mod fake_dns;
 mod logging;
@@ -119,6 +120,7 @@ async fn run() -> anyhow::Result<()> {
     // 4. 打印启动信息
     tracing::info!("tun-adapter v{} starting", env!("CARGO_PKG_VERSION"));
     config.print_summary();
+    let direct_egress = Arc::new(direct::DirectEgress::discover()?);
 
     // 5. 创建 TUN 设备（包括路由设置和回环防护）
     tracing::info!("Creating TUN device...");
@@ -209,6 +211,7 @@ async fn run() -> anyhow::Result<()> {
         socks5_addr,
         health_dispatch,
         notify_tx_dispatch,
+        direct_egress,
     ));
 
     tracing::info!("All modules started, TUN adapter is running");
@@ -323,8 +326,9 @@ async fn connection_dispatcher(
     fake_dns: Arc<Mutex<FakeDnsEngine>>,
     router: Arc<Router>,
     socks5_addr: SocketAddr,
-    health_state: Arc<AtomicBool>,
+    _health_state: Arc<AtomicBool>,
     notify_tx: mpsc::Sender<()>,
+    direct_egress: Arc<direct::DirectEgress>,
 ) {
     tracing::info!("Connection dispatcher started");
 
@@ -355,18 +359,9 @@ async fn connection_dispatcher(
                     protocol: Protocol::Tcp,
                 };
 
-                let mut action = router.route(&info);
+                let action = router.route(&info);
 
-                // 3. 健康检查降级：代理不可用时所有代理流量走直连
-                if action == RouteAction::Proxy && !health_state.load(Ordering::Relaxed) {
-                    tracing::warn!(
-                        "Degraded mode: routing {}:{} (domain={:?}) to Direct",
-                        dst_ip,
-                        dst_port,
-                        domain
-                    );
-                    action = RouteAction::Direct;
-                }
+
 
                 // 4. 尝试获取并发许可（非阻塞）
                 let permit = match semaphore.clone().try_acquire_owned() {
@@ -418,13 +413,18 @@ async fn connection_dispatcher(
                     }
                     RouteAction::Direct => {
                         let target_owned = target.clone();
-                        let socks5 = socks5_addr;
+                        let egress = direct_egress.clone();
                         let notify = notify_tx.clone();
                         tokio::spawn(async move {
                             let _permit = permit;
                             let stream = SmolTcpStream::new(stream_tx, stream_rx, notify);
                             if let Err(e) =
-                                direct_tcp_stream(stream, &target_owned, dst_port, socks5).await
+                                {
+                                    #[cfg(windows)]
+                                    { direct_tcp_stream(stream, &target_owned, dst_port, &egress).await }
+                                    #[cfg(not(windows))]
+                                    { let _ = egress; proxy_tcp_stream(&target_owned, dst_port, stream, socks5_addr).await.map_err(TunError::Socks5) }
+                                }
                             {
                                 tracing::warn!(
                                     "Direct connection error for {}:{}: {}",
@@ -448,30 +448,11 @@ async fn connection_dispatcher(
     tracing::info!("Connection dispatcher stopped");
 }
 
-/// "直连" 转发：在全局 TUN 透明代理模式下，"Direct" 实际上也走 SOCKS5 代理
-///
-/// 原因：TUN 截获了所有出站流量（0.0.0.0/1 + 128.0.0.0/1），
-/// 如果在本机做 TcpStream::connect() 直连，TCP 包会再次进入 TUN 造成回环。
-/// 系统 DNS 也被 FakeDNS 接管，无法在本机做真实 DNS 解析。
-///
-/// MVP 方案：所有流量（包括 Direct）都通过 SOCKS5 代理出去，
-/// 让 proxy-remote 来完成实际的 DNS 解析和 TCP 连接。
-/// 将来可以在 proxy-remote 侧实现分流策略（如国内直连、国外走二级代理等）。
-async fn direct_tcp_stream(
-    app_stream: SmolTcpStream,
-    target_domain: &str,
-    target_port: u16,
-    socks5_addr: SocketAddr,
-) -> Result<(), TunError> {
-    tracing::debug!(
-        "Direct (via proxy): {}:{} through {}",
-        target_domain,
-        target_port,
-        socks5_addr
-    );
-    proxy_tcp_stream(target_domain, target_port, app_stream, socks5_addr)
-        .await
-        .map_err(|e| TunError::Socks5(e))?;
+/// Direct streams use the physical interface, never SOCKS5 or system DNS.
+async fn direct_tcp_stream(app_stream: SmolTcpStream, host: &str, port: u16, egress: &direct::DirectEgress) -> Result<(), TunError> {
+    let stream = tokio::time::timeout(Duration::from_secs(15), egress.connect(host, port)).await
+        .map_err(|_| TunError::Network(format!("Direct connect timed out for {host}:{port}")))??;
+    socks5::relay_with_idle_timeout(app_stream, stream, Duration::from_secs(120)).await?;
     Ok(())
 }
 

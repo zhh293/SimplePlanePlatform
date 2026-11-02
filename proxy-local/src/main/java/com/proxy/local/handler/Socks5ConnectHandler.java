@@ -145,7 +145,12 @@ public class Socks5ConnectHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
-            if (decision.isDirect()) {
+            // TUN owns routing and FakeDNS. Re-applying local DIRECT here
+            // would send the connection back into TUN. REJECT is still honored.
+            boolean fromTun = ctx.channel().remoteAddress() instanceof java.net.InetSocketAddress
+                    && "127.0.0.2".equals(((java.net.InetSocketAddress)
+                    ctx.channel().remoteAddress()).getAddress().getHostAddress());
+            if (decision.isDirect() && !fromTun) {
                 // === 直连模式 ===
                 log.info("Route DIRECT (SOCKS5, rule={}): {}:{}", decision.getRuleId(), host, port);
                 DirectRelayHandler directHandler = new DirectRelayHandler(host, port);

@@ -187,6 +187,7 @@ pub async fn stack_loop(
                                         let tcp_rx_buffer = tcp::SocketBuffer::new(vec![0u8; 65536]);
                                         let tcp_tx_buffer = tcp::SocketBuffer::new(vec![0u8; 65536]);
                                         let mut tcp_socket = TcpSocket::new(tcp_rx_buffer, tcp_tx_buffer);
+                                        tcp_socket.set_nagle_enabled(false);
                                         let listen_ep = IpListenEndpoint {
                                             addr: None,
                                             port: dst_port,

@@ -1,8 +1,21 @@
-# ============================================================
+﻿# ============================================================
 # SimplePlane Platform — Windows TUN Mode Launcher (PowerShell)
 # 必须以管理员身份运行
 # ============================================================
-#Requires -RunAsAdministrator
+# Request elevation before starting services when launched directly.
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = [Security.Principal.WindowsPrincipal]::new($identity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    try {
+        $launcher = Join-Path $PSHOME 'powershell.exe'
+        $arguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $PSCommandPath
+        $child = Start-Process -FilePath $launcher -ArgumentList $arguments -Verb RunAs -WindowStyle Hidden -PassThru -Wait -ErrorAction Stop
+        exit $child.ExitCode
+    } catch {
+        Write-Error "Unable to obtain administrator privileges. Allow the Windows UAC prompt or ask an administrator to launch this script. $($_.Exception.Message)"
+        exit 1
+    }
+}
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
