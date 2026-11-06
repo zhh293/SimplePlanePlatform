@@ -311,9 +311,7 @@ impl OutboundConnection {
         tokio::time::timeout(CONNECT_TIMEOUT, self.open_proxy_stream_inner(host, port))
             .await
             .map_err(|_| {
-                CoreError::Protocol(format!(
-                    "HTTP/3 CONNECT {host}:{port} timed out after 15s; check node protocol and key"
-                ))
+                CoreError::Timeout(format!("HTTP/3 CONNECT {host}:{port} timed out after 15s"))
             })?
     }
 
@@ -909,6 +907,7 @@ pub(crate) mod tests {
             .err()
             .unwrap();
         assert!(error.to_string().contains("timed out after 15s"));
+        assert!(matches!(error, CoreError::Timeout(_)));
         server.abort();
     }
 

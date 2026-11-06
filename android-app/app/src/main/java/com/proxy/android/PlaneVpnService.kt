@@ -225,7 +225,11 @@ class PlaneVpnService : VpnService() {
         val message = when (state) {
             "connected" -> getString(R.string.vpn_status_connected)
             "ready" -> getString(R.string.vpn_status_ready)
-            "proxy_error", "error" -> {
+            "proxy_error" -> {
+                val detail = stats.optString("last_error").ifBlank { getString(R.string.vpn_status_error) }
+                getString(R.string.vpn_status_proxy_failure_detail, detail)
+            }
+            "error" -> {
                 val detail = stats.optString("last_error").ifBlank { getString(R.string.vpn_status_error) }
                 getString(R.string.vpn_status_failure_detail, detail)
             }

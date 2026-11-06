@@ -9,6 +9,7 @@
     <string name="vpn_status_connecting">正在连接...</string>
     <string name="vpn_status_connected">已连接</string>
     <string name="vpn_status_ready">VPN 已启动，代理连接尚未验证</string>
+    <string name="vpn_status_proxy_failure_detail">VPN 已启动；代理请求失败：%1$s</string>
     <string name="vpn_status_failure_detail">连接失败：%1$s</string>
     <string name="vpn_status_disconnecting">正在断开...</string>
     <string name="vpn_status_error">连接异常</string>
