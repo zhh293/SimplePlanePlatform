@@ -405,6 +405,9 @@ pub fn write_tun_node_config() -> Result<PathBuf, String> {
         }
     }
     let root = value.as_table_mut().ok_or("TUN configuration must be a table")?;
+    // The adapter loads the same policy and providers as proxy-local, including live edits.
+    root.insert("route_source".into(), toml::Value::String(
+        get_config_dir().join("proxy.yml").to_string_lossy().into_owned()));
     if !root.contains_key("bypass") { root.insert("bypass".into(), toml::Value::Table(toml::map::Map::new())); }
     let bypass = root.get_mut("bypass").and_then(|value| value.as_table_mut()).ok_or("TUN bypass must be a table")?;
     let mut existing = bypass.get("proxy_remote_ips").and_then(|v| v.as_array()).cloned().unwrap_or_default();

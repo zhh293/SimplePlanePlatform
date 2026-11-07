@@ -11,6 +11,7 @@ mod error;
 mod fake_dns;
 mod logging;
 mod route_guard;
+mod route_policy;
 mod router;
 mod socks5;
 mod stack;
@@ -29,7 +30,8 @@ use tokio::sync::{mpsc, Mutex};
 use crate::config::Config;
 use crate::error::TunError;
 use crate::fake_dns::FakeDnsEngine;
-use crate::router::{ConnectionInfo, Protocol, RouteAction, Router};
+use crate::route_policy::RoutePolicy;
+use crate::router::{ConnectionInfo, Protocol, RouteAction};
 use crate::socks5::proxy_tcp_stream;
 use crate::stack::{SmolTcpStream, TcpEvent};
 
@@ -49,6 +51,11 @@ struct Args {
     /// Override persistent diagnostics for elevated launches.
     #[arg(long)]
     log_file: Option<PathBuf>,
+    /// Inspect policy without creating a TUN device or changing system networking.
+    #[arg(long)]
+    check_route: Option<String>,
+    #[arg(long, default_value_t = 443)]
+    check_port: u16,
 }
 
 /// 初始化 tracing 日志系统（输出到终端 + 日志文件）
@@ -120,6 +127,27 @@ async fn run() -> anyhow::Result<()> {
     // 4. 打印启动信息
     tracing::info!("tun-adapter v{} starting", env!("CARGO_PKG_VERSION"));
     config.print_summary();
+    // Validate/compile the shared policy before touching DNS or system routes.
+    let (policy, watched_paths) = RoutePolicy::new(&config.routing, config.route_source.as_deref())
+        .map_err(TunError::Route)?;
+    let router = Arc::new(policy);
+    if let Some(target) = &args.check_route {
+        let ip = target.parse().ok();
+        let info = ConnectionInfo {
+            src_ip: std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            dst_ip: ip.unwrap_or_else(|| "198.19.0.10".parse().unwrap()),
+            dst_port: args.check_port,
+            domain: ip.is_none().then(|| target.clone()),
+            protocol: Protocol::Tcp,
+        };
+        println!(
+            "Route decision: {:?} {}:{}",
+            router.route(&info),
+            target,
+            args.check_port
+        );
+        return Ok(());
+    }
     let direct_egress = Arc::new(direct::DirectEgress::discover()?);
 
     // 5. 创建 TUN 设备（包括路由设置和回环防护）
@@ -137,9 +165,10 @@ async fn run() -> anyhow::Result<()> {
     tracing::info!("FakeDNS engine initialized");
 
     // 7. 初始化路由引擎
-    let router = Arc::new(
-        Router::from_config(&config.routing).map_err(|e| TunError::Route(format!("{}", e)))?,
-    );
+    let route_watch_handle = config.route_source.clone().map(|path| {
+        tracing::info!("Using shared desktop route policy: {}", path.display());
+        tokio::spawn(route_policy::watch(router.clone(), path, watched_paths))
+    });
     tracing::info!("Router initialized");
 
     // 8. 健康状态标记
@@ -275,6 +304,9 @@ async fn run() -> anyhow::Result<()> {
     health_handle.abort();
     stack_handle.abort();
     conn_handle.abort();
+    if let Some(handle) = route_watch_handle {
+        handle.abort();
+    }
     if let Some(path) = &args.ready_file {
         let _ = std::fs::remove_file(path);
     }
@@ -324,7 +356,7 @@ mod lifecycle_tests {
 async fn connection_dispatcher(
     mut rx: mpsc::Receiver<TcpEvent>,
     fake_dns: Arc<Mutex<FakeDnsEngine>>,
-    router: Arc<Router>,
+    router: Arc<RoutePolicy>,
     socks5_addr: SocketAddr,
     _health_state: Arc<AtomicBool>,
     notify_tx: mpsc::Sender<()>,
@@ -360,8 +392,6 @@ async fn connection_dispatcher(
                 };
 
                 let action = router.route(&info);
-
-
 
                 // 4. 尝试获取并发许可（非阻塞）
                 let permit = match semaphore.clone().try_acquire_owned() {
@@ -418,14 +448,20 @@ async fn connection_dispatcher(
                         tokio::spawn(async move {
                             let _permit = permit;
                             let stream = SmolTcpStream::new(stream_tx, stream_rx, notify);
-                            if let Err(e) =
+                            if let Err(e) = {
+                                #[cfg(windows)]
                                 {
-                                    #[cfg(windows)]
-                                    { direct_tcp_stream(stream, &target_owned, dst_port, &egress).await }
-                                    #[cfg(not(windows))]
-                                    { let _ = egress; proxy_tcp_stream(&target_owned, dst_port, stream, socks5_addr).await.map_err(TunError::Socks5) }
+                                    direct_tcp_stream(stream, &target_owned, dst_port, &egress)
+                                        .await
                                 }
-                            {
+                                #[cfg(not(windows))]
+                                {
+                                    let _ = egress;
+                                    proxy_tcp_stream(&target_owned, dst_port, stream, socks5_addr)
+                                        .await
+                                        .map_err(TunError::Socks5)
+                                }
+                            } {
                                 tracing::warn!(
                                     "Direct connection error for {}:{}: {}",
                                     target_owned,
@@ -449,8 +485,14 @@ async fn connection_dispatcher(
 }
 
 /// Direct streams use the physical interface, never SOCKS5 or system DNS.
-async fn direct_tcp_stream(app_stream: SmolTcpStream, host: &str, port: u16, egress: &direct::DirectEgress) -> Result<(), TunError> {
-    let stream = tokio::time::timeout(Duration::from_secs(15), egress.connect(host, port)).await
+async fn direct_tcp_stream(
+    app_stream: SmolTcpStream,
+    host: &str,
+    port: u16,
+    egress: &direct::DirectEgress,
+) -> Result<(), TunError> {
+    let stream = tokio::time::timeout(Duration::from_secs(15), egress.connect(host, port))
+        .await
         .map_err(|_| TunError::Network(format!("Direct connect timed out for {host}:{port}")))??;
     socks5::relay_with_idle_timeout(app_stream, stream, Duration::from_secs(120)).await?;
     Ok(())

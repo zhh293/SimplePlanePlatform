@@ -3,6 +3,7 @@
 //! 基于域名后缀、域名关键词、IP CIDR 和端口进行路由决策，
 //! 决定每个连接走代理、直连还是拦截。
 
+use std::collections::HashSet;
 use std::net::IpAddr;
 
 use ipnet::IpNet;
@@ -88,16 +89,138 @@ struct IpCidrRule {
 /// 端口匹配规则
 struct PortRule {
     port: u16,
+    end: u16,
     action: RouteAction,
+}
+
+struct ProtocolRule {
+    protocol: Protocol,
+    action: RouteAction,
+}
+struct MatchRule {
+    action: RouteAction,
+}
+struct DomainProviderRule {
+    source: String,
+    suffixes: HashSet<String>,
+    exact: HashSet<String>,
+    action: RouteAction,
+}
+
+impl DomainProviderRule {
+    fn load(source: &str, action: RouteAction) -> Result<Self, RouterError> {
+        let contents = match source.trim() {
+            "classpath:routing/providers/direct-list.txt" => {
+                std::borrow::Cow::Borrowed(include_str!(
+                    "../../proxy-local/src/main/resources/routing/providers/direct-list.txt"
+                ))
+            }
+            "classpath:routing/providers/proxy-list.txt" => {
+                std::borrow::Cow::Borrowed(include_str!(
+                    "../../proxy-local/src/main/resources/routing/providers/proxy-list.txt"
+                ))
+            }
+            path if path.starts_with("classpath:") => {
+                return Err(RouterError::InvalidProvider(format!(
+                    "Unknown bundled provider: {path}"
+                )))
+            }
+            path => std::borrow::Cow::Owned(
+                std::fs::read_to_string(path)
+                    .map_err(|e| RouterError::InvalidProvider(format!("{path}: {e}")))?,
+            ),
+        };
+        let mut rule = Self {
+            source: source.into(),
+            suffixes: HashSet::new(),
+            exact: HashSet::new(),
+            action,
+        };
+        for line in contents.lines() {
+            let domain = line.split('#').next().unwrap_or("").trim();
+            if domain.is_empty() || domain.starts_with(';') {
+                continue;
+            }
+            let (exact, domain) = match domain.strip_prefix("full:") {
+                Some(domain) => (true, domain),
+                None => (false, domain),
+            };
+            let domain = domain
+                .strip_prefix("*.")
+                .or_else(|| domain.strip_prefix("+."))
+                .unwrap_or(domain);
+            let domain = domain
+                .strip_prefix("domain:")
+                .or_else(|| domain.strip_prefix("domain_suffix:"))
+                .unwrap_or(domain);
+            let domain = normalize_domain(domain);
+            if domain.is_empty() || domain.parse::<IpAddr>().is_ok() {
+                continue;
+            }
+            if exact {
+                rule.exact.insert(domain);
+            } else {
+                rule.suffixes.insert(domain);
+            }
+        }
+        tracing::info!(
+            "Route provider {} loaded: {} suffixes, {} exact domains",
+            source,
+            rule.suffixes.len(),
+            rule.exact.len()
+        );
+        Ok(rule)
+    }
+}
+
+impl Rule for DomainProviderRule {
+    fn matches(&self, info: &ConnectionInfo) -> Option<RouteAction> {
+        let domain = info.domain.as_deref()?;
+        if self.exact.contains(domain) {
+            return Some(self.action.clone());
+        }
+        let mut suffix = domain;
+        loop {
+            if self.suffixes.contains(suffix) {
+                return Some(self.action.clone());
+            }
+            suffix = suffix.split_once('.')?.1;
+        }
+    }
+    fn name(&self) -> &str {
+        &self.source
+    }
+}
+
+impl Rule for ProtocolRule {
+    fn matches(&self, info: &ConnectionInfo) -> Option<RouteAction> {
+        (info.protocol == self.protocol).then(|| self.action.clone())
+    }
+    fn name(&self) -> &str {
+        "protocol"
+    }
+}
+impl Rule for MatchRule {
+    fn matches(&self, _: &ConnectionInfo) -> Option<RouteAction> {
+        Some(self.action.clone())
+    }
+    fn name(&self) -> &str {
+        "match"
+    }
+}
+
+pub(crate) fn normalize_domain(value: &str) -> String {
+    value.trim().trim_end_matches('.').to_lowercase()
 }
 
 impl Rule for DomainSuffixRule {
     fn matches(&self, info: &ConnectionInfo) -> Option<RouteAction> {
         if let Some(domain) = &info.domain {
-            let domain_lower = domain.to_lowercase();
             // 匹配完整后缀：.cn 匹配 www.baidu.cn，cn 匹配所有 .cn 域名
-            if domain_lower.ends_with(&format!(".{}", self.suffix))
-                || domain_lower == self.suffix
+            if domain
+                .strip_suffix(&self.suffix)
+                .is_some_and(|prefix| prefix.ends_with('.'))
+                || domain == &self.suffix
             {
                 return Some(self.action.clone());
             }
@@ -113,7 +236,7 @@ impl Rule for DomainSuffixRule {
 impl Rule for DomainKeywordRule {
     fn matches(&self, info: &ConnectionInfo) -> Option<RouteAction> {
         if let Some(domain) = &info.domain {
-            if domain.to_lowercase().contains(&self.keyword) {
+            if domain.contains(&self.keyword) {
                 return Some(self.action.clone());
             }
         }
@@ -128,7 +251,7 @@ impl Rule for DomainKeywordRule {
 impl Rule for DomainFullRule {
     fn matches(&self, info: &ConnectionInfo) -> Option<RouteAction> {
         if let Some(domain) = &info.domain {
-            if domain.to_lowercase() == self.domain {
+            if domain == &self.domain {
                 return Some(self.action.clone());
             }
         }
@@ -155,7 +278,7 @@ impl Rule for IpCidrRule {
 
 impl Rule for PortRule {
     fn matches(&self, info: &ConnectionInfo) -> Option<RouteAction> {
-        if info.dst_port == self.port {
+        if (self.port..=self.end).contains(&info.dst_port) {
             return Some(self.action.clone());
         }
         None
@@ -174,33 +297,64 @@ impl Router {
 
         for rule_cfg in &routing_config.rules {
             let action = parse_action(&rule_cfg.action)?;
-            let rule: Box<dyn Rule> = match rule_cfg.rule_type.as_str() {
+            let rule: Box<dyn Rule> = match rule_cfg.rule_type.trim().to_lowercase().as_str() {
                 "domain_suffix" => Box::new(DomainSuffixRule {
-                    suffix: rule_cfg.value.to_lowercase(),
+                    suffix: normalize_domain(&rule_cfg.value),
                     action,
                 }),
                 "domain_keyword" => Box::new(DomainKeywordRule {
-                    keyword: rule_cfg.value.to_lowercase(),
+                    keyword: normalize_domain(&rule_cfg.value),
                     action,
                 }),
                 "domain_full" => Box::new(DomainFullRule {
-                    domain: rule_cfg.value.to_lowercase(),
+                    domain: normalize_domain(&rule_cfg.value),
                     action,
                 }),
-                "ip_cidr" => {
-                    let cidr: IpNet = rule_cfg
-                        .value
+                "ip_cidr" | "ip" => {
+                    let value = rule_cfg.value.trim();
+                    let literal;
+                    let value = if !value.contains('/') {
+                        let ip = value
+                            .trim_matches(['[', ']'])
+                            .parse::<IpAddr>()
+                            .map_err(|_| RouterError::InvalidCidr(value.into()))?;
+                        literal = format!("{}/{}", ip, if ip.is_ipv4() { 32 } else { 128 });
+                        literal.as_str()
+                    } else {
+                        value
+                    };
+                    let cidr: IpNet = value
                         .parse()
                         .map_err(|_| RouterError::InvalidCidr(rule_cfg.value.clone()))?;
                     Box::new(IpCidrRule { cidr, action })
                 }
                 "port" => {
-                    let port: u16 = rule_cfg
-                        .value
-                        .parse()
-                        .map_err(|_| RouterError::InvalidRuleType(format!("invalid port: {}", rule_cfg.value)))?;
-                    Box::new(PortRule { port, action })
+                    let value = rule_cfg.value.trim();
+                    let (start, end) = value.split_once('-').unwrap_or((value, value));
+                    let invalid = || {
+                        RouterError::InvalidRuleType(format!("invalid port: {}", rule_cfg.value))
+                    };
+                    let port: u16 = start.parse().map_err(|_| invalid())?;
+                    let end: u16 = end.parse().map_err(|_| invalid())?;
+                    if port == 0 || end < port {
+                        return Err(invalid());
+                    }
+                    Box::new(PortRule { port, end, action })
                 }
+                "protocol" => Box::new(ProtocolRule {
+                    protocol: match normalize_domain(&rule_cfg.value).as_str() {
+                        "tcp" => Protocol::Tcp,
+                        "udp" => Protocol::Udp,
+                        other => {
+                            return Err(RouterError::InvalidRuleType(format!(
+                                "invalid protocol: {other}"
+                            )))
+                        }
+                    },
+                    action,
+                }),
+                "match" => Box::new(MatchRule { action }),
+                "domain_provider" => Box::new(DomainProviderRule::load(&rule_cfg.value, action)?),
                 other => {
                     return Err(RouterError::InvalidRuleType(other.to_string()));
                 }
@@ -208,17 +362,36 @@ impl Router {
             rules.push(rule);
         }
 
-        tracing::info!("Router initialized with {} rules, default: {:?}", rules.len(), default_action);
-        Ok(Self { rules, default_action })
+        tracing::info!(
+            "Router initialized with {} rules, default: {:?}",
+            rules.len(),
+            default_action
+        );
+        Ok(Self {
+            rules,
+            default_action,
+        })
     }
 
     /// 对连接信息进行路由决策（first-match-wins）
     pub fn route(&self, info: &ConnectionInfo) -> RouteAction {
+        let normalized = ConnectionInfo {
+            domain: info.domain.as_deref().map(normalize_domain),
+            src_ip: info.src_ip,
+            dst_ip: info.dst_ip,
+            dst_port: info.dst_port,
+            protocol: info.protocol.clone(),
+        };
+        let info = &normalized;
         for rule in &self.rules {
             if let Some(action) = rule.matches(info) {
                 tracing::debug!(
                     "Route match: {:?}:{} (domain={:?}) -> {:?} (rule: {})",
-                    info.dst_ip, info.dst_port, info.domain, action, rule.name()
+                    info.dst_ip,
+                    info.dst_port,
+                    info.domain,
+                    action,
+                    rule.name()
                 );
                 return action;
             }
@@ -226,7 +399,10 @@ impl Router {
 
         tracing::debug!(
             "Route no match: {:?}:{} (domain={:?}) -> {:?} (default)",
-            info.dst_ip, info.dst_port, info.domain, self.default_action
+            info.dst_ip,
+            info.dst_port,
+            info.domain,
+            self.default_action
         );
         self.default_action.clone()
     }
@@ -234,7 +410,7 @@ impl Router {
 
 /// 解析路由动作字符串
 fn parse_action(action: &str) -> Result<RouteAction, RouterError> {
-    match action.to_lowercase().as_str() {
+    match action.trim().to_lowercase().as_str() {
         "proxy" => Ok(RouteAction::Proxy),
         "direct" => Ok(RouteAction::Direct),
         "reject" => Ok(RouteAction::Reject),
@@ -322,18 +498,10 @@ mod tests {
 
         let router = Router::from_config(&config).unwrap();
 
-        let info = make_info(
-            IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
-            80,
-            None,
-        );
+        let info = make_info(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 80, None);
         assert_eq!(router.route(&info), RouteAction::Direct);
 
-        let info = make_info(
-            IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)),
-            53,
-            None,
-        );
+        let info = make_info(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53, None);
         assert_eq!(router.route(&info), RouteAction::Proxy);
     }
 
@@ -395,19 +563,11 @@ mod tests {
         let router = Router::from_config(&config).unwrap();
 
         // 无域名但 IP 匹配
-        let info = make_info(
-            IpAddr::V4(Ipv4Addr::new(10, 1, 1, 1)),
-            80,
-            None,
-        );
+        let info = make_info(IpAddr::V4(Ipv4Addr::new(10, 1, 1, 1)), 80, None);
         assert_eq!(router.route(&info), RouteAction::Direct);
 
         // 无域名且 IP 不匹配，走默认
-        let info = make_info(
-            IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)),
-            80,
-            None,
-        );
+        let info = make_info(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 80, None);
         assert_eq!(router.route(&info), RouteAction::Proxy);
     }
 
