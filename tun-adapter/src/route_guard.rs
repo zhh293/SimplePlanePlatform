@@ -1180,35 +1180,20 @@ impl RouteGuard {
     /// 获取指定网络接口的当前 DNS 服务器列表 — Windows
     #[cfg(target_os = "windows")]
     fn get_dns_servers_win(interface_name: &str) -> Result<Vec<String>, TunError> {
+        // Effective ServerAddresses includes DHCP-provided DNS. Only the static
+        // NameServer override records whether the user actually selected manual DNS.
         let ps_cmd = format!(
-            "(Get-DnsClientServerAddress -InterfaceAlias '{}' -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses -join ','",
-            interface_name
+            r"$ErrorActionPreference='Stop'; $adapter=Get-NetAdapter | Where-Object {{ $_.Name -eq '{}' }} | Select-Object -First 1; if (!$adapter) {{ throw 'DNS interface not found' }}; $guid=([guid]$adapter.InterfaceGuid).ToString('B'); $settings=Get-ItemProperty -LiteralPath ('HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\'+$guid); if ([string]::IsNullOrWhiteSpace($settings.NameServer)) {{ 'DHCP' }} else {{ $settings.NameServer }}",
+            interface_name.replace('\'', "''")
         );
-
         let output = Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &ps_cmd])
             .output()
-            .map_err(|e| TunError::SystemRoute(format!("failed to get DNS servers: {}", e)))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let result = stdout.trim();
-
-        if result.is_empty() {
-            // 没有手动设置的 DNS，表示使用 DHCP
-            return Ok(vec!["DHCP".to_string()]);
+            .map_err(|e| TunError::SystemRoute(format!("failed to read DNS mode: {}", e)))?;
+        if !output.status.success() {
+            return Err(TunError::SystemRoute(format!("failed to read DNS mode: {}", String::from_utf8_lossy(&output.stderr).trim())));
         }
-
-        let servers: Vec<String> = result
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        if servers.is_empty() {
-            Ok(vec!["DHCP".to_string()])
-        } else {
-            Ok(servers)
-        }
+        parse_windows_dns_override(&String::from_utf8_lossy(&output.stdout))
     }
 
     /// 获取 TUN 接口的网关地址 — Windows
@@ -1375,5 +1360,30 @@ impl Drop for RouteGuard {
         }
 
         tracing::info!("RouteGuard cleanup completed");
+    }
+}
+
+/// Parse the registry override, never the currently effective DHCP server list.
+fn parse_windows_dns_override(value: &str) -> Result<Vec<String>, TunError> {
+    let value = value.trim();
+    if value == "DHCP" { return Ok(vec!["DHCP".into()]); }
+    let servers: Vec<String> = value.split(|ch: char| ch == ',' || ch.is_whitespace())
+        .filter(|s| !s.is_empty()).map(str::to_string).collect();
+    if servers.is_empty() || servers.iter().any(|s| s.parse::<std::net::IpAddr>().is_err()) {
+        return Err(TunError::SystemRoute("Invalid static DNS backup; refusing to replace network settings".into()));
+    }
+    Ok(servers)
+}
+
+#[cfg(test)]
+mod dns_mode_tests {
+    use super::*;
+    #[test] fn automatic_mode_is_preserved_as_a_mode() {
+        assert_eq!(parse_windows_dns_override("DHCP\r\n").unwrap(), vec!["DHCP"]);
+    }
+    #[test] fn manual_servers_are_preserved_in_order() {
+        assert_eq!(parse_windows_dns_override("1.1.1.1, 8.8.8.8").unwrap(), vec!["1.1.1.1", "8.8.8.8"]);
+        assert!(parse_windows_dns_override("").is_err());
+        assert!(parse_windows_dns_override("unexpected output").is_err());
     }
 }

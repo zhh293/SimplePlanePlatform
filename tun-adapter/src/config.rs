@@ -12,6 +12,9 @@ use crate::error::TunError;
 /// 顶级配置结构体
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
+    /// Desktop policy shared with proxy-local; standalone configurations remain independent.
+    #[serde(default)]
+    pub route_source: Option<std::path::PathBuf>,
     /// TUN 设备配置
     #[serde(default)]
     pub tun: TunConfig,
@@ -327,10 +330,19 @@ impl Config {
             TunError::Config(format!("failed to read config file {:?}: {}", path, e))
         })?;
 
-        let config: Config = toml::from_str(&content).map_err(|e| {
+        let mut config: Config = toml::from_str(&content).map_err(|e| {
             TunError::Config(format!("failed to parse config file {:?}: {}", path, e))
         })?;
 
+        let directory = path.parent().unwrap_or_else(|| Path::new("."));
+        if let Some(source) = &config.route_source {
+            if source.is_relative() { config.route_source = Some(directory.join(source)); }
+        } else if path.file_name().is_some_and(|name| name == "tun-nodes.toml") {
+            // Upgrade compatibility: existing desktop binaries only emit this file
+            // and cannot add route_source until the desktop itself is upgraded.
+            let source = directory.join("proxy.yml");
+            if source.is_file() { config.route_source = Some(source); }
+        }
         config.validate()?;
         Ok(config)
     }
@@ -360,7 +372,8 @@ impl Config {
         // 校验路由规则
         for rule in &self.routing.rules {
             match rule.rule_type.as_str() {
-                "domain_suffix" | "domain_keyword" | "domain_full" | "ip_cidr" | "port" => {}
+                "domain_suffix" | "domain_keyword" | "domain_full" | "ip_cidr" | "ip"
+                | "port" | "protocol" | "match" | "domain_provider" => {}
                 other => {
                     return Err(TunError::Config(format!("unknown rule type: {}", other)));
                 }
@@ -402,6 +415,20 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn managed_config_shares_desktop_policy_without_changing_standalone_configs() {
+        let dir = tempfile::tempdir().unwrap();
+        let shared = dir.path().join("proxy.yml");
+        std::fs::write(&shared, "route: {default_route: proxy}\n").unwrap();
+        let managed = dir.path().join("tun-nodes.toml");
+        std::fs::write(&managed, "").unwrap();
+        assert_eq!(super::Config::load(&managed).unwrap().route_source, Some(shared));
+        let standalone = dir.path().join("tun.toml");
+        std::fs::write(&standalone, "").unwrap();
+        assert!(super::Config::load(&standalone).unwrap().route_source.is_none());
+        std::fs::write(&standalone, "route_source = 'custom.yml'\n").unwrap();
+        assert_eq!(super::Config::load(&standalone).unwrap().route_source, Some(dir.path().join("custom.yml")));
+    }
     use super::*;
     use std::io::Write;
 

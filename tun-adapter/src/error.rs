@@ -96,6 +96,8 @@ pub enum Socks5Error {
 #[derive(Debug, thiserror::Error)]
 #[allow(clippy::enum_variant_names)]
 pub enum RouterError {
+    #[error("invalid route provider: {0}")]
+    InvalidProvider(String),
     /// 无效的规则类型
     #[error("invalid rule type: {0}")]
     InvalidRuleType(String),

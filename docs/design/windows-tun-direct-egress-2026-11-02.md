@@ -19,3 +19,9 @@ Live Windows TUN, three rounds: Baidu HTTP 200 at 0.485 / 0.344 / 0.500 s; Googl
 Installed tun-adapter.exe with tun-adapter.before-direct.exe backup; user tun.toml and tun-nodes.toml have .before-direct backups. proxy-local.jar and proxy-remote were not changed for this work.
 
 Reference: https://learn.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options (IP_UNICAST_IF).
+
+## Follow-up: preserve automatic DNS mode
+
+The previous backup read effective ServerAddresses, which includes DHCP-provided servers. Restoring that list wrote a static override even if the interface originally used automatic DNS. Windows backup now reads the interface registry NameServer override: an empty override is recorded as DHCP and restored with ResetServerAddresses. Static servers retain their original order; failed or invalid backups abort setup.
+
+Validation: 56 unit tests and 2 integration tests passed, 4 environment-dependent tests skipped. A live TUN start/stop cycle preserved an empty NameServer override and DHCP DNS 202.118.66.6. This fixes DNS mode restoration; it does not establish the cause of the separately observed HTTP/3 eight-second timeouts. Temporary QUIC diagnostics and test artifacts are excluded from this change.
