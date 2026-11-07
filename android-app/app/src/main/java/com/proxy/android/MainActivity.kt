@@ -64,6 +64,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var logText: TextView
     private lateinit var navigation: BottomNavigationView
     private lateinit var nodeSelectionSpinner: Spinner
+    private lateinit var appRoutingModeSpinner: Spinner
+    private var selectedAppPackages: List<String> = emptyList()
     private var selectedPage = R.id.nav_connection
     private var selectedNodeIndex = -1
     private var formMtu = VpnConfigStore.DEFAULT_MTU
@@ -123,6 +125,17 @@ class MainActivity : AppCompatActivity() {
         if (uri != null && text != null) writeConfigFile(uri, text)
     }
 
+    private val appPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            if (PlaneVpnService.isRunning) {
+                Toast.makeText(this, R.string.config_locked, Toast.LENGTH_LONG).show()
+            } else {
+                selectedAppPackages = result.data?.getStringArrayListExtra(AppPickerActivity.EXTRA_PACKAGES).orEmpty().distinct().sorted()
+                updateAppRoutingUi()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
@@ -152,6 +165,19 @@ class MainActivity : AppCompatActivity() {
         }
         defaultRouteSpinner = findViewById(R.id.defaultRouteSpinner)
         defaultRouteSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("代理", "直连", "拒绝"))
+        appRoutingModeSpinner = findViewById<Spinner>(R.id.appRoutingModeSpinner).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item,
+                AppRoutingConfig.MODES.map(::appRoutingModeLabel))
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = updateAppRoutingUi()
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
+        }
+        findViewById<Button>(R.id.selectAppsButton).setOnClickListener {
+            appPickerLauncher.launch(Intent(this, AppPickerActivity::class.java)
+                .putStringArrayListExtra(AppPickerActivity.EXTRA_PACKAGES, ArrayList(selectedAppPackages))
+                .putExtra(AppPickerActivity.EXTRA_REQUIRE_SELECTION, currentAppRouting().mode == AppRoutingConfig.INCLUDE))
+        }
         cnDirectCheckBox = findViewById(R.id.cnDirectCheckBox)
         directListInput = findViewById(R.id.directListInput)
         proxyListInput = findViewById(R.id.proxyListInput)
@@ -221,6 +247,8 @@ class MainActivity : AppCompatActivity() {
             putInt("preset", presetSpinner.selectedItemPosition)
             putInt("selectedNode", selectedNodeIndex)
             putInt("mtu", formMtu)
+            putInt("appMode", appRoutingModeSpinner.selectedItemPosition)
+            putStringArrayList("appPackages", ArrayList(selectedAppPackages))
             putString("ruleOrder", JSONArray().apply {
                 originalRules.forEach { put(JSONObject().put("type", it.type).put("value", it.value).put("action", it.action)) }
             }.toString())
@@ -252,6 +280,8 @@ class MainActivity : AppCompatActivity() {
         presetSpinner.setSelection(draft.getInt("preset"))
         selectedNodeIndex = draft.getInt("selectedNode", -1)
         formMtu = draft.getInt("mtu", VpnConfigStore.DEFAULT_MTU)
+        selectedAppPackages = draft.getStringArrayList("appPackages").orEmpty()
+        appRoutingModeSpinner.setSelection(draft.getInt("appMode", 0))
         draft.getString("ruleOrder")?.let { json ->
             val rules = JSONArray(json)
             originalRules = (0 until rules.length()).map {
@@ -261,6 +291,7 @@ class MainActivity : AppCompatActivity() {
         }
         draftInputs().forEach { (key, input) -> input.setText(draft.getString(key, "")) }
         refreshNodeChoices()
+        updateAppRoutingUi()
     }
 
     private fun showPage(page: Int) {
@@ -281,6 +312,34 @@ class MainActivity : AppCompatActivity() {
         }
         nodeSelectionSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
         nodeSelectionSpinner.setSelection(selectedNodeIndex + 1)
+    }
+
+    private fun currentAppRouting() = AppRoutingConfig(
+        AppRoutingConfig.MODES[appRoutingModeSpinner.selectedItemPosition.coerceAtLeast(0)], selectedAppPackages,
+    )
+
+    private fun appRoutingModeLabel(mode: String) = getString(when (mode) {
+        AppRoutingConfig.INCLUDE -> R.string.app_routing_include
+        AppRoutingConfig.EXCLUDE -> R.string.app_routing_exclude
+        else -> R.string.app_routing_all
+    })
+
+    private fun appRoutingSummary(policy: AppRoutingConfig): String {
+        val label = appRoutingModeLabel(policy.mode)
+        return if (policy.mode == AppRoutingConfig.ALL) label else getString(R.string.app_routing_summary, label, policy.packages.size)
+    }
+
+    private fun updateAppRoutingUi() {
+        val policy = currentAppRouting()
+        val all = policy.mode == AppRoutingConfig.ALL
+        findViewById<TextView>(R.id.appRoutingConnectionSummary).text = getString(R.string.app_routing_connection_summary, appRoutingSummary(policy))
+        findViewById<TextView>(R.id.appRoutingHint).setText(if (all) R.string.app_routing_hint_all else R.string.app_routing_hint)
+        findViewById<Button>(R.id.selectAppsButton).apply {
+            visibility = if (all) View.GONE else View.VISIBLE
+            isEnabled = !vpnRunning && !transferInProgress && !all
+            text = if (selectedAppPackages.isEmpty()) getString(R.string.app_picker_title)
+                else getString(R.string.app_picker_change, selectedAppPackages.size)
+        }
     }
 
     private fun configureNotifications() {
@@ -334,6 +393,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindConfigToForm(config: AndroidVpnConfig) {
+        selectedAppPackages = config.appRouting.packages
+        appRoutingModeSpinner.setSelection(AppRoutingConfig.MODES.indexOf(config.appRouting.mode).coerceAtLeast(0))
         selectedNodeIndex = config.selectedNodeIndex
         formMtu = config.mtu
         originalRules = config.routing.rules
@@ -360,6 +421,7 @@ class MainActivity : AppCompatActivity() {
                 .joinToString("\n") { "${it.type},${it.value},${it.action}" },
         )
         refreshNodeChoices()
+        updateAppRoutingUi()
     }
 
     private fun addNodeRow(node: RemoteNodeConfig) {
@@ -384,6 +446,7 @@ class MainActivity : AppCompatActivity() {
     private fun saveCurrentConfig(showSavedToast: Boolean): AndroidVpnConfig? {
         val config = readConfigFromForm() ?: return null
         config.validate()?.let {
+            if (config.appRouting.validate() != null) navigation.selectedItemId = R.id.nav_routing
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
             return null
         }
@@ -440,6 +503,7 @@ class MainActivity : AppCompatActivity() {
             mtu = formMtu,
             remotes = remotes,
             selectedNodeIndex = selectedNodeIndex,
+            appRouting = currentAppRouting(),
             routing = AndroidRoutingConfig(
                 defaultAction = routeActions[defaultRouteSpinner.selectedItemPosition],
                 cnDirect = cnDirectCheckBox.isChecked,
@@ -548,8 +612,8 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.import_preview_title)
             .setMessage(getString(R.string.import_preview, imported.remotes.size,
-                imported.remotes.count { it.enabled }, imported.routing.rules.size, choice))
-            .setNegativeButton(android.R.string.cancel, null)
+                imported.remotes.count { it.enabled }, imported.routing.rules.size, choice, appRoutingSummary(imported.appRouting)))
+            .setNegativeButton(R.string.cancel_action, null)
             .setPositiveButton(R.string.import_apply) { _, _ ->
                 if (PlaneVpnService.isRunning) {
                     Toast.makeText(this, R.string.config_locked, Toast.LENGTH_LONG).show()
@@ -611,6 +675,7 @@ class MainActivity : AppCompatActivity() {
         val failed = status.startsWith("VPN 已启动；代理请求失败") || status.startsWith("连接失败") || status == getString(R.string.vpn_status_error)
         vpnStatusText.text = if (failed) getString(R.string.vpn_status_error) else status
         findViewById<TextView>(R.id.vpnDetailText).setText(when {
+            status == getString(R.string.app_routing_unavailable) -> R.string.app_routing_choose_installed
             failed -> R.string.failure_detail
             status == getString(R.string.vpn_status_no_network) -> R.string.offline_detail
             status == getString(R.string.vpn_status_recovering) -> R.string.recovery_detail
@@ -629,6 +694,7 @@ class MainActivity : AppCompatActivity() {
         listOf(
             addNodeButton,
             nodeSelectionSpinner,
+            appRoutingModeSpinner,
             saveConfigButton,
             defaultRouteSpinner,
             cnDirectCheckBox,
@@ -649,6 +715,7 @@ class MainActivity : AppCompatActivity() {
             view.isEnabled = enabled
             ((view.parent as? View)?.parent as? TextInputLayout)?.isEnabled = enabled
         }
+        updateAppRoutingUi()
     }
 
     private fun updateStats(json: String) {

@@ -38,8 +38,10 @@ data class AndroidVpnConfig(
     val routing: AndroidRoutingConfig = AndroidRoutingConfig(),
     /** -1 keeps ordered failover; otherwise only this node may carry proxy traffic. */
     val selectedNodeIndex: Int = -1,
+    val appRouting: AppRoutingConfig = AppRoutingConfig(),
 ) {
     fun validate(): String? {
+        appRouting.validate()?.let { return it }
         if (selectedNodeIndex < -1 || selectedNodeIndex >= remotes.size) return "所选节点不存在，请重新选择"
         if (selectedNodeIndex >= 0 && !remotes[selectedNodeIndex].enabled) return "所选节点已停用，请启用或重新选择"
         val enabled = remotes.filter { it.enabled }
@@ -80,6 +82,7 @@ data class AndroidVpnConfig(
         val root = JSONObject()
             .put("mtu", mtu)
             .put("selected_node_index", selectedNodeIndex)
+            .put("app_routing", appRouting.toJson())
             .put("remotes", JSONArray().apply {
                 remotes.forEach { node ->
                     put(JSONObject()
@@ -193,6 +196,7 @@ data class AndroidVpnConfig(
                 },
                 routing = routing,
                 selectedNodeIndex = if (root.has("selected_node_index")) root.getInt("selected_node_index") else -1,
+                appRouting = AppRoutingConfig.fromJson(root),
             )
         }
 

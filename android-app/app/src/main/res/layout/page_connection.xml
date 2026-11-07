@@ -88,6 +88,8 @@
                     style="@style/AppBodyText"
                     android:text="@string/node_selection_hint"
                     android:textSize="12sp" />
+                <TextView android:id="@+id/appRoutingConnectionSummary" style="@style/AppBodyText"
+                    android:layout_marginTop="16dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

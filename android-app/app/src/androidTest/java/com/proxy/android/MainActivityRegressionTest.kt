@@ -2,7 +2,9 @@ package com.proxy.android
 
 import android.app.ActivityOptions
 import android.content.Intent
+import android.net.VpnService
 import android.os.Build
+import android.os.SystemClock
 import android.text.method.PasswordTransformationMethod
 import android.view.View
 import android.widget.Button
@@ -14,11 +16,39 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.junit.Assert.*
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityRegressionTest {
+    @Test
+    fun missingSelectedApplicationPreventsVpnStart() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assumeTrue("Requires the user's existing VPN consent", VpnService.prepare(context) == null)
+        val original = VpnConfigStore.load(context)
+        val missingApp = AppRoutingConfig(AppRoutingConfig.INCLUDE, listOf("com.example.qa.never.installed"))
+        try {
+            VpnConfigStore.save(context, original.copy(appRouting = missingApp))
+            launch().use { scenario ->
+                scenario.onActivity { it.findViewById<Button>(R.id.toggleVpnButton).performClick() }
+                val expected = context.getString(R.string.app_routing_unavailable)
+                val deadline = SystemClock.elapsedRealtime() + 5000
+                while (PlaneVpnService.latestStatusMessage != expected && SystemClock.elapsedRealtime() < deadline) {
+                    SystemClock.sleep(100)
+                }
+                assertEquals(expected, PlaneVpnService.latestStatusMessage)
+                assertFalse(PlaneVpnService.isRunning)
+                scenario.onActivity {
+                    assertEquals(expected, it.findViewById<android.widget.TextView>(R.id.vpnStatusText).text)
+                }
+            }
+        } finally {
+            context.stopService(Intent(context, PlaneVpnService::class.java))
+            VpnConfigStore.save(context, original)
+        }
+    }
+
     @Test
     fun selectionAndExportPreserveImportedSettingsAfterRecreation() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
@@ -27,6 +57,7 @@ class MainActivityRegressionTest {
             mtu = 1400,
             remotes = listOf(original.remotes.first().copy(name = "FIRST"), original.remotes.first().copy(name = "SECOND")),
             selectedNodeIndex = 1,
+            appRouting = AppRoutingConfig(AppRoutingConfig.EXCLUDE, listOf("com.android.chrome", "com.example.mail")),
             routing = AndroidRoutingConfig("proxy", false, listOf(
                 RouteRuleConfig("port", "443", "reject"),
                 RouteRuleConfig("domain_pattern", "*.example.com", "direct"),
@@ -39,6 +70,7 @@ class MainActivityRegressionTest {
                 scenario.recreate()
                 scenario.onActivity { activity ->
                     assertEquals(2, activity.findViewById<Spinner>(R.id.nodeSelectionSpinner).selectedItemPosition)
+                    assertEquals(2, activity.findViewById<Spinner>(R.id.appRoutingModeSpinner).selectedItemPosition)
                     activity.findViewById<Button>(R.id.exportConfigButton).performClick()
                     val exported = AndroidVpnConfig.fromImportText(activity.findViewById<EditText>(R.id.importConfigInput).text.toString())
                     assertEquals(fixture, exported)

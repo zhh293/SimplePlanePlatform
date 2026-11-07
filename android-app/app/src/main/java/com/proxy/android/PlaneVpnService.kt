@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
@@ -84,9 +85,14 @@ class PlaneVpnService : VpnService() {
         publishStatus(running = true, message = getString(R.string.vpn_status_connecting))
         watchUnderlyingNetwork()
 
-        if (!startDataPlane(intent)) {
+        val failure = try {
+            if (startDataPlane(intent)) null else getString(R.string.vpn_status_error)
+        } catch (_: NoAvailableVpnApps) {
+            getString(R.string.app_routing_unavailable)
+        }
+        if (failure != null) {
             stopSelfSafely()
-            publishStatus(running = false, message = getString(R.string.vpn_status_error))
+            publishStatus(running = false, message = failure)
             return START_NOT_STICKY
         }
 
@@ -95,13 +101,14 @@ class PlaneVpnService : VpnService() {
     }
 
     private fun startDataPlane(intent: Intent?): Boolean {
-        val configJson = runCatching { buildConfigJson(intent) }
+        val config = runCatching { buildConfig(intent) }
             .onFailure {
                 Log.e(TAG, "VPN configuration could not be loaded", it)
                 AppLogStore.add("配置或证书加载失败，请检查节点配置")
             }
             .getOrNull() ?: return false
-        val pfd = establishTun() ?: run {
+        val configJson = config.toJsonString()
+        val pfd = establishTun(config.appRouting) ?: run {
             Log.e(TAG, "establish TUN failed")
             AppLogStore.add("建立 TUN 失败，请确认 VPN 授权")
             return false
@@ -141,21 +148,44 @@ class PlaneVpnService : VpnService() {
         tunInterface = null
     }
 
-    private fun establishTun(): ParcelFileDescriptor? =
-        runCatching {
+    private fun establishTun(appRouting: AppRoutingConfig): ParcelFileDescriptor? =
+        try {
             Builder()
                 .setSession(getString(R.string.app_name))
                 .setMtu(TUN_MTU)
-                // The data plane runs in this process. Excluding our own UID is
-                // the last line of defense if a per-socket protect call regresses.
-                .addDisallowedApplication(packageName)
+                .apply { applyAppRouting(this, appRouting) }
                 .addAddress(TUN_ADDRESS, TUN_PREFIX)
                 .addRoute("0.0.0.0", 0)
                 // The native data plane forwards IPv4 only. Leaving IPv6
                 // unconfigured makes Android block it and use IPv4 fallback.
                 .addDnsServer(FAKE_DNS_SERVER)
                 .establish()
-        }.onFailure { Log.e(TAG, "establish threw", it) }.getOrNull()
+        } catch (missing: NoAvailableVpnApps) {
+            throw missing
+        } catch (error: Exception) {
+            Log.e(TAG, "establish threw", error)
+            null
+        }
+
+    private fun applyAppRouting(builder: Builder, policy: AppRoutingConfig) {
+        fun add(name: String, register: (String) -> Builder): Boolean =
+            try {
+                // Some Android versions accept an unknown package in Builder
+                // and only omit its UID later. Check availability explicitly.
+                @Suppress("DEPRECATION")
+                packageManager.getApplicationInfo(name, 0)
+                register(name)
+                true
+            } catch (_: PackageManager.NameNotFoundException) { false }
+        val unavailable = policy.applyToVpn(
+            ownPackage = packageName,
+            allow = { add(it, builder::addAllowedApplication) },
+            exclude = { add(it, builder::addDisallowedApplication) },
+        )
+        if (unavailable > 0) {
+            AppLogStore.add("应用分流已跳过 ${unavailable} 个不可用应用")
+        }
+    }
 
     /**
      * Excludes an outbound native socket from this VPN and pins it to the
@@ -264,7 +294,7 @@ class PlaneVpnService : VpnService() {
         recoveringNetwork = false
     }
 
-    private fun buildConfigJson(intent: Intent?): String {
+    private fun buildConfig(intent: Intent?): AndroidVpnConfig {
         val explicit = intent?.getStringExtra(EXTRA_CONFIG_JSON)?.takeIf { it.isNotBlank() }
         val json = explicit ?: VpnConfigStore.load(this).toJsonString()
         val savedConfig = AndroidVpnConfig.fromJson(json)
@@ -280,7 +310,7 @@ class PlaneVpnService : VpnService() {
         val summary = "$selection，使用 ${config.remotes.size}/${savedConfig.remotes.size} 个节点，协议 ${config.remotes.joinToString { it.transport }}，规则 ${config.routing.rules.size}"
         AppLogStore.add("加载配置：$summary")
         Log.i(TAG, "VPN config: $summary")
-        return nativeConfig.toJsonString()
+        return nativeConfig
     }
 
     fun onNativeStatus(state: String) {

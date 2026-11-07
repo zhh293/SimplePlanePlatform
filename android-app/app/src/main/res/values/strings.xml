@@ -100,6 +100,25 @@
     <string name="file_unavailable">无法打开所选文件</string>
     <string name="file_error">文件操作失败：%1$s</string>
     <string name="import_preview_title">导入配置</string>
-    <string name="import_preview">共 %1$d 个节点，启用 %2$d 个\n路由规则 %3$d 条\n连接选择：%4$s\n\n应用后将替换当前配置及未保存的编辑。</string>
+    <string name="import_preview">共 %1$d 个节点，启用 %2$d 个\n路由规则 %3$d 条\n连接选择：%4$s\n应用范围：%5$s\n\n应用后将替换当前配置及未保存的编辑。</string>
     <string name="import_apply">应用配置</string>
+    <string name="app_routing_title">应用范围</string>
+    <string name="app_routing_all">所有应用</string>
+    <string name="app_routing_include">仅选中应用</string>
+    <string name="app_routing_exclude">排除选中应用</string>
+    <string name="app_routing_summary">%1$s · 已选 %2$d 个</string>
+    <string name="app_routing_connection_summary">应用范围：%1$s</string>
+    <string name="app_routing_hint_all">进入 VPN 的流量按下方规则分流。</string>
+    <string name="app_routing_hint">范围外的应用使用系统网络。如果系统已开启“阻止未通过 VPN 的连接”，这些应用将无法联网。</string>
+    <string name="app_picker_title">选择应用</string>
+    <string name="cancel_action">取消</string>
+    <string name="app_picker_search">搜索应用名称或包名</string>
+    <string name="app_picker_count">已选择 %1$d 个应用</string>
+    <string name="app_picker_change">更改已选应用（%1$d）</string>
+    <string name="app_picker_done">使用所选应用</string>
+    <string name="app_picker_empty">没有匹配的应用</string>
+    <string name="app_picker_unavailable">应用不可用或未安装</string>
+    <string name="app_picker_failed">无法读取应用列表，请返回后重试</string>
+    <string name="app_routing_unavailable">所选应用均不可用</string>
+    <string name="app_routing_choose_installed">打开「路由 → 选择应用」，选择当前设备上已安装的应用，再重新连接。</string>
 </resources>
