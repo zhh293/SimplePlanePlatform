@@ -140,12 +140,58 @@ const QUIC_STREAM_RECEIVE_WINDOW: u32 = 4 * 1024 * 1024;
 const QUIC_SEND_WINDOW: u32 = 16 * 1024 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 
+fn quic_error(context: &str, error: quinn::ConnectionError) -> CoreError {
+    let detail = format!("{context}: {error}");
+    match error {
+        quinn::ConnectionError::TimedOut => CoreError::Timeout(detail),
+        quinn::ConnectionError::TransportError(_) => CoreError::Protocol(detail),
+        _ => CoreError::Network(detail),
+    }
+}
+
+fn h3_connection_error(
+    context: &str,
+    error: h3::error::ConnectionError,
+    connection: &quinn::Connection,
+) -> CoreError {
+    use h3::error::ConnectionError;
+    // h3 0.0.8 hides the payload of its non-exhaustive tuple variants.
+    // Read the typed QUIC close reason instead of parsing error strings or
+    // opting into h3's unstable backend API.
+    if let Some(reason) = connection.close_reason() {
+        return quic_error(context, reason);
+    }
+    let detail = format!("{context}: {error}");
+    match error {
+        ConnectionError::Local { .. } if !error.is_h3_no_error() => CoreError::Protocol(detail),
+        _ => CoreError::Network(detail),
+    }
+}
+
+fn h3_stream_error(
+    context: &str,
+    error: h3::error::StreamError,
+    connection: &quinn::Connection,
+) -> CoreError {
+    use h3::error::StreamError;
+    if let Some(reason) = connection.close_reason() {
+        return quic_error(context, reason);
+    }
+    match error {
+        StreamError::StreamError { .. } | StreamError::HeaderTooBig { .. } => {
+            CoreError::Protocol(format!("{context}: {error}"))
+        }
+        _ => CoreError::Network(format!("{context}: {error}")),
+    }
+}
+
 type H3RequestStream = h3::client::RequestStream<h3_quinn::BidiStream<Bytes>, Bytes>;
 
 /// One QUIC connection carrying many HTTP/3 request streams.
 #[derive(Clone)]
 pub struct OutboundConnection {
     endpoint: quinn::Endpoint,
+    quic_connection: quinn::Connection,
     send_request: h3::client::SendRequest<h3_quinn::OpenStreams, Bytes>,
     cipher: Cipher,
     req_id_gen: Arc<RequestIdGen>,
@@ -276,18 +322,18 @@ impl OutboundConnection {
         let connection = tokio::time::timeout(CONNECT_TIMEOUT, connecting)
             .await
             .map_err(|_| {
-                CoreError::Protocol(format!(
+                CoreError::Timeout(format!(
                     "HTTP/3 QUIC handshake with {addr} timed out after 15s"
                 ))
             })?
-            .map_err(|e| CoreError::Protocol(format!("HTTP/3 QUIC handshake failed: {e}")))?;
+            .map_err(|e| quic_error("HTTP/3 QUIC handshake failed", e))?;
 
         let health = ConnectionHealth::new();
 
-        let quinn_connection = h3_quinn::Connection::new(connection);
+        let quinn_connection = h3_quinn::Connection::new(connection.clone());
         let (mut driver, send_request) = h3::client::new(quinn_connection)
             .await
-            .map_err(|e| CoreError::Protocol(format!("HTTP/3 session setup failed: {e:?}")))?;
+            .map_err(|e| h3_connection_error("HTTP/3 session setup failed", e, &connection))?;
         let driver_health = Arc::clone(&health);
         tokio::spawn(async move {
             let result = future::poll_fn(|cx| driver.poll_close(cx)).await;
@@ -299,6 +345,7 @@ impl OutboundConnection {
 
         Ok(Self {
             endpoint,
+            quic_connection: connection,
             send_request,
             cipher,
             req_id_gen: Arc::new(RequestIdGen::new()),
@@ -331,16 +378,15 @@ impl OutboundConnection {
             .clone()
             .send_request(request)
             .await
-            .map_err(|e| CoreError::Protocol(format!("open HTTP/3 stream failed: {e:?}")))?;
+            .map_err(|e| h3_stream_error("open HTTP/3 stream failed", e, &self.quic_connection))?;
 
         // Netty's HTTP/3 transport sends the response headers as soon as the
         // request headers are accepted.  Wait for those headers before writing
         // the first proxy frame, matching the Java client and avoiding an
         // early request-body/response-header race in the native QUIC stack.
-        let response = stream
-            .recv_response()
-            .await
-            .map_err(|e| CoreError::Protocol(format!("receive HTTP/3 response failed: {e:?}")))?;
+        let response = stream.recv_response().await.map_err(|e| {
+            h3_stream_error("receive HTTP/3 response failed", e, &self.quic_connection)
+        })?;
         let protocol = response
             .headers()
             .get("x-plane-protocol")
@@ -364,7 +410,7 @@ impl OutboundConnection {
         stream
             .send_data(Bytes::from(frame))
             .await
-            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 CONNECT failed: {e:?}")))?;
+            .map_err(|e| h3_stream_error("send HTTP/3 CONNECT failed", e, &self.quic_connection))?;
 
         let mut stream = OutboundStream {
             request_id,
@@ -381,12 +427,13 @@ impl OutboundConnection {
             // this flow ends, including when the dispatcher replaces its cache.
             _sender: self.send_request.clone(),
             _endpoint: self.endpoint.clone(),
+            quic_connection: self.quic_connection.clone(),
         };
         // HTTP headers do not prove the encrypted CONNECT or target succeeded.
         // Java replies with stream_id=0, so correlate using request_id instead.
         loop {
             let messages = stream.recv_wire_messages().await?.ok_or_else(|| {
-                CoreError::Protocol("HTTP/3 closed before CONNECT_RESPONSE".into())
+                CoreError::Network("HTTP/3 closed before CONNECT_RESPONSE".into())
             })?;
             let mut connected = false;
             for message in messages {
@@ -434,6 +481,7 @@ fn format_authority(host: &str, port: u16) -> String {
 pub struct OutboundStream {
     _sender: h3::client::SendRequest<h3_quinn::OpenStreams, Bytes>,
     _endpoint: quinn::Endpoint,
+    quic_connection: quinn::Connection,
     request_id: i64,
     stream_id: i64,
     target_host: String,
@@ -456,7 +504,7 @@ impl OutboundStream {
         self.stream
             .send_data(Bytes::from(frame))
             .await
-            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 DATA failed: {e:?}")))
+            .map_err(|e| h3_stream_error("send HTTP/3 DATA failed", e, &self.quic_connection))
     }
 
     pub async fn send_disconnect(&mut self) -> Result<()> {
@@ -467,11 +515,13 @@ impl OutboundStream {
         self.stream
             .send_data(Bytes::from(frame))
             .await
-            .map_err(|e| CoreError::Protocol(format!("send HTTP/3 DISCONNECT failed: {e:?}")))?;
+            .map_err(|e| {
+                h3_stream_error("send HTTP/3 DISCONNECT failed", e, &self.quic_connection)
+            })?;
         self.stream
             .finish()
             .await
-            .map_err(|e| CoreError::Protocol(format!("finish HTTP/3 stream failed: {e:?}")))
+            .map_err(|e| h3_stream_error("finish HTTP/3 stream failed", e, &self.quic_connection))
     }
 
     pub async fn recv_messages(&mut self) -> Result<Option<Vec<ProxyMessage>>> {
@@ -511,9 +561,11 @@ impl OutboundStream {
                 Ok(Some(messages))
             }
             Ok(None) => Ok(None),
-            Err(e) => Err(CoreError::Protocol(format!(
-                "receive HTTP/3 DATA failed: {e:?}"
-            ))),
+            Err(e) => Err(h3_stream_error(
+                "receive HTTP/3 DATA failed",
+                e,
+                &self.quic_connection,
+            )),
         }
     }
 }
@@ -545,7 +597,9 @@ where
             tokio::select! {
                     changed = health_receiver.changed() => {
                     if changed.is_err() || !*health_receiver.borrow() {
-                        return Err(CoreError::Protocol("HTTP/3 connection lost".into()));
+                        return Err(stream.quic_connection.close_reason()
+                            .map(|e| quic_error("HTTP/3 connection lost", e))
+                            .unwrap_or_else(|| CoreError::Network("HTTP/3 connection lost".into())));
                     }
                 }
                 read = local.read(&mut buf) => {
@@ -604,6 +658,18 @@ pub(crate) mod tests {
     use super::*;
     use crate::outbound::NoopProtector;
 
+    #[test]
+    fn quic_timeout_is_not_reported_as_a_codec_failure() {
+        assert!(matches!(
+            quic_error("receive response", quinn::ConnectionError::TimedOut),
+            CoreError::Timeout(_)
+        ));
+        assert!(matches!(
+            quic_error("receive response", quinn::ConnectionError::LocallyClosed),
+            CoreError::Network(_)
+        ));
+    }
+
     pub(crate) async fn mock_proxy(
         http_status: u16,
         ack_status: Option<u8>,
@@ -630,95 +696,98 @@ pub(crate) mod tests {
         let endpoint = quinn::Endpoint::server(config, "127.0.0.1:0".parse().unwrap()).unwrap();
         let addr = endpoint.local_addr().unwrap();
         let task = tokio::spawn(async move {
-            let incoming = endpoint.accept().await.unwrap();
-            let Ok(connection) = incoming.await else {
-                return;
-            };
-            let mut server = h3::server::Connection::new(h3_quinn::Connection::new(connection))
-                .await
-                .unwrap();
-            while let Ok(Some(resolver)) = server.accept().await {
-                tokio::spawn(async move {
-                    let (_, mut stream) = resolver.resolve_request().await.unwrap();
-                    let response = http::Response::builder()
-                        .status(http_status)
-                        .header("x-plane-protocol", "proxy-message-v1")
-                        .body(())
-                        .unwrap();
-                    stream.send_response(response).await.unwrap();
-                    if http_status != 200 {
-                        let _ = stream.finish().await;
-                        return;
-                    }
-                    let cipher = Cipher::test_server(suite, secret).unwrap();
-                    let mut reassembler = InboundReassembler::new(cipher.clone());
-                    while let Ok(Some(mut chunk)) = stream.recv_data().await {
-                        let bytes = chunk.copy_to_bytes(chunk.remaining());
-                        let Ok(messages) = reassembler.push_encrypted_frame(&bytes) else {
+            while let Some(incoming) = endpoint.accept().await {
+                let Ok(connection) = incoming.await else {
+                    return;
+                };
+                let mut server = h3::server::Connection::new(h3_quinn::Connection::new(connection))
+                    .await
+                    .unwrap();
+                while let Ok(Some(resolver)) = server.accept().await {
+                    tokio::spawn(async move {
+                        let (_, mut stream) = resolver.resolve_request().await.unwrap();
+                        let response = http::Response::builder()
+                            .status(http_status)
+                            .header("x-plane-protocol", "proxy-message-v1")
+                            .body(())
+                            .unwrap();
+                        stream.send_response(response).await.unwrap();
+                        if http_status != 200 {
+                            let _ = stream.finish().await;
                             return;
-                        };
-                        for message in messages {
-                            let response = match message.type_ {
-                                MessageType::Connect => {
-                                    if message.host == "reset.test" {
-                                        stream.stop_stream(h3::error::Code::H3_REQUEST_REJECTED);
+                        }
+                        let cipher = Cipher::test_server(suite, secret).unwrap();
+                        let mut reassembler = InboundReassembler::new(cipher.clone());
+                        while let Ok(Some(mut chunk)) = stream.recv_data().await {
+                            let bytes = chunk.copy_to_bytes(chunk.remaining());
+                            let Ok(messages) = reassembler.push_encrypted_frame(&bytes) else {
+                                return;
+                            };
+                            for message in messages {
+                                let response = match message.type_ {
+                                    MessageType::Connect => {
+                                        if message.host == "reset.test" {
+                                            stream
+                                                .stop_stream(h3::error::Code::H3_REQUEST_REJECTED);
+                                            return;
+                                        }
+                                        if message.host == "slow.test" {
+                                            continue;
+                                        }
+                                        let Some(status) = ack_status else { continue };
+                                        let ack = ProxyMessage {
+                                            type_: MessageType::ConnectResponse,
+                                            status: if message.host == "reject.test" {
+                                                244
+                                            } else {
+                                                status
+                                            },
+                                            request_id: message.request_id,
+                                            stream_id: 0,
+                                            host: String::new(),
+                                            port: 0,
+                                            data: Vec::new(),
+                                        };
+                                        let mut bytes =
+                                            encode_encrypted_frame(&cipher, &ack).unwrap();
+                                        bytes.extend(
+                                            encode_encrypted_frame(
+                                                &cipher,
+                                                &ProxyMessage::data(message.stream_id, b"greeting"),
+                                            )
+                                            .unwrap(),
+                                        );
+                                        bytes
+                                    }
+                                    MessageType::Data => {
+                                        encode_encrypted_frame(&cipher, &message).unwrap()
+                                    }
+                                    MessageType::Disconnect => {
+                                        let _ = stream.finish().await;
                                         return;
                                     }
-                                    if message.host == "slow.test" {
-                                        continue;
-                                    }
-                                    let Some(status) = ack_status else { continue };
-                                    let ack = ProxyMessage {
-                                        type_: MessageType::ConnectResponse,
-                                        status: if message.host == "reject.test" {
-                                            244
-                                        } else {
-                                            status
-                                        },
-                                        request_id: message.request_id,
-                                        stream_id: 0,
-                                        host: String::new(),
-                                        port: 0,
-                                        data: Vec::new(),
-                                    };
-                                    let mut bytes = encode_encrypted_frame(&cipher, &ack).unwrap();
-                                    bytes.extend(
-                                        encode_encrypted_frame(
-                                            &cipher,
-                                            &ProxyMessage::data(message.stream_id, b"greeting"),
-                                        )
-                                        .unwrap(),
-                                    );
-                                    bytes
-                                }
-                                MessageType::Data => {
-                                    encode_encrypted_frame(&cipher, &message).unwrap()
-                                }
-                                MessageType::Disconnect => {
-                                    let _ = stream.finish().await;
+                                    _ => continue,
+                                };
+                                // Exercise reassembly across independent QUIC DATA frames.
+                                let split = response.len() / 2;
+                                if stream
+                                    .send_data(Bytes::copy_from_slice(&response[..split]))
+                                    .await
+                                    .is_err()
+                                {
                                     return;
                                 }
-                                _ => continue,
-                            };
-                            // Exercise reassembly across independent QUIC DATA frames.
-                            let split = response.len() / 2;
-                            if stream
-                                .send_data(Bytes::copy_from_slice(&response[..split]))
-                                .await
-                                .is_err()
-                            {
-                                return;
-                            }
-                            if stream
-                                .send_data(Bytes::copy_from_slice(&response[split..]))
-                                .await
-                                .is_err()
-                            {
-                                return;
+                                if stream
+                                    .send_data(Bytes::copy_from_slice(&response[split..]))
+                                    .await
+                                    .is_err()
+                                {
+                                    return;
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
         });
         (addr, ca_pem, task)

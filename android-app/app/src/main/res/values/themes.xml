@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SimplePlane" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Theme.SimplePlane" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/app_background</item>
         <item name="android:statusBarColor">@color/app_background</item>
         <item name="android:navigationBarColor">@color/app_background</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
         <item name="colorPrimary">@color/app_primary</item>
-        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorOnPrimary">@color/app_on_primary</item>
+        <item name="colorPrimaryContainer">@color/app_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/app_on_primary_container</item>
+        <item name="colorSecondaryContainer">@color/app_primary_container</item>
+        <item name="colorOnSecondaryContainer">@color/app_on_primary_container</item>
+        <item name="colorSurface">@color/app_surface</item>
+        <item name="colorOnSurface">@color/app_text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/app_text_secondary</item>
+        <item name="colorOutline">@color/app_outline</item>
+        <item name="android:colorBackground">@color/app_background</item>
+        <item name="textInputStyle">@style/Widget.Material3.TextInputLayout.OutlinedBox</item>
     </style>
 
     <style name="AppSectionTitle">
@@ -17,5 +27,22 @@
         <item name="android:textColor">@color/app_text_primary</item>
         <item name="android:textSize">17sp</item>
         <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="AppPageTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/app_text_primary</item>
+    </style>
+
+    <style name="AppBodyText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingExtra">3dp</item>
+        <item name="android:textColor">@color/app_text_secondary</item>
     </style>
 </resources>

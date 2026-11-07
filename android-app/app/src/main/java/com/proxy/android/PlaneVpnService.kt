@@ -3,12 +3,14 @@ package com.proxy.android
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.Handler
@@ -26,6 +28,30 @@ class PlaneVpnService : VpnService() {
     private var nativeHandle: Long = 0L
     private var foregroundStarted = false
     private var tunInterface: ParcelFileDescriptor? = null
+    private var watchingNetwork = false
+    @Volatile
+    private var underlyingNetwork: Network? = null
+    private val availableNetworks = mutableMapOf<Network, NetworkCapabilities>()
+    private var recoveringNetwork = false
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            recordNetwork(network, getSystemService(ConnectivityManager::class.java).getNetworkCapabilities(network))
+        }
+        override fun onLost(network: Network) = recordNetwork(network, null)
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = recordNetwork(network, capabilities)
+    }
+
+    private fun recordNetwork(network: Network, capabilities: NetworkCapabilities?) {
+        mainHandler.post {
+            if (!watchingNetwork) return@post
+            if (capabilities != null && isPhysicalInternet(capabilities)) {
+                availableNetworks[network] = capabilities
+            } else {
+                availableNetworks.remove(network)
+            }
+            refreshUnderlyingNetwork()
+        }
+    }
 
     private val statsTicker = object : Runnable {
         override fun run() {
@@ -56,14 +82,15 @@ class PlaneVpnService : VpnService() {
         ensureNotificationChannel()
         startForegroundCompat(getString(R.string.vpn_status_connecting))
         publishStatus(running = true, message = getString(R.string.vpn_status_connecting))
+        watchUnderlyingNetwork()
 
         if (!startDataPlane(intent)) {
-            publishStatus(running = false, message = getString(R.string.vpn_status_error))
             stopSelfSafely()
+            publishStatus(running = false, message = getString(R.string.vpn_status_error))
             return START_NOT_STICKY
         }
 
-        publishStatus(running = true, message = getString(R.string.vpn_status_ready))
+        refreshNativeStatus(bridge.nativeStats(nativeHandle))
         return START_STICKY
     }
 
@@ -100,6 +127,7 @@ class PlaneVpnService : VpnService() {
         }
 
         nativeHandle = handle
+        setUnderlyingNetworks(underlyingNetwork?.let { arrayOf(it) } ?: emptyArray())
         startStatsTicker()
         AppLogStore.add("数据面已启动")
         Log.i(TAG, "data plane started, handle=$handle")
@@ -141,7 +169,7 @@ class PlaneVpnService : VpnService() {
             return false
         }
 
-        val network = findUnderlyingNetwork()
+        val network = underlyingNetwork
         if (network == null) {
             Log.e(TAG, "no non-VPN network available for fd=$fd")
             AppLogStore.add("没有可用的底层网络")
@@ -164,7 +192,7 @@ class PlaneVpnService : VpnService() {
 
     /** Resolves through one physical network, never through the VPN DNS path. */
     fun resolveIpOutsideVpn(host: String): String? {
-        val network = findUnderlyingNetwork() ?: run {
+        val network = underlyingNetwork ?: run {
             Log.w(TAG, "resolveIpOutsideVpn($host): no non-VPN network")
             return null
         }
@@ -177,18 +205,63 @@ class PlaneVpnService : VpnService() {
         }.getOrNull()
     }
 
-    private fun findUnderlyingNetwork(): Network? {
-        val connectivity = getSystemService(ConnectivityManager::class.java) ?: return null
+    private fun isPhysicalInternet(capabilities: NetworkCapabilities): Boolean =
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
+            !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
 
-        fun isUsable(network: Network): Boolean {
-            val capabilities = connectivity.getNetworkCapabilities(network) ?: return false
-            return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
-                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+    private fun selectUnderlyingNetwork(): Network? =
+        getSystemService(ConnectivityManager::class.java).activeNetwork?.takeIf { it in availableNetworks }
+            ?: availableNetworks.maxByOrNull { (_, caps) ->
+                (if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) 2 else 0) +
+                    (if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) 1 else 0)
+            }?.key
+
+    private fun watchUnderlyingNetwork() {
+        if (watchingNetwork) return
+        val connectivity = getSystemService(ConnectivityManager::class.java)
+        availableNetworks.clear()
+        // Seed once, then treat onLost as authoritative. Re-querying allNetworks
+        // inside onLost can still return the just-disconnected network.
+        @Suppress("DEPRECATION")
+        connectivity.allNetworks.forEach { network ->
+            connectivity.getNetworkCapabilities(network)?.takeIf(::isPhysicalInternet)?.let {
+                availableNetworks[network] = it
+            }
         }
+        underlyingNetwork = selectUnderlyingNetwork()
+        recoveringNetwork = false
+        connectivity.registerNetworkCallback(
+            NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                .build(),
+            networkCallback,
+        )
+        watchingNetwork = true
+        setUnderlyingNetworks(underlyingNetwork?.let { arrayOf(it) } ?: emptyArray())
+    }
 
-        return connectivity.activeNetwork?.takeIf(::isUsable)
-            ?: connectivity.allNetworks.firstOrNull(::isUsable)
+    private fun refreshUnderlyingNetwork() {
+        val next = selectUnderlyingNetwork()
+        if (next == underlyingNetwork) return
+        underlyingNetwork = next
+        setUnderlyingNetworks(next?.let { arrayOf(it) } ?: emptyArray())
+        if (nativeHandle == 0L) return
+        recoveringNetwork = true
+        bridge.nativeNetworkChanged(nativeHandle)
+        AppLogStore.add(if (next == null) "底层网络不可用，等待网络恢复" else "底层网络已切换，已清理旧连接")
+        publishStatus(true, getString(if (next == null) R.string.vpn_status_no_network else R.string.vpn_status_recovering))
+    }
+
+    private fun stopWatchingNetwork() {
+        if (watchingNetwork) {
+            watchingNetwork = false
+            getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(networkCallback)
+        }
+        availableNetworks.clear()
+        underlyingNetwork = null
+        recoveringNetwork = false
     }
 
     private fun buildConfigJson(intent: Intent?): String {
@@ -222,9 +295,14 @@ class PlaneVpnService : VpnService() {
     private fun refreshNativeStatus(json: String) {
         val stats = runCatching { JSONObject(json) }.getOrNull() ?: return
         val state = stats.optString("state")
-        val message = when (state) {
-            "connected" -> getString(R.string.vpn_status_connected)
-            "ready" -> getString(R.string.vpn_status_ready)
+        val message = if (underlyingNetwork == null && nativeHandle != 0L) {
+            getString(R.string.vpn_status_no_network)
+        } else when (state) {
+            "connected" -> {
+                recoveringNetwork = false
+                getString(R.string.vpn_status_connected)
+            }
+            "ready" -> getString(if (recoveringNetwork) R.string.vpn_status_recovering else R.string.vpn_status_ready)
             "proxy_error" -> {
                 val detail = stats.optString("last_error").ifBlank { getString(R.string.vpn_status_error) }
                 getString(R.string.vpn_status_proxy_failure_detail, detail)
@@ -247,7 +325,8 @@ class PlaneVpnService : VpnService() {
     }
 
     override fun onDestroy() {
-        cleanupDataPlane()
+        if (nativeHandle != 0L || foregroundStarted) cleanupDataPlane()
+        stopWatchingNetwork()
         super.onDestroy()
     }
 
@@ -257,6 +336,7 @@ class PlaneVpnService : VpnService() {
     }
 
     private fun cleanupDataPlane() {
+        stopWatchingNetwork()
         if (nativeHandle != 0L) {
             runCatching { bridge.nativeStop(nativeHandle) }
                 .onFailure { Log.e(TAG, "nativeStop threw", it) }
@@ -308,7 +388,16 @@ class PlaneVpnService : VpnService() {
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(statusText)
-            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setSmallIcon(R.drawable.ic_vpn)
+            .setContentIntent(PendingIntent.getActivity(
+                this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ))
+            .addAction(0, getString(R.string.disconnect_vpn), PendingIntent.getService(
+                this, 1, Intent(this, PlaneVpnService::class.java).setAction(ACTION_STOP),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ))
+            .setOnlyAlertOnce(true)
             .setOngoing(true)
             .build()
 

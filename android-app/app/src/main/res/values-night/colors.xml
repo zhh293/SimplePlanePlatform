@@ -1,0 +1,11 @@
+<resources>
+    <color name="app_background">#101622</color>
+    <color name="app_surface">#1B2433</color>
+    <color name="app_primary">#ADC7FF</color>
+    <color name="app_on_primary">#123575</color>
+    <color name="app_primary_container">#294778</color>
+    <color name="app_on_primary_container">#DCE7FF</color>
+    <color name="app_text_primary">#E6ECF7</color>
+    <color name="app_text_secondary">#B6C2D6</color>
+    <color name="app_outline">#75829A</color>
+</resources>

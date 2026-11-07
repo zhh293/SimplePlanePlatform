@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nodesPage"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:visibility="gone">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+        <TextView
+            style="@style/AppPageTitle"
+            android:id="@+id/nodesPageTitle"
+            android:text="@string/nav_nodes" />
+
+        <TextView
+            style="@style/AppBodyText"
+            android:text="@string/nodes_intro"
+            android:layout_marginBottom="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/nodesContainer"
+            android:orientation="vertical" />
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/addNodeButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:minHeight="52dp"
+            android:text="@string/add_node" />
+    </LinearLayout>
+</ScrollView>

@@ -1,19 +1,19 @@
 package com.proxy.android
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.VpnService
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
+import android.provider.Settings
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
-import android.widget.AdapterView
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -24,6 +24,11 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.textfield.TextInputLayout
 import org.json.JSONObject
 import java.util.Locale
 
@@ -48,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var presetSpinner: Spinner
     private lateinit var importConfigInput: EditText
     private lateinit var logText: TextView
+    private lateinit var navigation: BottomNavigationView
+    private var selectedPage = R.id.nav_connection
 
     private var vpnRunning = false
     private var presets: List<ConfigPreset> = emptyList()
@@ -86,14 +93,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val notificationLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) Toast.makeText(this, R.string.notification_denied, Toast.LENGTH_LONG).show()
+        updateNotificationButton()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         setContentView(R.layout.activity_main)
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightNavigationBars =
+            resources.getBoolean(R.bool.light_system_bars)
+        listOf(R.id.connectionPageTitle, R.id.nodesPageTitle, R.id.routingPageTitle, R.id.settingsPageTitle).forEach {
+            ViewCompat.setAccessibilityHeading(findViewById(it), true)
+        }
 
         mainContent = findViewById(R.id.mainContent)
         findViewById<TextView>(R.id.nativeVersionText).text =
-            getString(R.string.native_version_label, readNativeVersion())
+            getString(R.string.version_label, packageManager.getPackageInfo(packageName, 0).versionName, readNativeVersion())
         vpnStatusText = findViewById(R.id.vpnStatusText)
         statsText = findViewById(R.id.statsText)
         nodesContainer = findViewById(R.id.nodesContainer)
@@ -101,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { addNodeRow(RemoteNodeConfig(name = "节点 ${nodeRows.size + 1}", host = "", port = 9090, key = "")) }
         }
         defaultRouteSpinner = findViewById(R.id.defaultRouteSpinner)
-        defaultRouteSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, routeActions)
+        defaultRouteSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("代理", "直连", "拒绝"))
         cnDirectCheckBox = findViewById(R.id.cnDirectCheckBox)
         directListInput = findViewById(R.id.directListInput)
         proxyListInput = findViewById(R.id.proxyListInput)
@@ -126,9 +143,15 @@ class MainActivity : AppCompatActivity() {
             AppLogStore.clear()
             updateLogView()
         }
+        navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation).apply {
+            setOnItemSelectedListener { showPage(it.itemId); true }
+        }
+        findViewById<Button>(R.id.notificationPermissionButton).setOnClickListener { configureNotifications() }
 
         refreshPresets()
         bindConfigToForm(VpnConfigStore.load(this))
+        savedInstanceState?.getBundle(FORM_DRAFT)?.let(::restoreDraft)
+        navigation.selectedItemId = savedInstanceState?.getInt(SELECTED_PAGE, R.id.nav_connection) ?: R.id.nav_connection
         mainContent.requestFocus()
         updateVpnUi(PlaneVpnService.isRunning)
         updateStats(PlaneVpnService.latestStatsJson)
@@ -142,6 +165,7 @@ class MainActivity : AppCompatActivity() {
         }
         ContextCompat.registerReceiver(this, statusReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         updateVpnUi(PlaneVpnService.isRunning)
+        updateNotificationButton()
         uiHandler.post(uiTicker)
     }
 
@@ -149,6 +173,72 @@ class MainActivity : AppCompatActivity() {
         runCatching { unregisterReceiver(statusReceiver) }
         uiHandler.removeCallbacks(uiTicker)
         super.onStop()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBundle(FORM_DRAFT, Bundle().apply {
+            putParcelableArrayList("nodes", ArrayList(nodeRows.map { it.saveDraft() }))
+            putInt("defaultRoute", defaultRouteSpinner.selectedItemPosition)
+            putBoolean("cnDirect", cnDirectCheckBox.isChecked)
+            putInt("preset", presetSpinner.selectedItemPosition)
+            draftInputs().forEach { (key, input) -> putString(key, input.text.toString()) }
+        })
+        outState.putInt(SELECTED_PAGE, selectedPage)
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun draftInputs() = mapOf(
+        "direct" to directListInput, "proxy" to proxyListInput, "rules" to advancedRulesInput,
+        "presetName" to presetNameInput, "import" to importConfigInput,
+    )
+
+    private fun restoreDraft(draft: Bundle) {
+        @Suppress("DEPRECATION")
+        val nodes = draft.getParcelableArrayList<Bundle>("nodes")
+        if (!nodes.isNullOrEmpty()) {
+            nodesContainer.removeAllViews()
+            nodeRows.clear()
+            nodes.forEach {
+                addNodeRow(RemoteNodeConfig(name = "", host = "", port = 9090, key = ""))
+                nodeRows.last().restoreDraft(it)
+            }
+        }
+        defaultRouteSpinner.setSelection(draft.getInt("defaultRoute"))
+        cnDirectCheckBox.isChecked = draft.getBoolean("cnDirect")
+        presetSpinner.setSelection(draft.getInt("preset"))
+        draftInputs().forEach { (key, input) -> input.setText(draft.getString(key, "")) }
+    }
+
+    private fun showPage(page: Int) {
+        selectedPage = page
+        mapOf(R.id.nav_connection to R.id.connectionPage, R.id.nav_nodes to R.id.nodesPage,
+            R.id.nav_routing to R.id.routingPage, R.id.nav_settings to R.id.settingsPage).forEach { (item, view) ->
+            findViewById<View>(view).visibility = if (item == page) View.VISIBLE else View.GONE
+        }
+        saveConfigButton.visibility = if (page == R.id.nav_nodes || page == R.id.nav_routing) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.configLockedText).visibility = if (vpnRunning && page != R.id.nav_connection) View.VISIBLE else View.GONE
+    }
+
+    private fun configureNotifications() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !NotificationManagerCompat.from(this).areNotificationsEnabled() &&
+            !getPreferences(MODE_PRIVATE).getBoolean("notificationRequested", false)) {
+            getPreferences(MODE_PRIVATE).edit().putBoolean("notificationRequested", true).apply()
+            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            } else {
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName"))
+            }
+            startActivity(intent)
+        }
+    }
+
+    private fun updateNotificationButton() {
+        findViewById<Button>(R.id.notificationPermissionButton).setText(
+            if (NotificationManagerCompat.from(this).areNotificationsEnabled()) R.string.notification_settings else R.string.notification_enable,
+        )
     }
 
     private fun readNativeVersion(): String =
@@ -234,16 +324,19 @@ class MainActivity : AppCompatActivity() {
             val port = row.portInput.text.toString().trim().toIntOrNull() ?: 0
             if (row.enabledCheckBox.isChecked) {
                 if (row.hostInput.text.toString().trim().isBlank()) {
+                    navigation.selectedItemId = R.id.nav_nodes
                     row.hostInput.error = getString(R.string.config_error_host)
                     row.hostInput.requestFocus()
                     return null
                 }
                 if (port !in 1..65535) {
+                    navigation.selectedItemId = R.id.nav_nodes
                     row.portInput.error = getString(R.string.config_error_port)
                     row.portInput.requestFocus()
                     return null
                 }
                 if (row.keyInput.text.toString().isBlank()) {
+                    navigation.selectedItemId = R.id.nav_nodes
                     row.keyInput.error = getString(R.string.config_error_key)
                     row.keyInput.requestFocus()
                     return null
@@ -296,6 +389,7 @@ class MainActivity : AppCompatActivity() {
                 line.split(Regex("\\s+")).map { it.trim() }
             }
             if (parts.size < 3) {
+                navigation.selectedItemId = R.id.nav_routing
                 advancedRulesInput.error = "第 ${index + 1} 行格式应为 type,value,action"
                 advancedRulesInput.requestFocus()
                 return null
@@ -369,8 +463,19 @@ class MainActivity : AppCompatActivity() {
     private fun updateVpnUi(running: Boolean, message: String? = null) {
         vpnRunning = running
         toggleVpnButton.text = getString(if (running) R.string.disconnect_vpn else R.string.connect_vpn)
-        vpnStatusText.text = message ?: PlaneVpnService.latestStatusMessage
+        val status = message ?: PlaneVpnService.latestStatusMessage
+        val failed = status.startsWith("VPN 已启动；代理请求失败") || status.startsWith("连接失败") || status == getString(R.string.vpn_status_error)
+        vpnStatusText.text = if (failed) getString(R.string.vpn_status_error) else status
+        findViewById<TextView>(R.id.vpnDetailText).setText(when {
+            failed -> R.string.failure_detail
+            status == getString(R.string.vpn_status_no_network) -> R.string.offline_detail
+            status == getString(R.string.vpn_status_recovering) -> R.string.recovery_detail
+            status == getString(R.string.vpn_status_connected) -> R.string.connected_detail
+            running -> R.string.ready_detail
+            else -> R.string.idle_detail
+        })
         setConfigInputsEnabled(!running)
+        showPage(selectedPage)
     }
 
     private fun setConfigInputsEnabled(enabled: Boolean) {
@@ -391,7 +496,10 @@ class MainActivity : AppCompatActivity() {
             findViewById<Button>(R.id.deletePresetButton),
             findViewById<Button>(R.id.importConfigButton),
             findViewById<Button>(R.id.exportConfigButton),
-        ).forEach { it.isEnabled = enabled }
+        ).forEach { view ->
+            view.isEnabled = enabled
+            ((view.parent as? View)?.parent as? TextInputLayout)?.isEnabled = enabled
+        }
     }
 
     private fun updateStats(json: String) {
@@ -399,15 +507,15 @@ class MainActivity : AppCompatActivity() {
             val obj = JSONObject(json.ifBlank { "{}" })
             val up = formatBytes(obj.optLong("upload_bytes", 0))
             val down = formatBytes(obj.optLong("download_bytes", 0))
+            findViewById<TextView>(R.id.uploadTotalText).text = up
+            findViewById<TextView>(R.id.downloadTotalText).text = down
             val active = obj.optLong("active_connections", 0)
             val total = obj.optLong("total_connections", 0)
             val proxy = obj.optLong("proxy_connections", 0)
             val direct = obj.optLong("direct_connections", 0)
             val rejected = obj.optLong("rejected_connections", 0)
             val node = obj.optString("active_node", "-").ifBlank { "-" }
-            val error = obj.optString("last_error").takeIf { it.isNotBlank() }
-                ?.let { "\n最近错误：$it" }.orEmpty()
-            "上行 $up / 下行 $down\n连接 活跃 $active / 总计 $total · 代理 $proxy · 直连 $direct · 拒绝 $rejected\n当前节点 $node$error"
+            "当前节点  $node\n活跃连接 $active · 累计 $total\n代理 $proxy · 直连 $direct · 拒绝 $rejected"
         }.getOrElse {
             getString(R.string.stats_empty)
         }
@@ -426,99 +534,12 @@ class MainActivity : AppCompatActivity() {
             size /= 1024
             unit += 1
         }
-        return if (unit == 0) "${value}B" else String.format(Locale.US, "%.1f%s", size, units[unit])
-    }
-
-    private class NodeRow private constructor(
-        val root: LinearLayout,
-        val nameInput: EditText,
-        val hostInput: EditText,
-        val portInput: EditText,
-        val keyInput: EditText,
-        val cipherInput: EditText,
-        val transportSpinner: Spinner,
-        val serverNameInput: EditText,
-        val caPem: String,
-        val tlsCheckBox: CheckBox,
-        val enabledCheckBox: CheckBox,
-        private val removeButton: Button,
-    ) {
-        fun clearErrors() {
-            hostInput.error = null
-            portInput.error = null
-            keyInput.error = null
-        }
-
-        fun setEnabled(enabled: Boolean) {
-            listOf(nameInput, hostInput, portInput, keyInput, cipherInput, transportSpinner, serverNameInput, enabledCheckBox, removeButton)
-                .forEach { it.isEnabled = enabled }
-            tlsCheckBox.isEnabled = enabled && transportSpinner.selectedItemPosition == 0
-        }
-
-        companion object {
-            fun create(context: Context, node: RemoteNodeConfig, onRemove: (NodeRow) -> Unit): NodeRow {
-                val root = LinearLayout(context).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(0, 8.dp(context), 0, 18.dp(context))
-                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                }
-                fun input(hint: String, text: String, type: Int = InputType.TYPE_CLASS_TEXT): EditText =
-                    EditText(context).apply {
-                        this.hint = hint
-                        setText(text)
-                        inputType = type
-                        isSingleLine = type != (InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
-                    }
-
-                val name = input("名称", node.name)
-                val host = input("地址，例如 1.2.3.4 或 example.com", node.host, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
-                val port = input("端口", node.port.toString(), InputType.TYPE_CLASS_NUMBER)
-                val key = input("加密密钥", node.key, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
-                val cipher = input("加密方式", node.cipher)
-                val transport = Spinner(context).apply {
-                    adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, listOf("HTTP/2 (TCP)", "HTTP/3 (QUIC)"))
-                    setSelection(if (node.transport == "http3") 1 else 0)
-                }
-                val serverName = input("TLS 服务器名称（留空使用节点地址）", node.serverName)
-                val tls = CheckBox(context).apply {
-                    text = "TLS 出站"
-                    isChecked = node.tls || node.transport == "http3"
-                    isEnabled = node.transport != "http3"
-                }
-                transport.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                        tls.isEnabled = transport.isEnabled && position == 0
-                        if (position == 1) tls.isChecked = true
-                    }
-                    override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-                }
-                val enabled = CheckBox(context).apply {
-                    text = "启用节点"
-                    isChecked = node.enabled
-                }
-                val remove = Button(context).apply { text = "删除节点" }
-                root.addView(name)
-                root.addView(host)
-                root.addView(port)
-                root.addView(key)
-                root.addView(cipher)
-                root.addView(transport)
-                root.addView(serverName)
-                root.addView(tls)
-                root.addView(enabled)
-                root.addView(remove)
-                lateinit var row: NodeRow
-                row = NodeRow(root, name, host, port, key, cipher, transport, serverName, node.caPem, tls, enabled, remove)
-                remove.setOnClickListener { onRemove(row) }
-                return row
-            }
-
-            private fun Int.dp(context: Context): Int =
-                (this * context.resources.displayMetrics.density).toInt()
-        }
+        return if (unit == 0) "$value B" else String.format(Locale.US, "%.1f %s", size, units[unit])
     }
 
     companion object {
+        private const val FORM_DRAFT = "formDraft"
+        private const val SELECTED_PAGE = "selectedPage"
         private const val UI_REFRESH_MS = 1000L
     }
 }
