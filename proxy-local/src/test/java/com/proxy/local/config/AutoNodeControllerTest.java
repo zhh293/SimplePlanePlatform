@@ -47,7 +47,9 @@ class AutoNodeControllerTest {
     }
 
     static void await(BooleanSupplier condition) throws Exception {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        // Cold SPI/filter class loading on Windows can exceed five seconds.
+        // Controller timing assertions use the injected monotonic clock.
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
         while (!condition.getAsBoolean() && System.nanoTime() < deadline) Thread.sleep(5);
         assertTrue(condition.getAsBoolean(), "Controller condition not reached");
     }

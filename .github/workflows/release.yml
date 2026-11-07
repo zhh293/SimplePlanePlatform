@@ -107,8 +107,18 @@ jobs:
           NODE
 
       # Step 1: Build fat-jar
-      - name: Build proxy-local fat-jar
-        run: mvn package -pl proxy-local -am -DskipTests -q
+      - name: Build and test proxy-local fat-jar
+        timeout-minutes: 20
+        run: mvn package -pl proxy-local -am -q
+
+      - name: Upload Java test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Java_test_reports_${{ matrix.target }}
+          path: proxy-*/target/surefire-reports/**
+          if-no-files-found: warn
+          retention-days: 14
 
       # Step 2: Build tun-adapter
       - name: Build tun-adapter

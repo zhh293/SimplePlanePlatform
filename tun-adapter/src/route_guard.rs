@@ -819,7 +819,7 @@ impl RouteGuard {
     /// 使用 PowerShell Get-NetRoute 获取默认路由的 NextHop。
     #[cfg(target_os = "windows")]
     fn get_default_gateway() -> Result<Option<IpAddr>, TunError> {
-        let ps_cmd = "(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).NextHop";
+        let ps_cmd = "(Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Where-Object { $_.NextHop -notmatch '^(198\\.(18|19)\\.|0\\.)' } | Sort-Object @{Expression={$_.RouteMetric + $_.InterfaceMetric}} | Select-Object -First 1).NextHop";
 
         let output = Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", ps_cmd])
@@ -918,13 +918,15 @@ impl RouteGuard {
 
         if output.status.success() {
             tracing::info!("Route added successfully: {}/{} -> {}", dest_ip, mask, gateway);
-        } else if stdout.contains("already exists") || stderr.contains("already exists") {
-            tracing::info!("Route already exists: {} mask {} -> {}", dest_ip, mask, gateway);
         } else {
-            tracing::warn!(
-                "Route add may have failed (exit={}): stdout={}, stderr={}",
-                output.status, stdout.trim(), stderr.trim()
-            );
+            // Confirm an exact pre-existing route, independent of OS language.
+            // It is usable, but belongs to its creator and must not be deleted.
+            let prefix = if destination.contains('/') { destination.to_string() } else { format!("{destination}/32") };
+            let check = format!("if (Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '{}' -ErrorAction SilentlyContinue | Where-Object NextHop -eq '{}') {{ exit 0 }} else {{ exit 1 }}", prefix.replace('\'', "''"), gateway.replace('\'', "''"));
+            if Command::new("powershell").args(["-NoProfile", "-NonInteractive", "-Command", &check]).status().is_ok_and(|s| s.success()) {
+                return Ok(());
+            }
+            return Err(TunError::SystemRoute(format!("Cannot add route {destination} via {gateway}: {} {}", stdout.trim(), stderr.trim())));
         }
 
         self.routes_added.push(RouteEntry {
@@ -1010,6 +1012,17 @@ impl RouteGuard {
             Err(e) => {
                 tracing::error!("Failed to run route delete command: {}", e);
             }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn delete_owned_route(entry: &RouteEntry) {
+        let (ip, mask) = cidr_to_ip_and_mask(&entry.destination);
+        // Destination-only deletion also removes the newly leased DHCP default
+        // or another application's routes. Restrict cleanup to our next hop.
+        let result = Command::new("route").args(["delete", &ip, "mask", &mask, &entry.gateway]).output();
+        if !matches!(&result, Ok(output) if output.status.success()) {
+            tracing::debug!("Owned route already absent or could not be removed: {:?}", entry);
         }
     }
 
@@ -1164,7 +1177,7 @@ impl RouteGuard {
     #[cfg(target_os = "windows")]
     fn get_active_interface_name() -> Result<String, TunError> {
         let ps_cmd = r#"
-            $route = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1
+            $route = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Where-Object { $_.NextHop -notmatch '^(198\.(18|19)\.|0\.)' } | Sort-Object @{Expression={$_.RouteMetric + $_.InterfaceMetric}} | Select-Object -First 1
             if ($route) {
                 (Get-NetAdapter -InterfaceIndex $route.InterfaceIndex -ErrorAction SilentlyContinue).Name
             }
@@ -1330,10 +1343,16 @@ impl Drop for RouteGuard {
 
         // 3. 删除所有添加的路由（逆序删除）
         for entry in self.routes_added.iter().rev() {
+            #[cfg(target_os = "windows")]
+            Self::delete_owned_route(entry);
+            #[cfg(not(target_os = "windows"))]
             Self::delete_route(&entry.destination);
         }
 
-        // 4. 恢复原始默认路由
+        // Windows keeps DHCP's current default: TUN owns only the /1 routes.
+        // Restoring a captured gateway would resurrect a stale route on roaming.
+        // macOS changes the default route and must restore it.
+        #[cfg(target_os = "macos")]
         if let Some(gateway) = &self.original_gateway {
             tracing::info!("Restoring original default gateway: {}", gateway);
 
@@ -1358,30 +1377,6 @@ impl Drop for RouteGuard {
                 }
             }
 
-            #[cfg(target_os = "windows")]
-            {
-                let result = Command::new("route")
-                    .args(["add", "0.0.0.0", "mask", "0.0.0.0", &gateway.to_string()])
-                    .output();
-
-                match result {
-                    Ok(output) => {
-                        if output.status.success() {
-                            tracing::info!("Default gateway restored successfully");
-                        } else {
-                            let stdout = String::from_utf8_lossy(&output.stdout);
-                            let stderr = String::from_utf8_lossy(&output.stderr);
-                            tracing::warn!(
-                                "Gateway restore may have issues: stdout={}, stderr={}",
-                                stdout.trim(), stderr.trim()
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!("Failed to restore default gateway: {}", e);
-                    }
-                }
-            }
         }
 
         #[cfg(target_os = "macos")]

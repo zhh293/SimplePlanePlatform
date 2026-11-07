@@ -12,6 +12,9 @@ use crate::error::TunError;
 /// 顶级配置结构体
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
+    /// A generation token asks the local proxy to discard transports after a network change.
+    #[serde(default)]
+    pub proxy_reconnect_file: Option<std::path::PathBuf>,
     /// Desktop policy shared with proxy-local; standalone configurations remain independent.
     #[serde(default)]
     pub route_source: Option<std::path::PathBuf>,
@@ -335,6 +338,11 @@ impl Config {
         })?;
 
         let directory = path.parent().unwrap_or_else(|| Path::new("."));
+        if let Some(file) = &config.proxy_reconnect_file {
+            if file.is_relative() { config.proxy_reconnect_file = Some(directory.join(file)); }
+        } else if path.file_name().is_some_and(|name| name == "tun-nodes.toml") {
+            config.proxy_reconnect_file = Some(directory.join("proxy-java.yml.network-reset"));
+        }
         if let Some(source) = &config.route_source {
             if source.is_relative() { config.route_source = Some(directory.join(source)); }
         } else if path.file_name().is_some_and(|name| name == "tun-nodes.toml") {
@@ -423,9 +431,11 @@ mod tests {
         let managed = dir.path().join("tun-nodes.toml");
         std::fs::write(&managed, "").unwrap();
         assert_eq!(super::Config::load(&managed).unwrap().route_source, Some(shared));
+        assert_eq!(super::Config::load(&managed).unwrap().proxy_reconnect_file, Some(dir.path().join("proxy-java.yml.network-reset")));
         let standalone = dir.path().join("tun.toml");
         std::fs::write(&standalone, "").unwrap();
         assert!(super::Config::load(&standalone).unwrap().route_source.is_none());
+        assert!(super::Config::load(&standalone).unwrap().proxy_reconnect_file.is_none());
         std::fs::write(&standalone, "route_source = 'custom.yml'\n").unwrap();
         assert_eq!(super::Config::load(&standalone).unwrap().route_source, Some(dir.path().join("custom.yml")));
     }
