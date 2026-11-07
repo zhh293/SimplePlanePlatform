@@ -70,6 +70,24 @@
                     android:text="@string/connect_vpn"
                     android:layout_marginTop="20dp"
                     android:textSize="16sp" />
+
+                <TextView
+                    style="@style/AppBodyText"
+                    android:text="@string/node_selection_title"
+                    android:labelFor="@id/nodeSelectionSpinner"
+                    android:layout_marginTop="16dp" />
+
+                <Spinner
+                    android:id="@+id/nodeSelectionSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:saveEnabled="false" />
+
+                <TextView
+                    style="@style/AppBodyText"
+                    android:text="@string/node_selection_hint"
+                    android:textSize="12sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

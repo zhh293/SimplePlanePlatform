@@ -152,6 +152,7 @@ internal class NodeRow private constructor(
             content.addView(remove, LinearLayout.LayoutParams(-1, -2))
             val row = NodeRow(root, name, host, port, key, cipher, transport, serverName, node.caPem, tls, enabled, remove, fields, advanced)
             remove.setOnClickListener { onRemove(row) }
+            remove.tag = "removeNode"
             return row
         }
     }

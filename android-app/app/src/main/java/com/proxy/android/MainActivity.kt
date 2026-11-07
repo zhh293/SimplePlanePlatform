@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.VpnService
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -14,6 +15,7 @@ import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
+import android.widget.AdapterView
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -27,9 +29,16 @@ import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.textfield.TextInputLayout
 import org.json.JSONObject
+import org.json.JSONArray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -54,7 +63,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var importConfigInput: EditText
     private lateinit var logText: TextView
     private lateinit var navigation: BottomNavigationView
+    private lateinit var nodeSelectionSpinner: Spinner
     private var selectedPage = R.id.nav_connection
+    private var selectedNodeIndex = -1
+    private var formMtu = VpnConfigStore.DEFAULT_MTU
+    private var originalRules: List<RouteRuleConfig> = emptyList()
+    private var pendingExportJson: String? = null
+    private var transferInProgress = false
 
     private var vpnRunning = false
     private var presets: List<ConfigPreset> = emptyList()
@@ -98,6 +113,16 @@ class MainActivity : AppCompatActivity() {
         updateNotificationButton()
     }
 
+    private val importFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) readConfigFile(uri)
+    }
+
+    private val exportFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val text = pendingExportJson
+        pendingExportJson = null
+        if (uri != null && text != null) writeConfigFile(uri, text)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
@@ -113,6 +138,14 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.version_label, packageManager.getPackageInfo(packageName, 0).versionName, readNativeVersion())
         vpnStatusText = findViewById(R.id.vpnStatusText)
         statsText = findViewById(R.id.statsText)
+        nodeSelectionSpinner = findViewById<Spinner>(R.id.nodeSelectionSpinner).apply {
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    selectedNodeIndex = position - 1
+                }
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
+        }
         nodesContainer = findViewById(R.id.nodesContainer)
         addNodeButton = findViewById<Button>(R.id.addNodeButton).apply {
             setOnClickListener { addNodeRow(RemoteNodeConfig(name = "节点 ${nodeRows.size + 1}", host = "", port = 9090, key = "")) }
@@ -139,6 +172,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.deletePresetButton).setOnClickListener { deleteSelectedPreset() }
         findViewById<Button>(R.id.importConfigButton).setOnClickListener { importConfig() }
         findViewById<Button>(R.id.exportConfigButton).setOnClickListener { exportConfig() }
+        findViewById<Button>(R.id.importFileButton).setOnClickListener {
+            importFileLauncher.launch(arrayOf("*/*"))
+        }
+        findViewById<Button>(R.id.exportFileButton).setOnClickListener { exportConfigFile() }
         findViewById<Button>(R.id.clearLogButton).setOnClickListener {
             AppLogStore.clear()
             updateLogView()
@@ -151,6 +188,7 @@ class MainActivity : AppCompatActivity() {
         refreshPresets()
         bindConfigToForm(VpnConfigStore.load(this))
         savedInstanceState?.getBundle(FORM_DRAFT)?.let(::restoreDraft)
+        pendingExportJson = savedInstanceState?.getString(PENDING_EXPORT)
         navigation.selectedItemId = savedInstanceState?.getInt(SELECTED_PAGE, R.id.nav_connection) ?: R.id.nav_connection
         mainContent.requestFocus()
         updateVpnUi(PlaneVpnService.isRunning)
@@ -181,9 +219,15 @@ class MainActivity : AppCompatActivity() {
             putInt("defaultRoute", defaultRouteSpinner.selectedItemPosition)
             putBoolean("cnDirect", cnDirectCheckBox.isChecked)
             putInt("preset", presetSpinner.selectedItemPosition)
+            putInt("selectedNode", selectedNodeIndex)
+            putInt("mtu", formMtu)
+            putString("ruleOrder", JSONArray().apply {
+                originalRules.forEach { put(JSONObject().put("type", it.type).put("value", it.value).put("action", it.action)) }
+            }.toString())
             draftInputs().forEach { (key, input) -> putString(key, input.text.toString()) }
         })
         outState.putInt(SELECTED_PAGE, selectedPage)
+        outState.putString(PENDING_EXPORT, pendingExportJson)
         super.onSaveInstanceState(outState)
     }
 
@@ -206,7 +250,17 @@ class MainActivity : AppCompatActivity() {
         defaultRouteSpinner.setSelection(draft.getInt("defaultRoute"))
         cnDirectCheckBox.isChecked = draft.getBoolean("cnDirect")
         presetSpinner.setSelection(draft.getInt("preset"))
+        selectedNodeIndex = draft.getInt("selectedNode", -1)
+        formMtu = draft.getInt("mtu", VpnConfigStore.DEFAULT_MTU)
+        draft.getString("ruleOrder")?.let { json ->
+            val rules = JSONArray(json)
+            originalRules = (0 until rules.length()).map {
+                val rule = rules.getJSONObject(it)
+                RouteRuleConfig(rule.getString("type"), rule.getString("value"), rule.getString("action"))
+            }
+        }
         draftInputs().forEach { (key, input) -> input.setText(draft.getString(key, "")) }
+        refreshNodeChoices()
     }
 
     private fun showPage(page: Int) {
@@ -217,6 +271,16 @@ class MainActivity : AppCompatActivity() {
         }
         saveConfigButton.visibility = if (page == R.id.nav_nodes || page == R.id.nav_routing) View.VISIBLE else View.GONE
         findViewById<View>(R.id.configLockedText).visibility = if (vpnRunning && page != R.id.nav_connection) View.VISIBLE else View.GONE
+        if (page == R.id.nav_connection) refreshNodeChoices()
+    }
+
+    private fun refreshNodeChoices() {
+        val names = listOf(getString(R.string.node_selection_auto)) + nodeRows.mapIndexed { index, row ->
+            val name = row.nameInput.text.toString().ifBlank { "节点 ${index + 1}" }
+            if (row.enabledCheckBox.isChecked) "${index + 1}. $name" else "${index + 1}. $name（已停用）"
+        }
+        nodeSelectionSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
+        nodeSelectionSpinner.setSelection(selectedNodeIndex + 1)
     }
 
     private fun configureNotifications() {
@@ -270,6 +334,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindConfigToForm(config: AndroidVpnConfig) {
+        selectedNodeIndex = config.selectedNodeIndex
+        formMtu = config.mtu
+        originalRules = config.routing.rules
         nodesContainer.removeAllViews()
         nodeRows.clear()
         config.remotes.forEach { addNodeRow(it) }
@@ -292,6 +359,7 @@ class MainActivity : AppCompatActivity() {
                 .filterNot { it.type == "domain_pattern" && (it.action == "direct" || it.action == "proxy") }
                 .joinToString("\n") { "${it.type},${it.value},${it.action}" },
         )
+        refreshNodeChoices()
     }
 
     private fun addNodeRow(node: RemoteNodeConfig) {
@@ -299,8 +367,14 @@ class MainActivity : AppCompatActivity() {
             if (nodeRows.size <= 1) {
                 Toast.makeText(this, R.string.node_keep_one, Toast.LENGTH_SHORT).show()
             } else {
+                val removed = nodeRows.indexOf(it)
                 nodesContainer.removeView(it.root)
                 nodeRows.remove(it)
+                if (selectedNodeIndex == removed) {
+                    selectedNodeIndex = -1
+                    Toast.makeText(this, R.string.selected_node_removed, Toast.LENGTH_SHORT).show()
+                } else if (selectedNodeIndex > removed) selectedNodeIndex -= 1
+                refreshNodeChoices()
             }
         }
         nodeRows += row
@@ -314,6 +388,7 @@ class MainActivity : AppCompatActivity() {
             return null
         }
         VpnConfigStore.save(this, config)
+        originalRules = config.routing.rules
         if (showSavedToast) Toast.makeText(this, R.string.config_saved, Toast.LENGTH_SHORT).show()
         return config
     }
@@ -362,14 +437,23 @@ class MainActivity : AppCompatActivity() {
         rules += readAdvancedRules() ?: return null
 
         return AndroidVpnConfig(
+            mtu = formMtu,
             remotes = remotes,
+            selectedNodeIndex = selectedNodeIndex,
             routing = AndroidRoutingConfig(
                 defaultAction = routeActions[defaultRouteSpinner.selectedItemPosition],
                 cnDirect = cnDirectCheckBox.isChecked,
-                rules = rules,
+                // Splitting fields into categories must not reorder an imported
+                // first-match ruleset when the user has not edited its rules.
+                rules = if (rules == groupedRules(originalRules)) originalRules else rules,
             ),
         )
     }
+
+    private fun groupedRules(rules: List<RouteRuleConfig>): List<RouteRuleConfig> =
+        rules.filter { it.type == "domain_pattern" && it.action == "direct" } +
+            rules.filter { it.type == "domain_pattern" && it.action == "proxy" } +
+            rules.filterNot { it.type == "domain_pattern" && it.action in listOf("direct", "proxy") }
 
     private fun readDomainPatternRules(input: EditText, action: String): List<RouteRuleConfig> =
         input.text.lineSequence()
@@ -449,15 +533,75 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
             return
         }
-        bindConfigToForm(imported)
-        VpnConfigStore.save(this, imported)
-        Toast.makeText(this, R.string.config_imported, Toast.LENGTH_SHORT).show()
+        previewImport(imported)
     }
 
     private fun exportConfig() {
         val config = saveCurrentConfig(showSavedToast = false) ?: return
-        importConfigInput.setText(config.toDesktopYaml())
+        importConfigInput.setText(config.toJsonString(2))
         Toast.makeText(this, R.string.config_exported, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun previewImport(imported: AndroidVpnConfig) {
+        imported.validate()?.let { throw IllegalArgumentException(it) }
+        val choice = imported.remotes.getOrNull(imported.selectedNodeIndex)?.name ?: getString(R.string.node_selection_auto)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.import_preview_title)
+            .setMessage(getString(R.string.import_preview, imported.remotes.size,
+                imported.remotes.count { it.enabled }, imported.routing.rules.size, choice))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.import_apply) { _, _ ->
+                if (PlaneVpnService.isRunning) {
+                    Toast.makeText(this, R.string.config_locked, Toast.LENGTH_LONG).show()
+                } else {
+                    bindConfigToForm(imported)
+                    VpnConfigStore.save(this, imported)
+                    Toast.makeText(this, R.string.config_imported, Toast.LENGTH_SHORT).show()
+                }
+            }.show()
+    }
+
+    private fun readConfigFile(uri: Uri) = transfer {
+        val imported = withContext(Dispatchers.IO) {
+            val text = contentResolver.openInputStream(uri)?.use(ConfigFiles::read)
+                ?: error(getString(R.string.file_unavailable))
+            AndroidVpnConfig.fromImportText(text)
+        }
+        previewImport(imported)
+    }
+
+    private fun exportConfigFile() {
+        val config = saveCurrentConfig(showSavedToast = false) ?: return
+        pendingExportJson = runCatching { ConfigFiles.backup(config) }
+            .onFailure { Toast.makeText(this, it.message, Toast.LENGTH_LONG).show() }
+            .getOrNull() ?: return
+        exportFileLauncher.launch("SimplePlane-backup.json")
+    }
+
+    private fun writeConfigFile(uri: Uri, text: String) = transfer {
+        withContext(Dispatchers.IO) {
+            contentResolver.openOutputStream(uri, "wt")?.use { ConfigFiles.write(it, text) }
+                ?: error(getString(R.string.file_unavailable))
+        }
+        Toast.makeText(this, R.string.file_exported, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun transfer(action: suspend () -> Unit) {
+        if (transferInProgress) return
+        transferInProgress = true
+        updateVpnUi(PlaneVpnService.isRunning)
+        lifecycleScope.launch {
+            try {
+                action()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Toast.makeText(this@MainActivity, getString(R.string.file_error, error.message.orEmpty()), Toast.LENGTH_LONG).show()
+            } finally {
+                transferInProgress = false
+                if (!isDestroyed) updateVpnUi(PlaneVpnService.isRunning)
+            }
+        }
     }
 
     private fun updateVpnUi(running: Boolean, message: String? = null) {
@@ -474,7 +618,9 @@ class MainActivity : AppCompatActivity() {
             running -> R.string.ready_detail
             else -> R.string.idle_detail
         })
-        setConfigInputsEnabled(!running)
+        toggleVpnButton.isEnabled = !transferInProgress
+        findViewById<View>(R.id.fileTransferProgress).visibility = if (transferInProgress) View.VISIBLE else View.GONE
+        setConfigInputsEnabled(!running && !transferInProgress)
         showPage(selectedPage)
     }
 
@@ -482,6 +628,7 @@ class MainActivity : AppCompatActivity() {
         nodeRows.forEach { it.setEnabled(enabled) }
         listOf(
             addNodeButton,
+            nodeSelectionSpinner,
             saveConfigButton,
             defaultRouteSpinner,
             cnDirectCheckBox,
@@ -496,6 +643,8 @@ class MainActivity : AppCompatActivity() {
             findViewById<Button>(R.id.deletePresetButton),
             findViewById<Button>(R.id.importConfigButton),
             findViewById<Button>(R.id.exportConfigButton),
+            findViewById<Button>(R.id.importFileButton),
+            findViewById<Button>(R.id.exportFileButton),
         ).forEach { view ->
             view.isEnabled = enabled
             ((view.parent as? View)?.parent as? TextInputLayout)?.isEnabled = enabled
@@ -540,6 +689,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val FORM_DRAFT = "formDraft"
         private const val SELECTED_PAGE = "selectedPage"
+        private const val PENDING_EXPORT = "pendingExportJson"
         private const val UI_REFRESH_MS = 1000L
     }
 }

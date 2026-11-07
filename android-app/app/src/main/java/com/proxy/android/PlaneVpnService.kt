@@ -267,7 +267,8 @@ class PlaneVpnService : VpnService() {
     private fun buildConfigJson(intent: Intent?): String {
         val explicit = intent?.getStringExtra(EXTRA_CONFIG_JSON)?.takeIf { it.isNotBlank() }
         val json = explicit ?: VpnConfigStore.load(this).toJsonString()
-        val config = AndroidVpnConfig.fromJson(json)
+        val savedConfig = AndroidVpnConfig.fromJson(json)
+        val config = savedConfig.forConnection()
         // Trust the deployment certificate only for its configured node. Other
         // hosts use system roots or an explicitly imported CA, never this pin.
         val nativeConfig = config.copy(remotes = config.remotes.map { node ->
@@ -275,7 +276,8 @@ class PlaneVpnService : VpnService() {
                 node.copy(caPem = assets.open("http3-remote-ca.crt").bufferedReader().use { it.readText() })
             } else node
         })
-        val summary = "节点 ${config.remotes.count { it.enabled }}/${config.remotes.size}，协议 ${config.remotes.filter { it.enabled }.joinToString { it.transport }}，规则 ${config.routing.rules.size}"
+        val selection = if (savedConfig.selectedNodeIndex < 0) "自动" else "手动"
+        val summary = "$selection，使用 ${config.remotes.size}/${savedConfig.remotes.size} 个节点，协议 ${config.remotes.joinToString { it.transport }}，规则 ${config.routing.rules.size}"
         AppLogStore.add("加载配置：$summary")
         Log.i(TAG, "VPN config: $summary")
         return nativeConfig.toJsonString()

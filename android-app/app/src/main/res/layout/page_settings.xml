@@ -48,6 +48,26 @@
             style="@style/AppSectionTitle"
             android:text="@string/preset_title" />
 
+        <TextView style="@style/AppBodyText" android:text="@string/config_files_hint" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/importFileButton"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="52dp" android:text="@string/import_file" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exportFileButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="52dp" android:text="@string/export_file" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/fileTransferProgress"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:indeterminate="true" android:visibility="gone"
+            android:contentDescription="@string/file_transfer_progress" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

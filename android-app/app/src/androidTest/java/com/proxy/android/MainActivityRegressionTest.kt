@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Spinner
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -18,6 +19,56 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityRegressionTest {
+    @Test
+    fun selectionAndExportPreserveImportedSettingsAfterRecreation() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val original = VpnConfigStore.load(context)
+        val fixture = original.copy(
+            mtu = 1400,
+            remotes = listOf(original.remotes.first().copy(name = "FIRST"), original.remotes.first().copy(name = "SECOND")),
+            selectedNodeIndex = 1,
+            routing = AndroidRoutingConfig("proxy", false, listOf(
+                RouteRuleConfig("port", "443", "reject"),
+                RouteRuleConfig("domain_pattern", "*.example.com", "direct"),
+                RouteRuleConfig("domain_pattern", "proxy.example", "proxy"),
+            )),
+        )
+        try {
+            VpnConfigStore.save(context, fixture)
+            launch().use { scenario ->
+                scenario.recreate()
+                scenario.onActivity { activity ->
+                    assertEquals(2, activity.findViewById<Spinner>(R.id.nodeSelectionSpinner).selectedItemPosition)
+                    activity.findViewById<Button>(R.id.exportConfigButton).performClick()
+                    val exported = AndroidVpnConfig.fromImportText(activity.findViewById<EditText>(R.id.importConfigInput).text.toString())
+                    assertEquals(fixture, exported)
+                }
+            }
+        } finally { VpnConfigStore.save(context, original) }
+    }
+
+    @Test
+    fun deletingAnEarlierNodeKeepsTheSelectedNode() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val original = VpnConfigStore.load(context)
+        val chosen = original.remotes.first().copy(name = "CHOSEN")
+        try {
+            VpnConfigStore.save(context, original.copy(remotes = listOf(original.remotes.first(), chosen), selectedNodeIndex = 1))
+            launch().use { scenario ->
+                scenario.onActivity { activity ->
+                    activity.findViewById<LinearLayout>(R.id.nodesContainer).getChildAt(0).findViewWithTag<Button>("removeNode").performClick()
+                }
+                scenario.recreate()
+                scenario.onActivity { activity ->
+                    activity.findViewById<Button>(R.id.exportConfigButton).performClick()
+                    val exported = AndroidVpnConfig.fromImportText(activity.findViewById<EditText>(R.id.importConfigInput).text.toString())
+                    assertEquals(0, exported.selectedNodeIndex)
+                    assertEquals(listOf(chosen), exported.remotes)
+                }
+            }
+        } finally { VpnConfigStore.save(context, original) }
+    }
+
     private fun launch(): ActivityScenario<MainActivity> {
         val intent = Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java)
         val options = ActivityOptions.makeBasic()

@@ -32,7 +32,7 @@
     <string name="import_config">导入配置</string>
     <string name="export_config">导出到输入框</string>
     <string name="config_imported">配置已导入</string>
-    <string name="config_exported">已生成桌面兼容 YAML</string>
+    <string name="config_exported">已生成完整 JSON 配置</string>
 
     <string name="log_title">日志</string>
     <string name="clear_log">清空日志</string>
@@ -48,7 +48,7 @@
     <string name="nav_routing">路由</string>
     <string name="nav_settings">设置</string>
     <string name="connection_intro">连接状态、当前节点与本次流量</string>
-    <string name="nodes_intro">按列表顺序尝试启用的节点。连接前自动保存配置。</string>
+    <string name="nodes_intro">在首页选择连接节点。自动模式按顺序尝试启用的节点。</string>
     <string name="routing_intro">设置默认策略，以及需要单独处理的域名。</string>
     <string name="settings_intro">管理配置、通知与诊断日志</string>
     <string name="config_locked">断开 VPN 后可修改配置</string>
@@ -88,4 +88,18 @@
     <string name="node_tls">TLS 出站</string>
     <string name="node_enabled">启用节点</string>
     <string name="node_remove">删除节点</string>
+    <string name="node_selection_title">连接节点</string>
+    <string name="node_selection_auto">自动 · 按顺序尝试</string>
+    <string name="node_selection_hint">指定节点时只使用该节点。断开后可更换。</string>
+    <string name="selected_node_removed">所选节点已删除，已切回自动模式</string>
+    <string name="config_files_hint">导入 JSON 或桌面 YAML 配置；JSON 备份会保留全部节点和路由规则，包含密钥。</string>
+    <string name="import_file">从文件导入</string>
+    <string name="export_file">导出 JSON 备份</string>
+    <string name="file_transfer_progress">正在读写配置文件</string>
+    <string name="file_exported">配置备份已保存</string>
+    <string name="file_unavailable">无法打开所选文件</string>
+    <string name="file_error">文件操作失败：%1$s</string>
+    <string name="import_preview_title">导入配置</string>
+    <string name="import_preview">共 %1$d 个节点，启用 %2$d 个\n路由规则 %3$d 条\n连接选择：%4$s\n\n应用后将替换当前配置及未保存的编辑。</string>
+    <string name="import_apply">应用配置</string>
 </resources>

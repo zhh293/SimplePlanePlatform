@@ -4,6 +4,53 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AndroidVpnConfigTest {
+    @Test fun manualSelectionUsesOnlyTheChosenNodeEvenWithDuplicateNames() {
+        val node = AndroidVpnConfig.defaultConfig().remotes.single()
+        val config = AndroidVpnConfig(remotes = listOf(node.copy(host = "first.invalid"), node), selectedNodeIndex = 1)
+        assertEquals(config, AndroidVpnConfig.fromJson(config.toJsonString()))
+        assertEquals(listOf(node), config.forConnection().remotes)
+        assertEquals(-1, config.forConnection().selectedNodeIndex)
+        assertEquals(config.remotes, config.copy(selectedNodeIndex = -1).forConnection().remotes)
+    }
+
+    @Test fun missingOrDisabledSelectionCannotSilentlyFallBack() {
+        val config = AndroidVpnConfig.defaultConfig()
+        for (selected in listOf(-2, 1, 200)) {
+            assertNotNull(config.copy(selectedNodeIndex = selected).validate())
+            assertThrows(IllegalArgumentException::class.java) { config.copy(selectedNodeIndex = selected).forConnection() }
+        }
+        val disabled = config.copy(remotes = listOf(config.remotes.single().copy(enabled = false), config.remotes.single()), selectedNodeIndex = 0)
+        assertNotNull(disabled.validate())
+        assertThrows(IllegalArgumentException::class.java) { disabled.forConnection() }
+        assertEquals(1, disabled.copy(selectedNodeIndex = -1).forConnection().remotes.size)
+    }
+
+    @Test fun fileImportRejectsMissingAndEmptyNodeLists() {
+        for (text in listOf("{}", "{\"remotes\":[]}", "{\"remotes\":[null]}", "{\"remotes\":\"invalid\"}", "not a configuration", "route:\n  defaultRoute: direct")) {
+            assertThrows("Unexpected default-node fallback for $text", IllegalArgumentException::class.java) {
+                AndroidVpnConfig.fromImportText(text)
+            }
+        }
+    }
+
+    @Test fun importedLegacyConfigKeepsAutomaticMode() {
+        val config = AndroidVpnConfig.fromImportText("""{"remote_host":"proxy.example","remote_key":"test","remote_port":9090}""")
+        assertEquals(-1, config.selectedNodeIndex)
+        assertEquals("proxy.example", config.forConnection().remotes.single().host)
+    }
+
+    @Test fun yamlHashInsideCredentialsDoesNotStartAComment() {
+        for ((yaml, key) in listOf("\"alpha#beta\" # comment" to "alpha#beta", "'alpha#beta'" to "alpha#beta", "alpha#beta" to "alpha#beta")) {
+            val config = AndroidVpnConfig.fromImportText("""
+                remoteServers:
+                  - host: proxy.example
+                    port: 9090
+                    cipherKey: $yaml
+            """.trimIndent())
+            assertEquals(key, config.remotes.single().key)
+        }
+    }
+
     @Test fun v2SuitesKeepTheirConfigurationAndRequire32Utf8Bytes() {
         for (suite in listOf("chacha20-poly1305-v2", "aes-gcm-v2")) {
             val node = AndroidVpnConfig.defaultConfig().remotes.single().copy(
