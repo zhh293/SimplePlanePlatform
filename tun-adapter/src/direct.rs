@@ -20,7 +20,7 @@ impl DirectEgress {
     pub fn discover() -> io::Result<Self> {
         #[cfg(windows)]
         {
-            let script = "$ErrorActionPreference='Stop'; $r=Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' | Sort-Object @{Expression={$_.RouteMetric+$_.InterfaceMetric}} | Select-Object -First 1; if (!$r) {throw 'No default route'}; $r.InterfaceIndex; (Get-NetIPAddress -InterfaceIndex $r.InterfaceIndex -AddressFamily IPv4 | Where-Object {$_.AddressState -eq 'Preferred'} | Select-Object -First 1).IPAddress; (Get-DnsClientServerAddress -InterfaceIndex $r.InterfaceIndex -AddressFamily IPv4).ServerAddresses";
+            let script = include_str!("windows/discover-egress.ps1");
             let out = std::process::Command::new("powershell")
                 .args(["-NoProfile", "-NonInteractive", "-Command", script])
                 .output()?;
@@ -53,6 +53,8 @@ impl DirectEgress {
             .ok_or_else(|| io::Error::other("Missing egress IPv4"))?;
         if (source.octets()[0] == 198 && (source.octets()[1] == 18 || source.octets()[1] == 19))
             || source.is_unspecified()
+            || source.is_loopback()
+            || source.is_link_local()
         {
             return Err(io::Error::other("Invalid physical interface"));
         }
@@ -203,6 +205,42 @@ mod tests {
 #[cfg(all(test, windows))]
 mod windows_tests {
     use super::*;
+    #[test]
+    fn discovery_waits_for_dhcp_and_skips_a_stale_tun_default_route() {
+        let mocks = r#"
+$script:attempts=0
+function Get-NetRoute {
+    param($AddressFamily,$DestinationPrefix,$ErrorAction)
+    $script:attempts+=1
+    if ($script:attempts -eq 1) { return }
+    [pscustomobject]@{InterfaceIndex=99;RouteMetric=1;InterfaceMetric=1;NextHop='198.18.255.254'}
+    [pscustomobject]@{InterfaceIndex=3;RouteMetric=10;InterfaceMetric=10;NextHop='172.16.40.1'}
+}
+function Get-NetIPAddress {
+    param($InterfaceIndex,$AddressFamily,$ErrorAction)
+    $ip=if($InterfaceIndex -eq 99){'198.18.0.1'}else{'172.16.40.47'}
+    [pscustomobject]@{IPAddress=$ip;AddressState='Preferred'}
+}
+function Get-DnsClientServerAddress {
+    param($InterfaceIndex,$AddressFamily,$ErrorAction)
+    [pscustomobject]@{ServerAddresses=@('198.18.0.2','202.118.66.6')}
+}
+"#;
+        let script = format!("{mocks}\n& {{\n{}\n}} -PollMilliseconds 10", include_str!("windows/discover-egress.ps1"));
+        let output = std::process::Command::new("powershell").args(["-NoProfile", "-NonInteractive", "-Command", &script]).output().unwrap();
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        let egress = DirectEgress::parse(&String::from_utf8_lossy(&output.stdout)).unwrap();
+        assert_eq!(egress.index, 3);
+        assert_eq!(egress.source, "172.16.40.47".parse::<Ipv4Addr>().unwrap());
+        assert_eq!(egress.dns, vec!["202.118.66.6".parse::<Ipv4Addr>().unwrap()]);
+    }
+    #[test]
+    fn discovery_reports_a_bounded_failure_when_network_is_absent() {
+        let script = format!("function Get-NetRoute {{ param($AddressFamily,$DestinationPrefix,$ErrorAction) }}\n& {{\n{}\n}} -TimeoutSeconds 1 -PollMilliseconds 10", include_str!("windows/discover-egress.ps1"));
+        let output = std::process::Command::new("powershell").args(["-NoProfile", "-NonInteractive", "-Command", &script]).output().unwrap();
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("No usable physical IPv4"));
+    }
     #[tokio::test]
     async fn pinned_socket_can_relay_without_a_socks_server() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
