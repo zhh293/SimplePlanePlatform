@@ -114,12 +114,16 @@ class Http3ManualSwitchIntegrationTest {
             assertEquals(1, connectsA.get());
             assertEquals(1, connectsB.get());
             assertEquals(1, b.getActiveConnectionCount());
-            byte[] fragmented = new byte[131072];
-            new java.util.Random(7).nextBytes(fragmented);
-            for (int offset = 0; offset < fragmented.length; offset += 1023) {
-                browserB.getOutputStream().write(fragmented, offset, Math.min(1023, fragmented.length - offset));
+            java.util.Random random = new java.util.Random(7);
+            for (int round = 0; round < 4; round++) {
+                byte[] fragmented = new byte[131072];
+                random.nextBytes(fragmented);
+                for (int offset = 0; offset < fragmented.length; offset += 1023) {
+                    browserB.getOutputStream().write(fragmented, offset, Math.min(1023, fragmented.length - offset));
+                }
+                assertArrayEquals(fragmented, readBytes(browserB.getInputStream(), fragmented.length),
+                        "Fragment order must survive queued/fast-path writes, round " + round);
             }
-            assertArrayEquals(fragmented, readBytes(browserB.getInputStream(), fragmented.length));
             verifyPlainHttp(localPort, targetPort);
             // Invalid snapshots must leave the last valid node and its healthy streams alone.
             Files.write(config, yaml(localPort, portA, portB, certificate, "missing", suite).getBytes(StandardCharsets.UTF_8));
