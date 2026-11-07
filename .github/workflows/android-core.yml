@@ -19,6 +19,7 @@ on:
   push:
     paths:
       - "plane-core/**"
+      - "proxy-local/src/main/resources/routing/providers/**"
       - "android-app/**"
       - "scripts/build-rust.sh"
       - "scripts/crypto/**"
@@ -33,6 +34,7 @@ on:
     branches: [main, master]
     paths:
       - "plane-core/**"
+      - "proxy-local/src/main/resources/routing/providers/**"
       - "android-app/**"
       - "scripts/build-rust.sh"
       - "scripts/crypto/**"

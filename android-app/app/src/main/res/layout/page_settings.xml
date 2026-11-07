@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/settingsPage"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:visibility="gone">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+        <TextView
+            style="@style/AppPageTitle"
+            android:id="@+id/settingsPageTitle"
+            android:text="@string/nav_settings" />
+
+        <TextView
+            style="@style/AppBodyText"
+            android:text="@string/settings_intro"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/nativeVersionText"
+            style="@style/AppBodyText" />
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/notification_title" />
+
+        <TextView
+            style="@style/AppBodyText"
+            android:text="@string/notification_description" />
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/notificationPermissionButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:minHeight="52dp"
+            android:text="@string/notification_enable" />
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/preset_title" />
+
+        <TextView style="@style/AppBodyText" android:text="@string/config_files_hint" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/importFileButton"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="52dp" android:text="@string/import_file" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exportFileButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="52dp" android:text="@string/export_file" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/fileTransferProgress"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:indeterminate="true" android:visibility="gone"
+            android:contentDescription="@string/file_transfer_progress" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/preset_name_hint"
+            app:expandedHintEnabled="false">
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/presetNameInput"
+                android:inputType="text"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/savePresetButton"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:minHeight="52dp"
+            android:text="@string/save_preset" />
+
+        <Spinner
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/presetSpinner"
+            android:minHeight="48dp"
+            android:layout_marginTop="12dp"
+            android:contentDescription="@string/preset_title" />
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/loadPresetButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:minHeight="52dp"
+            android:text="@string/load_preset" />
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/deletePresetButton"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:minHeight="52dp"
+            android:text="@string/delete_preset" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/import_config_label"
+            app:expandedHintEnabled="false"
+            app:helperText="@string/import_config_helper">
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/importConfigInput"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:minLines="5"
+                android:gravity="top" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/importConfigButton"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:minHeight="52dp"
+            android:text="@string/import_config" />
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/exportConfigButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:minHeight="52dp"
+            android:text="@string/export_config" />
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/log_title" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/logText"
+            style="@style/AppBodyText"
+            android:minHeight="96dp"
+            android:textSize="12sp"
+            android:textIsSelectable="true" />
+
+        <com.google.android.material.button.MaterialButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/clearLogButton"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:minHeight="52dp"
+            android:text="@string/clear_log" />
+    </LinearLayout>
+</ScrollView>

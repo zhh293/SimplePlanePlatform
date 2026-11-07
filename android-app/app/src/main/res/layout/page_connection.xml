@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/connectionPage"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+        <TextView
+            style="@style/AppPageTitle"
+            android:id="@+id/connectionPageTitle"
+            android:text="@string/nav_connection" />
+
+        <TextView
+            style="@style/AppBodyText"
+            android:text="@string/connection_intro"
+            android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="@color/app_surface">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_vpn"
+                    app:tint="@color/app_primary"
+                    android:importantForAccessibility="no"
+                    android:layout_marginBottom="20dp" />
+
+                <TextView
+                    style="@style/AppBodyText"
+                    android:text="@string/status_label" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/vpnStatusText"
+                    android:text="@string/vpn_status_idle"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/app_text_primary"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="8dp"
+                    android:accessibilityLiveRegion="polite" />
+
+                <TextView
+                    style="@style/AppBodyText"
+                    android:text="@string/idle_detail"
+                    android:id="@+id/vpnDetailText" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/toggleVpnButton"
+                    android:minHeight="52dp"
+                    android:text="@string/connect_vpn"
+                    android:layout_marginTop="20dp"
+                    android:textSize="16sp" />
+
+                <TextView
+                    style="@style/AppBodyText"
+                    android:text="@string/node_selection_title"
+                    android:labelFor="@id/nodeSelectionSpinner"
+                    android:layout_marginTop="16dp" />
+
+                <Spinner
+                    android:id="@+id/nodeSelectionSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:saveEnabled="false" />
+
+                <TextView
+                    style="@style/AppBodyText"
+                    android:text="@string/node_selection_hint"
+                    android:textSize="12sp" />
+                <TextView android:id="@+id/appRoutingConnectionSummary" style="@style/AppBodyText"
+                    android:layout_marginTop="16dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:text="@string/session_traffic" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="@color/app_surface">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingEnd="8dp"
+                        android:paddingStart="0dp">
+                        <TextView
+                            style="@style/AppBodyText"
+                            android:text="@string/upload_label" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/uploadTotalText"
+                            android:text="@string/traffic_zero"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/app_text_primary" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingEnd="8dp"
+                        android:paddingStart="0dp">
+                        <TextView
+                            style="@style/AppBodyText"
+                            android:text="@string/download_label" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/downloadTotalText"
+                            android:text="@string/traffic_zero"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/app_text_primary" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    style="@style/AppBodyText"
+                    android:text="@string/stats_empty"
+                    android:id="@+id/statsText"
+                    android:layout_marginTop="16dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>
