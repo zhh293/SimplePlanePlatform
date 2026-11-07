@@ -185,7 +185,15 @@ jobs:
           Get-ChildItem $RESOURCES
 
       # Step 5: Build Tauri app (branch push / PR — build only, no release)
+      - name: Prepare macOS TUN loopback source
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.2', 0)); s.close()" || sudo /sbin/ifconfig lo0 inet 127.0.0.2/32 alias
+          python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.2', 0)); s.close(); print('TUN loopback source is available')"
+
       - name: Test TUN adapter
+        timeout-minutes: 5
         run: cargo test --manifest-path tun-adapter/Cargo.toml --locked
 
       - name: Test desktop

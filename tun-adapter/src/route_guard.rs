@@ -30,6 +30,8 @@ pub struct RouteGuard {
     /// macOS: 已创建的 /etc/resolver/ 文件列表
     /// Windows: NRPT 规则的 namespace 列表（用于恢复时删除）
     resolver_files: Vec<String>,
+    #[cfg(target_os = "macos")]
+    loopback_alias_owned: bool,
 }
 
 /// 保存的原始 DNS 设置
@@ -100,6 +102,26 @@ fn cidr_to_ip_and_mask(cidr: &str) -> (String, String) {
 }
 
 impl RouteGuard {
+    #[cfg(target_os = "macos")]
+    fn setup_tun_loopback_alias(&mut self) -> Result<(), TunError> {
+        let output = Command::new("/sbin/ifconfig").arg("lo0").output()
+            .map_err(|e| TunError::SystemRoute(format!("Cannot inspect loopback alias: {e}")))?;
+        if !output.status.success() {
+            return Err(TunError::SystemRoute("Cannot inspect loopback interface".into()));
+        }
+        if String::from_utf8_lossy(&output.stdout).lines().any(|line| {
+            let mut words = line.split_whitespace();
+            words.next() == Some("inet") && words.next() == Some("127.0.0.2")
+        }) { return Ok(()); }
+        let output = Command::new("/sbin/ifconfig").args(["lo0", "inet", "127.0.0.2/32", "alias"]).output()
+            .map_err(|e| TunError::SystemRoute(format!("Cannot configure TUN loopback alias: {e}")))?;
+        if !output.status.success() {
+            return Err(TunError::SystemRoute(format!("Cannot configure TUN loopback alias: {}", String::from_utf8_lossy(&output.stderr))));
+        }
+        self.loopback_alias_owned = true;
+        tracing::info!("Configured macOS TUN SOCKS5 source alias 127.0.0.2");
+        Ok(())
+    }
     // ========================================================================
     // setup() — macOS
     // ========================================================================
@@ -123,7 +145,10 @@ impl RouteGuard {
             routes_added: Vec::new(),
             original_dns: None,
             resolver_files: Vec::new(),
+            loopback_alias_owned: false,
         };
+
+        guard.setup_tun_loopback_alias()?;
 
         if let Some(orig_gw) = &guard.original_gateway {
             let gw_str = orig_gw.to_string();
@@ -1359,6 +1384,13 @@ impl Drop for RouteGuard {
             }
         }
 
+        #[cfg(target_os = "macos")]
+        if self.loopback_alias_owned {
+            match Command::new("/sbin/ifconfig").args(["lo0", "inet", "127.0.0.2", "-alias"]).output() {
+                Ok(output) if output.status.success() => tracing::info!("Removed owned TUN loopback alias"),
+                other => tracing::warn!("Could not remove owned TUN loopback alias: {:?}", other),
+            }
+        }
         tracing::info!("RouteGuard cleanup completed");
     }
 }

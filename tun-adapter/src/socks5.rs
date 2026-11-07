@@ -567,8 +567,8 @@ mod tests {
 
         let (mut client, server_side) = duplex(4096);
         client.shutdown().await.unwrap();
-        let _ = proxy_tcp_stream("www.example.com", 443, server_side, addr).await;
-        server_task.await.unwrap();
+        proxy_tcp_stream("www.example.com", 443, server_side, addr).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), server_task).await.unwrap().unwrap();
     }
 
     /// 验证 IPv4 类型的 CONNECT 请求编码格式
@@ -608,8 +608,8 @@ mod tests {
 
         let (mut client, server_side) = duplex(4096);
         client.shutdown().await.unwrap();
-        let _ = proxy_tcp_stream("93.184.216.34", 8080, server_side, addr).await;
-        server_task.await.unwrap();
+        proxy_tcp_stream("93.184.216.34", 8080, server_side, addr).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), server_task).await.unwrap().unwrap();
     }
 
     // =========================================================================
