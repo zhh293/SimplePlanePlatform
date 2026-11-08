@@ -1,23 +1,32 @@
 use crate::state::{AppState, OriginalProxyState};
+#[cfg(target_os = "macos")]
 use std::process::Command;
+
+// A reconnect must keep the snapshot taken before this application first took
+// ownership. Keeping it on failure also permits recovery after a partial write.
+fn apply_with_original(
+    original: &mut Option<OriginalProxyState>,
+    read: impl FnOnce() -> Result<OriginalProxyState, String>,
+    apply: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    if original.is_none() {
+        *original = Some(read()?);
+    }
+    apply()
+}
 
 /// 设置系统代理指向本地端口
 pub async fn set_system_proxy(state: &mut AppState) -> Result<(), String> {
     let socks_port = state.proxy_port;
     let http_port = state.http_port;
 
-    // 先保存原始系统代理状态
-    state.original_proxy_state = Some(get_current_proxy_state()?);
-
-    #[cfg(target_os = "macos")]
-    {
+    apply_with_original(&mut state.original_proxy_state, get_current_proxy_state, || {
+        #[cfg(target_os = "macos")]
         set_system_proxy_macos(socks_port, http_port)?;
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        set_system_proxy_windows(socks_port, http_port)?;
-    }
+        #[cfg(target_os = "windows")]
+        set_system_proxy_windows(http_port)?;
+        Ok(())
+    })?;
 
     log::info!(
         "System proxy set: SOCKS5={}, HTTP={}",
@@ -298,7 +307,7 @@ fn get_proxy_state_windows() -> Result<OriginalProxyState, String> {
 }
 
 #[cfg(target_os = "windows")]
-fn set_system_proxy_windows(socks_port: u16, http_port: u16) -> Result<(), String> {
+fn set_system_proxy_windows(http_port: u16) -> Result<(), String> {
     use winreg::enums::HKEY_CURRENT_USER;
     use winreg::RegKey;
 
@@ -307,20 +316,20 @@ fn set_system_proxy_windows(socks_port: u16, http_port: u16) -> Result<(), Strin
         .create_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings")
         .map_err(|e| format!("Failed to open registry: {}", e))?;
 
-    let proxy_server = format!(
-        "http=127.0.0.1:{};https=127.0.0.1:{};socks=127.0.0.1:{}",
-        http_port, http_port, socks_port
-    );
+    // A bare Windows socks= entry means SOCKS4 to Chromium, including its
+    // WebSocket fallback. Our listener supports HTTP CONNECT and SOCKS5 only.
+    // HTTP/HTTPS mappings also let WebSockets use the HTTP CONNECT listener.
+    let proxy_server = format!("http=127.0.0.1:{http_port};https=127.0.0.1:{http_port}");
 
-    internet_settings
-        .set_value("ProxyEnable", &1u32)
-        .map_err(|e| format!("Failed to set ProxyEnable: {}", e))?;
     internet_settings
         .set_value("ProxyServer", &proxy_server)
         .map_err(|e| format!("Failed to set ProxyServer: {}", e))?;
+    internet_settings
+        .set_value("ProxyEnable", &1u32)
+        .map_err(|e| format!("Failed to set ProxyEnable: {}", e))?;
 
     // 通知系统设置已更改
-    notify_proxy_change_windows();
+    notify_proxy_change_windows()?;
 
     Ok(())
 }
@@ -335,28 +344,82 @@ fn restore_proxy_windows(original: &OriginalProxyState) -> Result<(), String> {
         .create_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings")
         .map_err(|e| format!("Failed to open registry: {}", e))?;
 
-    if original.http_enabled {
-        internet_settings
-            .set_value("ProxyEnable", &1u32)
-            .map_err(|e| format!("Failed to restore ProxyEnable: {}", e))?;
-        internet_settings
-            .set_value("ProxyServer", &original.http_host)
-            .map_err(|e| format!("Failed to restore ProxyServer: {}", e))?;
-    } else {
-        internet_settings
-            .set_value("ProxyEnable", &0u32)
-            .map_err(|e| format!("Failed to restore ProxyEnable: {}", e))?;
-    }
+    // Restore the configured address even when the previous proxy was disabled.
+    internet_settings
+        .set_value("ProxyServer", &original.http_host)
+        .map_err(|e| format!("Failed to restore ProxyServer: {}", e))?;
+    internet_settings
+        .set_value("ProxyEnable", &(u32::from(original.http_enabled)))
+        .map_err(|e| format!("Failed to restore ProxyEnable: {}", e))?;
 
-    notify_proxy_change_windows();
+    notify_proxy_change_windows()?;
     Ok(())
 }
 
 #[cfg(target_os = "windows")]
-fn notify_proxy_change_windows() {
-    // 调用 InternetSetOption 通知系统代理变更
-    // 简化实现：通过命令行刷新
-    let _ = Command::new("cmd")
-        .args(["/c", "ipconfig /flushdns"])
-        .output();
+fn notify_proxy_change_windows() -> Result<(), String> {
+    use windows_sys::Win32::Networking::WinInet::{
+        InternetSetOptionW, INTERNET_OPTION_REFRESH, INTERNET_OPTION_SETTINGS_CHANGED,
+    };
+    // Flushing DNS does not refresh WinINet's cached proxy configuration.
+    for option in [INTERNET_OPTION_SETTINGS_CHANGED, INTERNET_OPTION_REFRESH] {
+        let ok = unsafe { InternetSetOptionW(std::ptr::null_mut(), option, std::ptr::null(), 0) };
+        if ok == 0 {
+            return Err(format!("Failed to refresh Windows proxy: {}", std::io::Error::last_os_error()));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    fn snapshot(enabled: bool, server: &str) -> OriginalProxyState {
+        OriginalProxyState {
+            http_enabled: enabled, https_enabled: enabled, socks_enabled: false,
+            http_host: server.into(), http_port: String::new(),
+            https_host: server.into(), https_port: String::new(),
+            socks_host: String::new(), socks_port: String::new(),
+        }
+    }
+
+    #[test]
+    fn reconnect_and_port_change_restore_the_proxy_from_before_the_session() {
+        let system = RefCell::new(snapshot(true, "127.0.0.1:7890"));
+        let mut original = None;
+        for port in [1080, 1080, 2080] {
+            apply_with_original(&mut original, || Ok(system.borrow().clone()), || {
+                *system.borrow_mut() = snapshot(true, &format!("127.0.0.1:{port}"));
+                Ok(())
+            }).unwrap();
+        }
+        *system.borrow_mut() = original.take().unwrap();
+        assert_eq!(system.borrow().http_host, "127.0.0.1:7890");
+        assert!(system.borrow().http_enabled);
+        // A later session captures the user's new configuration, not stale state.
+        *system.borrow_mut() = snapshot(false, "previous.example:8080");
+        apply_with_original(&mut original, || Ok(system.borrow().clone()), || Ok(())).unwrap();
+        assert!(!original.as_ref().unwrap().http_enabled);
+        assert_eq!(original.as_ref().unwrap().http_host, "previous.example:8080");
+    }
+
+    #[test]
+    fn failed_apply_and_retry_preserve_the_recovery_snapshot() {
+        let mut original = None;
+        assert!(apply_with_original(&mut original, || Ok(snapshot(false, "old:8080")),
+            || Err("partial registry write".into())).is_err());
+        apply_with_original(&mut original, || panic!("must not capture a partial update"), || Ok(())).unwrap();
+        assert!(!original.as_ref().unwrap().http_enabled);
+        assert_eq!(original.as_ref().unwrap().http_host, "old:8080");
+    }
+
+    #[test]
+    fn failed_snapshot_does_not_modify_the_system() {
+        let mut original = None;
+        assert!(apply_with_original(&mut original, || Err("cannot read registry".into()),
+            || panic!("must not overwrite without a backup")).is_err());
+        assert!(original.is_none());
+    }
 }

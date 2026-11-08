@@ -86,6 +86,9 @@ impl AppState {
             crate::process::stop_tun_adapter(self).await?;
         }
 
+        // Restore first so a failed registry update leaves the listener alive.
+        crate::proxy::restore_system_proxy(self).await?;
+
         // 停止代理进程（外部进程不管）
         if !self.proxy_external {
             if let Some(ref mut child) = self.proxy_process {
@@ -97,11 +100,6 @@ impl AppState {
         }
         self.proxy_process = None;
         self.proxy_status = ServiceStatus::Stopped;
-
-        // 还原系统代理
-        if self.original_proxy_state.is_some() {
-            crate::proxy::restore_system_proxy(self).await?;
-        }
 
         // DNS 兜底恢复（等待 tun-adapter 的 Drop handler 完成）
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
