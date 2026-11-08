@@ -80,16 +80,17 @@ where
     Ok(())
 }
 
-// A dedicated loopback source tells proxy-local this connection is already
-// routed by TUN. Local DIRECT would resolve FakeDNS and re-enter the adapter.
+// Windows TUN handles DIRECT itself and marks proxied connections so proxy-local
+// does not route them again. Other platforms delegate DIRECT to proxy-local and
+// use the default source address; macOS also cannot bind an unconfigured 127.0.0.2.
 async fn connect_proxy(addr: SocketAddr) -> std::io::Result<TcpStream> {
+    #[cfg(windows)]
     if addr.ip().is_loopback() && addr.is_ipv4() {
         let socket = tokio::net::TcpSocket::new_v4()?;
         socket.bind("127.0.0.2:0".parse().unwrap())?;
-        socket.connect(addr).await
-    } else {
-        TcpStream::connect(addr).await
+        return socket.connect(addr).await;
     }
+    TcpStream::connect(addr).await
 }
 
 /// Both directions share one idle deadline; cancelling this future drops both streams.
@@ -308,6 +309,28 @@ mod tests {
     use super::*;
     use tokio::io::duplex;
     use tokio::net::TcpListener;
+
+    #[tokio::test]
+    async fn proxy_source_matches_platform_routing_ownership() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let stream = tokio::time::timeout(
+            Duration::from_secs(5),
+            connect_proxy(listener.local_addr().unwrap()),
+        )
+        .await
+        .expect("local proxy connection timed out")
+        .expect("local proxy connection failed");
+        let (_accepted, peer) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+            .await
+            .expect("local proxy did not accept the connection")
+            .unwrap();
+        #[cfg(windows)]
+        let expected = std::net::Ipv4Addr::new(127, 0, 0, 2);
+        #[cfg(not(windows))]
+        let expected = std::net::Ipv4Addr::LOCALHOST;
+        assert_eq!(peer.ip(), std::net::IpAddr::V4(expected));
+        assert_eq!(stream.local_addr().unwrap().ip(), peer.ip());
+    }
 
     #[tokio::test(start_paused = true)]
     async fn one_way_traffic_survives_for_five_minutes_in_both_directions() {
@@ -567,8 +590,13 @@ mod tests {
 
         let (mut client, server_side) = duplex(4096);
         client.shutdown().await.unwrap();
-        let _ = proxy_tcp_stream("www.example.com", 443, server_side, addr).await;
-        server_task.await.unwrap();
+        proxy_tcp_stream("www.example.com", 443, server_side, addr)
+            .await
+            .expect("SOCKS5 domain connection failed before the mock accepted it");
+        tokio::time::timeout(Duration::from_secs(5), server_task)
+            .await
+            .expect("mock SOCKS5 server did not finish")
+            .unwrap();
     }
 
     /// 验证 IPv4 类型的 CONNECT 请求编码格式
@@ -608,8 +636,13 @@ mod tests {
 
         let (mut client, server_side) = duplex(4096);
         client.shutdown().await.unwrap();
-        let _ = proxy_tcp_stream("93.184.216.34", 8080, server_side, addr).await;
-        server_task.await.unwrap();
+        proxy_tcp_stream("93.184.216.34", 8080, server_side, addr)
+            .await
+            .expect("SOCKS5 IPv4 connection failed before the mock accepted it");
+        tokio::time::timeout(Duration::from_secs(5), server_task)
+            .await
+            .expect("mock SOCKS5 server did not finish")
+            .unwrap();
     }
 
     // =========================================================================

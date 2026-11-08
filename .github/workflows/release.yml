@@ -187,6 +187,7 @@ jobs:
 
       # Step 5: Build Tauri app (branch push / PR — build only, no release)
       - name: Test TUN adapter
+        timeout-minutes: 10
         run: cargo test --manifest-path tun-adapter/Cargo.toml --locked
 
       - name: Test desktop
