@@ -201,6 +201,10 @@ pub async fn start_proxy_local(state: &mut AppState) -> Result<(), String> {
     log::info!("Jar path: {:?}", jar_path);
 
     let mut cmd = Command::new(&java_path);
+    // The core is a background child. A separate console can be closed by the
+    // user independently of the UI, interrupting the active system proxy.
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
     // 设置工作目录：开发模式用项目根目录，生产模式用资源目录
     let work_dir = if cfg!(debug_assertions) {
