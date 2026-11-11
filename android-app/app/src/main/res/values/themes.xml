@@ -38,6 +38,24 @@
         <item name="android:textColor">@color/app_text_primary</item>
     </style>
 
+    <style name="DashboardCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="cardCornerRadius">22dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cardBackgroundColor">@color/app_surface</item>
+    </style>
+    <style name="DashboardMetric" parent="DashboardCard">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="cardCornerRadius">14dp</item>
+    </style>
+    <style name="DashboardSection" parent="AppBodyText">
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/app_text_primary</item>
+    </style>
     <style name="AppBodyText">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>

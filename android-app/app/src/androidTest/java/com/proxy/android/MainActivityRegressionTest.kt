@@ -10,7 +10,9 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ListView
 import android.widget.Spinner
+import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -69,11 +71,59 @@ class MainActivityRegressionTest {
             launch().use { scenario ->
                 scenario.recreate()
                 scenario.onActivity { activity ->
-                    assertEquals(2, activity.findViewById<Spinner>(R.id.nodeSelectionSpinner).selectedItemPosition)
+                    val nodeAction = activity.findViewById<View>(R.id.nodePickerButton)
+                    assertEquals("SECOND", nodeAction.findViewById<TextView>(R.id.actionValue).text)
                     assertEquals(2, activity.findViewById<Spinner>(R.id.appRoutingModeSpinner).selectedItemPosition)
                     activity.findViewById<Button>(R.id.exportConfigButton).performClick()
                     val exported = AndroidVpnConfig.fromImportText(activity.findViewById<EditText>(R.id.importConfigInput).text.toString())
                     assertEquals(fixture, exported)
+                }
+            }
+        } finally { VpnConfigStore.save(context, original) }
+    }
+
+    @Test
+    fun searchableNodeSheetKeepsItsQueryAndSelectsTheOriginalIndex() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val original = VpnConfigStore.load(context)
+        val template = original.remotes.first()
+        val nodes = listOf(template.copy(name = "West", host = "west.example"),
+            template.copy(name = "East backup", host = "backup.example", enabled = false),
+            template.copy(name = "East", host = "east.example", transport = "http3"))
+        try {
+            VpnConfigStore.save(context, original.copy(remotes = nodes, selectedNodeIndex = -1))
+            launch().use { scenario ->
+                scenario.onActivity { activity ->
+                    activity.findViewById<View>(R.id.nodePickerButton).performClick()
+                    activity.supportFragmentManager.executePendingTransactions()
+                    val sheet = activity.supportFragmentManager.findFragmentByTag(NodePickerSheet.TAG)!!.requireView()
+                    val search = sheet.findViewById<EditText>(R.id.nodeSearchInput)
+                    val list = sheet.findViewById<ListView>(R.id.nodeChoiceList)
+                    search.setText("no-such-node")
+                    assertEquals(0, list.count)
+                    assertEquals(View.VISIBLE, sheet.findViewById<View>(R.id.noNodeChoices).visibility)
+                    search.setText("EAST")
+                    assertEquals(2, list.count)
+                    assertFalse(list.adapter.isEnabled(0))
+                    assertFalse(activity.selectDashboardNode(1))
+                    assertEquals(-1, activity.selectedNodeIndex)
+                }
+                scenario.recreate()
+                scenario.onActivity { activity ->
+                    val sheet = activity.supportFragmentManager.findFragmentByTag(NodePickerSheet.TAG)!!.requireView()
+                    val search = sheet.findViewById<EditText>(R.id.nodeSearchInput)
+                    assertEquals("EAST", search.text.toString())
+                    search.setText("east.example")
+                    val list = sheet.findViewById<ListView>(R.id.nodeChoiceList)
+                    assertEquals(1, list.count)
+                    assertTrue(list.adapter.isEnabled(0))
+                    list.performItemClick(list.adapter.getView(0, null, list), 0, list.adapter.getItemId(0))
+                    assertEquals(2, activity.selectedNodeIndex)
+                    val action = activity.findViewById<View>(R.id.nodePickerButton)
+                    assertEquals("East", action.findViewById<TextView>(R.id.actionValue).text)
+                    activity.findViewById<Button>(R.id.exportConfigButton).performClick()
+                    val exported = activity.findViewById<EditText>(R.id.importConfigInput).text.toString()
+                    assertEquals(2, AndroidVpnConfig.fromImportText(exported).selectedNodeIndex)
                 }
             }
         } finally { VpnConfigStore.save(context, original) }

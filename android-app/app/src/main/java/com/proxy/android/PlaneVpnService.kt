@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.net.Inet4Address
@@ -62,8 +63,8 @@ class PlaneVpnService : VpnService() {
                 .onFailure { Log.w(TAG, "nativeStats failed", it) }
                 .getOrElse { """{"running":true,"state":"stats_error"}""" }
             latestStatsJson = json
+            refreshNativeStatus(json, recordTraffic = true)
             publishStats(json)
-            refreshNativeStatus(json)
             mainHandler.postDelayed(this, STATS_INTERVAL_MS)
         }
     }
@@ -134,6 +135,7 @@ class PlaneVpnService : VpnService() {
         }
 
         nativeHandle = handle
+        sessionTraffic.start(SystemClock.elapsedRealtime())
         setUnderlyingNetworks(underlyingNetwork?.let { arrayOf(it) } ?: emptyArray())
         startStatsTicker()
         AppLogStore.add("数据面已启动")
@@ -324,8 +326,13 @@ class PlaneVpnService : VpnService() {
         }
     }
 
-    private fun refreshNativeStatus(json: String) {
-        val stats = runCatching { JSONObject(json) }.getOrNull() ?: return
+    private fun refreshNativeStatus(json: String, recordTraffic: Boolean = false) {
+        val stats = runCatching { JSONObject(json) }.getOrNull()
+        if (recordTraffic) {
+            sessionTraffic.record(SystemClock.elapsedRealtime(),
+                stats?.optLong("upload_bytes", -1L) ?: -1L, stats?.optLong("download_bytes", -1L) ?: -1L)
+        }
+        if (stats == null) return
         val state = stats.optString("state")
         val message = if (underlyingNetwork == null && nativeHandle != 0L) {
             getString(R.string.vpn_status_no_network)
@@ -387,6 +394,7 @@ class PlaneVpnService : VpnService() {
 
     private fun stopStatsTicker() {
         mainHandler.removeCallbacks(statsTicker)
+        sessionTraffic.stop()
         latestStatsJson = """{"running":false,"state":"stopped"}"""
         publishStats(latestStatsJson)
     }
@@ -476,6 +484,8 @@ class PlaneVpnService : VpnService() {
     }
 
     companion object {
+        internal val sessionTraffic = SessionTraffic()
+
         @Volatile
         var latestStatusMessage: String = "未连接"
             private set

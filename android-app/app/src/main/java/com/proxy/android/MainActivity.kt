@@ -9,9 +9,9 @@ import android.net.VpnService
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
+import android.text.format.DateUtils
 import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
@@ -19,12 +19,14 @@ import android.widget.AdapterView
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.TooltipCompat
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.ViewCompat
@@ -32,6 +34,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import org.json.JSONObject
 import org.json.JSONArray
@@ -39,15 +42,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private val routeActions = listOf("proxy", "direct", "reject")
     private val nodeRows = mutableListOf<NodeRow>()
-    private val uiHandler = Handler(Looper.getMainLooper())
 
     private lateinit var mainContent: LinearLayout
-    private lateinit var toggleVpnButton: Button
+    private lateinit var toggleVpnButton: MaterialButton
     private lateinit var saveConfigButton: Button
     private lateinit var vpnStatusText: TextView
     private lateinit var statsText: TextView
@@ -63,11 +64,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var importConfigInput: EditText
     private lateinit var logText: TextView
     private lateinit var navigation: BottomNavigationView
-    private lateinit var nodeSelectionSpinner: Spinner
+    private lateinit var nodePickerButton: View
+    private lateinit var routingShortcut: View
+    private lateinit var uploadMetric: TrafficMetricView
+    private lateinit var downloadMetric: TrafficMetricView
     private lateinit var appRoutingModeSpinner: Spinner
     private var selectedAppPackages: List<String> = emptyList()
     private var selectedPage = R.id.nav_connection
-    private var selectedNodeIndex = -1
+    internal var selectedNodeIndex = -1
+        private set
+    internal val nodeSelectionLocked get() = vpnRunning || PlaneVpnService.isRunning || transferInProgress
     private var formMtu = VpnConfigStore.DEFAULT_MTU
     private var originalRules: List<RouteRuleConfig> = emptyList()
     private var pendingExportJson: String? = null
@@ -86,17 +92,10 @@ class MainActivity : AppCompatActivity() {
                     updateLogView()
                 }
                 PlaneVpnService.ACTION_STATS_CHANGED -> {
-                    updateStats(intent.getStringExtra(PlaneVpnService.EXTRA_STATS_JSON).orEmpty())
+                    if (selectedPage == R.id.nav_connection) updateStats()
+                    if (selectedPage == R.id.nav_settings) updateLogView()
                 }
             }
-        }
-    }
-
-    private val uiTicker = object : Runnable {
-        override fun run() {
-            updateStats(PlaneVpnService.latestStatsJson)
-            updateLogView()
-            uiHandler.postDelayed(this, UI_REFRESH_MS)
         }
     }
 
@@ -151,13 +150,23 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.version_label, packageManager.getPackageInfo(packageName, 0).versionName, readNativeVersion())
         vpnStatusText = findViewById(R.id.vpnStatusText)
         statsText = findViewById(R.id.statsText)
-        nodeSelectionSpinner = findViewById<Spinner>(R.id.nodeSelectionSpinner).apply {
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    selectedNodeIndex = position - 1
-                }
-                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        uploadMetric = findViewById<TrafficMetricView>(R.id.uploadMetric).apply { configure(isUpload = true) }
+        downloadMetric = findViewById<TrafficMetricView>(R.id.downloadMetric).apply { configure(isUpload = false) }
+        val screen = resources.configuration
+        if (screen.fontScale >= 1.5f || screen.screenWidthDp < 320) {
+            findViewById<LinearLayout>(R.id.trafficMetrics).orientation = LinearLayout.VERTICAL
+            listOf(uploadMetric, downloadMetric).forEach {
+                it.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT)
             }
+        }
+        nodePickerButton = dashboardAction(R.id.nodePickerButton, R.string.node_selection_title, R.drawable.ic_nodes) {
+            if (supportFragmentManager.findFragmentByTag(NodePickerSheet.TAG) == null) {
+                NodePickerSheet().show(supportFragmentManager, NodePickerSheet.TAG)
+            }
+        }
+        routingShortcut = dashboardAction(R.id.routingShortcut, R.string.scope_shortcut_title, R.drawable.ic_route) {
+            navigation.selectedItemId = R.id.nav_routing
         }
         nodesContainer = findViewById(R.id.nodesContainer)
         addNodeButton = findViewById<Button>(R.id.addNodeButton).apply {
@@ -190,7 +199,7 @@ class MainActivity : AppCompatActivity() {
         saveConfigButton = findViewById<Button>(R.id.saveConfigButton).apply {
             setOnClickListener { saveCurrentConfig(showSavedToast = true) }
         }
-        toggleVpnButton = findViewById<Button>(R.id.toggleVpnButton).apply {
+        toggleVpnButton = findViewById<MaterialButton>(R.id.toggleVpnButton).apply {
             setOnClickListener { onToggleClicked() }
         }
         findViewById<Button>(R.id.savePresetButton).setOnClickListener { savePreset() }
@@ -218,7 +227,6 @@ class MainActivity : AppCompatActivity() {
         navigation.selectedItemId = savedInstanceState?.getInt(SELECTED_PAGE, R.id.nav_connection) ?: R.id.nav_connection
         mainContent.requestFocus()
         updateVpnUi(PlaneVpnService.isRunning)
-        updateStats(PlaneVpnService.latestStatsJson)
     }
 
     override fun onStart() {
@@ -230,12 +238,10 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.registerReceiver(this, statusReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         updateVpnUi(PlaneVpnService.isRunning)
         updateNotificationButton()
-        uiHandler.post(uiTicker)
     }
 
     override fun onStop() {
         runCatching { unregisterReceiver(statusReceiver) }
-        uiHandler.removeCallbacks(uiTicker)
         super.onStop()
     }
 
@@ -302,16 +308,48 @@ class MainActivity : AppCompatActivity() {
         }
         saveConfigButton.visibility = if (page == R.id.nav_nodes || page == R.id.nav_routing) View.VISIBLE else View.GONE
         findViewById<View>(R.id.configLockedText).visibility = if (vpnRunning && page != R.id.nav_connection) View.VISIBLE else View.GONE
-        if (page == R.id.nav_connection) refreshNodeChoices()
+        if (page == R.id.nav_connection) {
+            refreshNodeChoices()
+            updateStats()
+        }
+        if (page == R.id.nav_settings) updateLogView()
+    }
+
+    private fun dashboardAction(id: Int, title: Int, icon: Int, onClick: () -> Unit): View =
+        findViewById<View>(id).apply {
+            findViewById<TextView>(R.id.actionTitle).setText(title)
+            findViewById<ImageView>(R.id.actionIcon).setImageResource(icon)
+            setOnClickListener { onClick() }
+        }
+
+    private fun nodeName(row: NodeRow, index: Int) =
+        row.nameInput.text.toString().trim().ifBlank { getString(R.string.node_fallback_name, index + 1) }
+
+    internal fun dashboardNodes(): List<NodeChoice> {
+        val auto = NodeChoice(-1, getString(R.string.node_auto_title), getString(R.string.node_auto_detail), true)
+        return listOf(auto) + nodeRows.mapIndexed { index, row ->
+            val protocol = if (row.transportSpinner.selectedItemPosition == 1) "HTTP/3" else "HTTP/2"
+            val host = row.hostInput.text.toString().trim()
+            val port = row.portInput.text.toString().trim()
+            val endpoint = if (host.contains(':') && !host.startsWith("[")) "[$host]" else host
+            val address = if (endpoint.isNotEmpty() && port.isNotEmpty()) "$endpoint:$port" else endpoint
+            NodeChoice(index, nodeName(row, index), listOf(protocol, address).filter { it.isNotEmpty() }.joinToString(" · "),
+                row.enabledCheckBox.isChecked)
+        }
+    }
+
+    internal fun selectDashboardNode(index: Int): Boolean {
+        if (nodeSelectionLocked || (index != -1 && nodeRows.getOrNull(index)?.enabledCheckBox?.isChecked != true)) return false
+        selectedNodeIndex = index
+        refreshNodeChoices()
+        return true
     }
 
     private fun refreshNodeChoices() {
-        val names = listOf(getString(R.string.node_selection_auto)) + nodeRows.mapIndexed { index, row ->
-            val name = row.nameInput.text.toString().ifBlank { "节点 ${index + 1}" }
-            if (row.enabledCheckBox.isChecked) "${index + 1}. $name" else "${index + 1}. $name（已停用）"
-        }
-        nodeSelectionSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
-        nodeSelectionSpinner.setSelection(selectedNodeIndex + 1)
+        val node = nodeRows.getOrNull(selectedNodeIndex)
+        val name = if (node == null) getString(R.string.node_auto_title) else nodeName(node, selectedNodeIndex)
+        nodePickerButton.findViewById<TextView>(R.id.actionValue).text =
+            if (node != null && !node.enabledCheckBox.isChecked) "$name · " + getString(R.string.node_disabled) else name
     }
 
     private fun currentAppRouting() = AppRoutingConfig(
@@ -332,7 +370,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateAppRoutingUi() {
         val policy = currentAppRouting()
         val all = policy.mode == AppRoutingConfig.ALL
-        findViewById<TextView>(R.id.appRoutingConnectionSummary).text = getString(R.string.app_routing_connection_summary, appRoutingSummary(policy))
+        routingShortcut.findViewById<TextView>(R.id.actionValue).text = appRoutingSummary(policy)
         findViewById<TextView>(R.id.appRoutingHint).setText(if (all) R.string.app_routing_hint_all else R.string.app_routing_hint)
         findViewById<Button>(R.id.selectAppsButton).apply {
             visibility = if (all) View.GONE else View.VISIBLE
@@ -670,30 +708,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateVpnUi(running: Boolean, message: String? = null) {
         vpnRunning = running
-        toggleVpnButton.text = getString(if (running) R.string.disconnect_vpn else R.string.connect_vpn)
+        val action = getString(if (running) R.string.disconnect_vpn else R.string.connect_vpn)
+        toggleVpnButton.contentDescription = action
+        TooltipCompat.setTooltipText(toggleVpnButton, action)
+        toggleVpnButton.setIconResource(if (running) R.drawable.ic_stop else R.drawable.ic_power)
         val status = message ?: PlaneVpnService.latestStatusMessage
         val failed = status.startsWith("VPN 已启动；代理请求失败") || status.startsWith("连接失败") || status == getString(R.string.vpn_status_error)
         vpnStatusText.text = if (failed) getString(R.string.vpn_status_error) else status
-        findViewById<TextView>(R.id.vpnDetailText).setText(when {
+        val detail = when {
             status == getString(R.string.app_routing_unavailable) -> R.string.app_routing_choose_installed
             failed -> R.string.failure_detail
             status == getString(R.string.vpn_status_no_network) -> R.string.offline_detail
             status == getString(R.string.vpn_status_recovering) -> R.string.recovery_detail
             status == getString(R.string.vpn_status_connected) -> R.string.connected_detail
-            running -> R.string.ready_detail
-            else -> R.string.idle_detail
-        })
+            status == getString(R.string.vpn_status_ready) -> R.string.ready_detail
+            else -> null
+        }
+        findViewById<TextView>(R.id.vpnDetailText).apply {
+            visibility = if (detail != null) View.VISIBLE else View.GONE
+            if (detail != null) setText(detail)
+        }
         toggleVpnButton.isEnabled = !transferInProgress
         findViewById<View>(R.id.fileTransferProgress).visibility = if (transferInProgress) View.VISIBLE else View.GONE
         setConfigInputsEnabled(!running && !transferInProgress)
         showPage(selectedPage)
+        (supportFragmentManager.findFragmentByTag(NodePickerSheet.TAG) as? NodePickerSheet)?.refresh()
     }
 
     private fun setConfigInputsEnabled(enabled: Boolean) {
         nodeRows.forEach { it.setEnabled(enabled) }
         listOf(
             addNodeButton,
-            nodeSelectionSpinner,
             appRoutingModeSpinner,
             saveConfigButton,
             defaultRouteSpinner,
@@ -718,45 +763,36 @@ class MainActivity : AppCompatActivity() {
         updateAppRoutingUi()
     }
 
-    private fun updateStats(json: String) {
-        val text = runCatching {
-            val obj = JSONObject(json.ifBlank { "{}" })
-            val up = formatBytes(obj.optLong("upload_bytes", 0))
-            val down = formatBytes(obj.optLong("download_bytes", 0))
-            findViewById<TextView>(R.id.uploadTotalText).text = up
-            findViewById<TextView>(R.id.downloadTotalText).text = down
-            val active = obj.optLong("active_connections", 0)
-            val total = obj.optLong("total_connections", 0)
-            val proxy = obj.optLong("proxy_connections", 0)
-            val direct = obj.optLong("direct_connections", 0)
-            val rejected = obj.optLong("rejected_connections", 0)
-            val node = obj.optString("active_node", "-").ifBlank { "-" }
-            "当前节点  $node\n活跃连接 $active · 累计 $total\n代理 $proxy · 直连 $direct · 拒绝 $rejected"
-        }.getOrElse {
-            getString(R.string.stats_empty)
+    private fun updateStats() {
+        val now = SystemClock.elapsedRealtime()
+        val session = PlaneVpnService.sessionTraffic
+        val started = session.startedAtMs.takeIf { vpnRunning }
+        val stats = if (started == null) null else runCatching { JSONObject(PlaneVpnService.latestStatsJson) }.getOrNull()
+        val samples = if (started == null) emptyList() else session.samplesAt(now)
+        fun total(key: String): Long? = if (started == null) 0L else stats?.optLong(key, -1L)?.takeIf { it >= 0 }
+        uploadMetric.render(samples, total("upload_bytes"), now)
+        downloadMetric.render(samples, total("download_bytes"), now)
+        findViewById<TextView>(R.id.sessionDuration).apply {
+            visibility = if (started == null) View.GONE else View.VISIBLE
+            if (started != null) text = getString(R.string.session_duration, DateUtils.formatElapsedTime((now - started) / 1000))
         }
-        statsText.text = text
+        val hasConnections = stats?.has("active_connections") == true
+        findViewById<View>(R.id.sessionConnections).visibility = if (hasConnections) View.VISIBLE else View.GONE
+        if (stats != null && hasConnections) {
+            val counts = getString(R.string.connection_counts, stats.optLong("active_connections"), stats.optLong("total_connections"),
+                stats.optLong("proxy_connections"), stats.optLong("direct_connections"), stats.optLong("rejected_connections"))
+            val node = stats.optString("active_node")
+            statsText.text = if (node.isBlank()) counts else getString(R.string.active_node, node) + "\n" + counts
+        }
     }
 
     private fun updateLogView() {
         logText.text = AppLogStore.snapshot().takeLast(80).joinToString("\n")
     }
 
-    private fun formatBytes(value: Long): String {
-        val units = arrayOf("B", "KB", "MB", "GB")
-        var size = value.toDouble()
-        var unit = 0
-        while (size >= 1024 && unit < units.lastIndex) {
-            size /= 1024
-            unit += 1
-        }
-        return if (unit == 0) "$value B" else String.format(Locale.US, "%.1f %s", size, units[unit])
-    }
-
     companion object {
         private const val FORM_DRAFT = "formDraft"
         private const val SELECTED_PAGE = "selectedPage"
         private const val PENDING_EXPORT = "pendingExportJson"
-        private const val UI_REFRESH_MS = 1000L
     }
 }
