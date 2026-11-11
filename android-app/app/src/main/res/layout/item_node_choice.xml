@@ -1,0 +1,15 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal" android:gravity="center_vertical" android:minHeight="64dp"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="10dp" android:paddingEnd="10dp"
+    android:background="@drawable/sheet_selection">
+    <ImageView android:id="@+id/choiceIcon" android:layout_width="36dp" android:layout_height="36dp" android:padding="8dp"
+        android:layout_marginEnd="10dp" android:background="@drawable/inset_tile" android:backgroundTint="@color/surface_inset"
+        android:importantForAccessibility="no" app:tint="@color/app_text_secondary" />
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+        <TextView android:id="@+id/choiceName" style="@style/DashboardSection" android:textSize="16sp" />
+        <TextView android:id="@+id/choiceDetail" style="@style/AppBodyText" android:textSize="13sp" />
+    </LinearLayout>
+    <ImageView android:id="@+id/choiceCheck" android:layout_width="22dp" android:layout_height="22dp"
+        android:layout_marginStart="8dp" android:src="@drawable/ic_choice_check" app:tint="@color/app_primary" android:importantForAccessibility="no" />
+</LinearLayout>

@@ -1,10 +1,10 @@
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpSocket, TcpStream};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{mpsc, Mutex, Semaphore};
 use tokio_rustls::{rustls, TlsConnector};
 
 use crate::crypto::Cipher;
@@ -53,6 +53,7 @@ pub async fn run_dispatcher<P>(
     protector: Arc<P>,
     notify_tx: mpsc::Sender<()>,
     mut shutdown_rx: tokio::sync::watch::Receiver<bool>,
+    mut network_rx: tokio::sync::watch::Receiver<u64>,
 ) -> Result<()>
 where
     P: SocketProtector + 'static,
@@ -64,7 +65,7 @@ where
     }
 
     let router = Router::from_config(&config.routing)?;
-    let proxy_conn = Arc::new(new_connection_pool(config.nodes.len()));
+    let mut proxy_conn = Arc::new(new_connection_pool(config.nodes.len()));
 
     tracing::info!(
         "dispatcher started with {} node(s), default route={}",
@@ -74,12 +75,25 @@ where
 
     loop {
         tokio::select! {
+            biased;
             res = shutdown_rx.changed() => {
                 if res.is_err() || *shutdown_rx.borrow() {
                     tracing::info!("dispatcher received shutdown");
                     config.stats.set_state("stopped");
                     return Ok(());
                 }
+            }
+
+            res = network_rx.changed() => {
+                if res.is_err() { return Ok(()); }
+                // Sockets are bound to an Android Network. Never reuse them on
+                // its replacement, even if QUIC has not timed out yet. Existing
+                // flows observe the same signal and close; no payload is replayed.
+                proxy_conn = Arc::new(new_connection_pool(config.nodes.len()));
+                config.stats.set_state("ready");
+                config.stats.set_error("");
+                config.stats.set_active_node("");
+                tracing::info!("underlying network changed; outbound cache cleared");
             }
 
             ev = event_rx.recv() => {
@@ -123,8 +137,16 @@ where
                         config.stats.inc_direct();
                         let stats = Arc::clone(&config.stats);
                         let protector = Arc::clone(&protector);
+                        let mut network_rx = network_rx.clone();
+                        let mut shutdown_rx = shutdown_rx.clone();
                         tokio::spawn(async move {
-                            if let Err(e) = proxy_direct(target_host, dst_port, local, protector, Arc::clone(&stats)).await {
+                            let result = tokio::select! {
+                                biased;
+                                _ = shutdown_rx.changed() => Ok(()),
+                                _ = network_rx.changed() => Ok(()),
+                                result = proxy_direct(target_host, dst_port, local, protector, Arc::clone(&stats)) => result,
+                            };
+                            if let Err(e) = result {
                                 stats.inc_failed();
                                 stats.set_error(format!("direct: {e}"));
                                 tracing::warn!("direct connection ended with error: {e}");
@@ -138,14 +160,17 @@ where
                         let proxy_conn = Arc::clone(&proxy_conn);
                         let notify_tx = notify_tx.clone();
                         let mut shutdown_rx = shutdown_rx.clone();
+                        let mut network_rx = network_rx.clone();
                         tokio::spawn(async move {
                             // A slow/dead proxy node must not block the dispatcher
                             // from handling direct connections or the stop signal.
-                            let open = open_proxy_with_failover(&config, protector.as_ref(), &proxy_conn, &target_host, dst_port);
+                            let open = open_proxy_with_failover(&config, Arc::clone(&protector), &proxy_conn, &target_host, dst_port);
                             let result = tokio::select! {
+                                biased;
                                 _ = shutdown_rx.changed() => return,
+                                _ = network_rx.changed() => return,
                                 result = tokio::time::timeout(Duration::from_secs(30), open) => {
-                                    result.unwrap_or_else(|_| Err(CoreError::Protocol(
+                                    result.unwrap_or_else(|_| Err(CoreError::Timeout(
                                         format!("proxy connection to {target_host}:{dst_port} timed out after 30s")
                                     )))
                                 }
@@ -161,7 +186,9 @@ where
                                     let stats = Arc::clone(&config.stats);
                                     let forwarding = proxy_via_remote_counted(stream, local, PROXY_READ_BUF, Some(Arc::clone(&stats)));
                                     let result = tokio::select! {
+                                        biased;
                                         _ = shutdown_rx.changed() => Ok(()),
+                                        _ = network_rx.changed() => Ok(()),
                                         result = forwarding => result,
                                     };
                                     if let Err(e) = result {
@@ -192,13 +219,13 @@ where
 
 async fn open_proxy_with_failover<P>(
     config: &DispatcherConfig,
-    protector: &P,
+    protector: Arc<P>,
     pool: &ConnectionPool,
     host: &str,
     port: u16,
 ) -> Result<(ProxyStream, String)>
 where
-    P: SocketProtector,
+    P: SocketProtector + 'static,
 {
     let mut last_error: Option<CoreError> = None;
     for (idx, node) in config.nodes.iter().enumerate() {
@@ -209,7 +236,7 @@ where
             if let Some(connection) = cached.as_ref() {
                 Arc::clone(connection)
             } else {
-                match establish_outbound(node, protector).await {
+                match establish_outbound(node, Arc::clone(&protector)).await {
                     Ok(connection) => {
                         let connection = Arc::new(connection);
                         *cached = Some(Arc::clone(&connection));
@@ -248,16 +275,19 @@ where
     }))
 }
 
-async fn establish_outbound<P>(node: &RemoteNodeConfig, protector: &P) -> Result<ProxyConnection>
+async fn establish_outbound<P>(
+    node: &RemoteNodeConfig,
+    protector: Arc<P>,
+) -> Result<ProxyConnection>
 where
-    P: SocketProtector,
+    P: SocketProtector + 'static,
 {
     let cipher = Cipher::from_name(&node.cipher.to_ascii_lowercase(), &node.key)?;
     if node.transport == Transport::Http3 {
-        let addr = resolve_server_addr_with_protector(&node.host, node.port, protector)?;
+        let addr = resolve_server_addr_async(&node.host, node.port, Arc::clone(&protector)).await?;
         return outbound_h3::OutboundConnection::connect(
             addr,
-            protector,
+            protector.as_ref(),
             cipher,
             outbound_h3::OutboundConfig {
                 server_host: node.host.clone(),
@@ -305,7 +335,7 @@ async fn proxy_direct<P>(
 where
     P: SocketProtector + 'static,
 {
-    let mut remote = connect_protected(&host, port, protector.as_ref()).await?;
+    let mut remote = connect_protected(&host, port, protector).await?;
     let mut up = vec![0u8; PROXY_READ_BUF];
     let mut down = vec![0u8; PROXY_READ_BUF];
 
@@ -334,13 +364,13 @@ where
     Ok(())
 }
 
-async fn connect_protected<P>(host: &str, port: u16, protector: &P) -> Result<TcpStream>
+async fn connect_protected<P>(host: &str, port: u16, protector: Arc<P>) -> Result<TcpStream>
 where
-    P: SocketProtector,
+    P: SocketProtector + 'static,
 {
     use std::os::unix::io::AsRawFd;
 
-    let addr = resolve_server_addr_with_protector(host, port, protector)?;
+    let addr = resolve_server_addr_async(host, port, Arc::clone(&protector)).await?;
     let socket = if addr.is_ipv6() {
         TcpSocket::new_v6()
     } else {
@@ -441,6 +471,44 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
     }
 }
 
+async fn resolve_server_addr_async<P>(
+    host: &str,
+    port: u16,
+    protector: Arc<P>,
+) -> Result<SocketAddr>
+where
+    P: SocketProtector + 'static,
+{
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        return Ok(SocketAddr::from((ip, port)));
+    }
+    // Android Network.getAllByName is blocking. Keep it off the two network
+    // workers and bound concurrent lookups even if callers time out or stop.
+    static SLOTS: OnceLock<Arc<Semaphore>> = OnceLock::new();
+    let slots = SLOTS.get_or_init(|| Arc::new(Semaphore::new(16)));
+    let name = host.to_owned();
+    tokio::time::timeout(NODE_CONNECT_TIMEOUT, async move {
+        let permit = Arc::clone(slots)
+            .acquire_owned()
+            .await
+            .map_err(|e| CoreError::Internal(format!("DNS worker unavailable: {e}")))?;
+        tokio::task::spawn_blocking(move || {
+            // A running blocking lookup cannot be aborted; retain its slot
+            // until it actually returns, including after the caller's timeout.
+            let _permit = permit;
+            resolve_server_addr_with_protector(&name, port, protector.as_ref())
+        })
+        .await
+        .map_err(|e| CoreError::Internal(format!("DNS worker failed: {e}")))?
+    })
+    .await
+    .map_err(|_| {
+        CoreError::Timeout(format!(
+            "protected DNS lookup for {host} timed out after 10s"
+        ))
+    })?
+}
+
 fn resolve_server_addr(host: &str, port: u16) -> Result<SocketAddr> {
     if let Ok(ip) = host.parse::<IpAddr>() {
         return Ok(SocketAddr::from((ip, port)));
@@ -463,7 +531,7 @@ fn resolve_server_addr(host: &str, port: u16) -> Result<SocketAddr> {
 
 fn resolve_server_addr_with_protector<P>(host: &str, port: u16, protector: &P) -> Result<SocketAddr>
 where
-    P: SocketProtector,
+    P: SocketProtector + 'static,
 {
     if let Ok(ip) = host.parse::<IpAddr>() {
         return Ok(SocketAddr::from((ip, port)));
@@ -500,6 +568,43 @@ mod tests {
         fn allow_unprotected_dns_fallback(&self) -> bool {
             false
         }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn slow_dns_does_not_block_tun_or_other_connections() {
+        struct SlowDns {
+            entered: std::sync::Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
+        }
+        impl SocketProtector for SlowDns {
+            fn protect(&self, _fd: i32) -> bool {
+                true
+            }
+            fn resolve_ip(&self, _host: &str) -> Option<IpAddr> {
+                if let Some(tx) = self.entered.lock().unwrap().take() {
+                    let _ = tx.send(());
+                }
+                std::thread::sleep(Duration::from_millis(600));
+                None
+            }
+            fn allow_unprotected_dns_fallback(&self) -> bool {
+                false
+            }
+        }
+        let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
+        let resolver = Arc::new(SlowDns {
+            entered: std::sync::Mutex::new(Some(entered_tx)),
+        });
+        let started = std::time::Instant::now();
+        let lookup =
+            tokio::spawn(async move { connect_protected("slow.invalid", 443, resolver).await });
+        entered_rx.await.unwrap();
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        let elapsed = started.elapsed();
+        assert!(lookup.await.unwrap().is_err());
+        assert!(
+            elapsed < Duration::from_millis(400),
+            "DNS blocked the network runtime for {elapsed:?}"
+        );
     }
 
     #[test]
@@ -543,7 +648,7 @@ mod tests {
             resolve_server_addr_with_protector("::1", port, &protector).unwrap(),
             listener.local_addr().unwrap(),
         );
-        let stream = connect_protected("ipv6.test", port, &protector)
+        let stream = connect_protected("ipv6.test", port, Arc::new(protector))
             .await
             .unwrap();
         assert!(stream.peer_addr().unwrap().is_ipv6());
@@ -564,6 +669,7 @@ mod tests {
         let (event_tx, event_rx) = mpsc::channel(8);
         let (notify_tx, _notify_rx) = mpsc::channel(8);
         let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+        let (_network_tx, network_rx) = tokio::sync::watch::channel(0);
         let stats = Arc::new(CoreStats::new());
         let config = DispatcherConfig {
             nodes: vec![RemoteNodeConfig {
@@ -595,6 +701,7 @@ mod tests {
             Arc::new(NoopProtector),
             notify_tx,
             shutdown_rx,
+            network_rx,
         ));
         let (proxy_tx, _proxy_rx) = mpsc::channel(4);
         let (_proxy_data_tx, proxy_data_rx) = mpsc::channel(4);
@@ -640,6 +747,96 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn network_change_closes_old_flows_and_rebuilds_the_cached_connection() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct CountingProtector(AtomicUsize);
+        impl SocketProtector for CountingProtector {
+            fn protect(&self, _: i32) -> bool {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                true
+            }
+        }
+        let (addr, ca_pem, server) = crate::outbound_h3::tests::mock_proxy(200, Some(200)).await;
+        let stats = Arc::new(CoreStats::new());
+        let config = DispatcherConfig {
+            nodes: vec![RemoteNodeConfig {
+                name: "network-test".into(),
+                host: "127.0.0.1".into(),
+                port: addr.port(),
+                key: b"test-key".to_vec(),
+                cipher: "chacha20".into(),
+                tls: true,
+                transport: Transport::Http3,
+                server_name: "localhost".into(),
+                ca_pem,
+            }],
+            routing: RoutingConfig {
+                cn_direct: false,
+                ..RoutingConfig::default()
+            },
+            stats: Arc::clone(&stats),
+        };
+        let protector = Arc::new(CountingProtector(AtomicUsize::new(0)));
+        let (event_tx, event_rx) = mpsc::channel(8);
+        let (notify_tx, _notify_rx) = mpsc::channel(8);
+        let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+        let (network_tx, network_rx) = tokio::sync::watch::channel(0);
+        let dispatcher = tokio::spawn(run_dispatcher(
+            event_rx,
+            Arc::new(Mutex::new(FakeDnsEngine::new("198.18.0.0/15", 32))),
+            config,
+            Arc::clone(&protector),
+            notify_tx,
+            shutdown_rx,
+            network_rx,
+        ));
+        tokio::time::timeout(Duration::from_secs(8), async {
+            for round in 0..2 {
+                let (stream_tx, mut stream_rx) = mpsc::channel(8);
+                let (_data_tx, data_rx) = mpsc::channel(8);
+                event_tx
+                    .send(TcpEvent::NewConnection {
+                        src_ip: Ipv4Addr::LOCALHOST,
+                        dst_ip: Ipv4Addr::new(203, 0, 113, 1),
+                        dst_port: 80,
+                        stream_tx,
+                        stream_rx: data_rx,
+                    })
+                    .await
+                    .unwrap();
+                let mut greeting = Vec::new();
+                while greeting.len() < 8 {
+                    match stream_rx.recv().await {
+                        Some(StreamCommand::Data(bytes)) => greeting.extend(bytes),
+                        _ => panic!("first request on the replacement network failed"),
+                    }
+                }
+                assert_eq!(greeting, b"greeting");
+                assert_eq!(
+                    protector.0.load(Ordering::SeqCst),
+                    round + 1,
+                    "new flow reused a socket bound to the previous network"
+                );
+                if round == 0 {
+                    network_tx.send(1).unwrap();
+                    assert!(
+                        stream_rx.recv().await.is_none(),
+                        "old flow survived network change"
+                    );
+                }
+            }
+            shutdown_tx.send(true).unwrap();
+            dispatcher.await.unwrap().unwrap();
+        })
+        .await
+        .expect("network recovery stalled");
+        let snapshot: serde_json::Value = serde_json::from_str(&stats.snapshot_json()).unwrap();
+        assert_eq!(snapshot["proxy_connections"], 2);
+        assert_eq!(snapshot["failed_connections"], 0);
+        server.abort();
+    }
+
+    #[tokio::test]
     async fn slow_or_rejected_target_does_not_block_or_replace_other_proxy_streams() {
         let (addr, ca_pem, server) = crate::outbound_h3::tests::mock_proxy(200, Some(200)).await;
         let config = DispatcherConfig {
@@ -658,28 +855,30 @@ mod tests {
             stats: Arc::new(CoreStats::new()),
         };
         let pool = new_connection_pool(1);
-        let protector = crate::outbound::NoopProtector;
+        let protector = Arc::new(crate::outbound::NoopProtector);
         let (mut original_stream, _) =
-            open_proxy_with_failover(&config, &protector, &pool, "example.com", 80)
+            open_proxy_with_failover(&config, Arc::clone(&protector), &pool, "example.com", 80)
                 .await
                 .unwrap();
         let original_connection = pool[0].lock().await.as_ref().unwrap().clone();
 
-        let slow = open_proxy_with_failover(&config, &protector, &pool, "slow.test", 80);
+        let slow =
+            open_proxy_with_failover(&config, Arc::clone(&protector), &pool, "slow.test", 80);
         tokio::pin!(slow);
         assert!(tokio::time::timeout(Duration::from_millis(50), &mut slow)
             .await
             .is_err());
         let (_second, _) = tokio::time::timeout(
             Duration::from_secs(2),
-            open_proxy_with_failover(&config, &protector, &pool, "example.com", 80),
+            open_proxy_with_failover(&config, Arc::clone(&protector), &pool, "example.com", 80),
         )
         .await
         .expect("slow destination blocked another proxy connection")
         .unwrap();
 
         let rejection =
-            open_proxy_with_failover(&config, &protector, &pool, "reject.test", 80).await;
+            open_proxy_with_failover(&config, Arc::clone(&protector), &pool, "reject.test", 80)
+                .await;
         assert!(matches!(rejection, Err(CoreError::TargetRejected(_))));
         assert!(Arc::ptr_eq(
             pool[0].lock().await.as_ref().unwrap(),
@@ -732,7 +931,7 @@ mod tests {
                 .map(|path| std::fs::read_to_string(path).unwrap())
                 .unwrap_or_default(),
         };
-        let mut connection = establish_outbound(&node, &crate::outbound::NoopProtector)
+        let mut connection = establish_outbound(&node, Arc::new(crate::outbound::NoopProtector))
             .await
             .expect("node transport handshake failed");
         async fn request<T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(

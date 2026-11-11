@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_background">#191715</color>
+    <color name="app_surface">#272421</color>
+    <color name="app_primary">#FFAD72</color>
+    <color name="app_on_primary">#40200B</color>
+    <color name="app_primary_container">#503729</color>
+    <color name="app_on_primary_container">#FFD9BE</color>
+    <color name="app_text_primary">#F7F1EA</color>
+    <color name="app_text_secondary">#C5BDB5</color>
+    <color name="app_outline">#80766D</color>
+    <color name="surface_inset">#302D2A</color>
+    <color name="surface_edge">#413B36</color>
+    <color name="surface_glint">#514942</color>
+    <color name="traffic_upload">#DAB9F5</color>
+    <color name="traffic_upload_surface">#342C36</color>
+    <color name="traffic_download_surface">#372E28</color>
+    <color name="hero_base">#2C2926</color>
+    <color name="hero_end">#3D3129</color>
+    <color name="hero_fold">#694834</color>
+    <color name="hero_fold_light">#65503F</color>
+    <color name="power_top">#FFDBA4</color>
+    <color name="power_mid">#FFAC65</color>
+    <color name="power_bottom">#E58743</color>
+    <color name="power_glyph">#43230F</color>
+    <color name="status_good">#9AE2B6</color>
+    <color name="status_good_surface">#233C2E</color>
+    <color name="status_wait">#F2CA89</color>
+    <color name="status_wait_surface">#483B28</color>
+    <color name="status_error">#FFA8AF</color>
+    <color name="status_error_surface">#4B2D30</color>
+</resources>

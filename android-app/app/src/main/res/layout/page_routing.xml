@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/routingPage"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:visibility="gone">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+        <TextView
+            style="@style/AppPageTitle"
+            android:id="@+id/routingPageTitle"
+            android:text="@string/nav_routing" />
+
+        <TextView
+            style="@style/AppBodyText"
+            android:text="@string/routing_intro"
+            android:layout_marginBottom="16dp" />
+
+        <TextView android:id="@+id/scopeSectionTitle" style="@style/AppSectionTitle" android:text="@string/app_routing_title"
+            android:labelFor="@id/appRoutingModeSpinner" />
+        <Spinner android:id="@+id/appRoutingModeSpinner" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:minHeight="48dp" android:saveEnabled="false" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/selectAppsButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="48dp" android:text="@string/app_picker_title" />
+        <TextView android:id="@+id/appRoutingHint" style="@style/AppBodyText" android:text="@string/app_routing_hint_all" />
+
+        <TextView
+            style="@style/AppSectionTitle"
+            android:id="@+id/defaultRouteTitle" android:text="@string/default_route_label"
+            android:labelFor="@id/defaultRouteSpinner" />
+
+        <Spinner
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/defaultRouteSpinner"
+            android:minHeight="48dp" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/cnDirectCheckBox"
+            android:minHeight="48dp"
+            android:checked="true"
+            android:text="@string/cn_direct_label" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/direct_list_label"
+            app:expandedHintEnabled="false"
+            app:helperText="@string/domain_helper">
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/directListInput"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:minLines="3"
+                android:gravity="top" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/proxy_list_label"
+            app:expandedHintEnabled="false"
+            app:helperText="@string/domain_helper">
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/proxyListInput"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:minLines="3"
+                android:gravity="top" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/advanced_rules_label"
+            app:expandedHintEnabled="false"
+            app:helperText="@string/advanced_rules_helper">
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/advancedRulesInput"
+                android:inputType="textMultiLine|textNoSuggestions"
+                android:minLines="3"
+                android:gravity="top" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+</ScrollView>

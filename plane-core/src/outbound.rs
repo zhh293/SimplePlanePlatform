@@ -353,14 +353,17 @@ impl OutboundConnection {
     ///
     /// 返回 [`OutboundStream`]，后续用它收发该 stream 上的 [`ProxyMessage`]。
     pub async fn open_proxy_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
-        tokio::time::timeout(PROXY_CONNECT_TIMEOUT, self.open_proxy_stream_inner(host, port))
-            .await
-            .map_err(|_| {
-                CoreError::Protocol(format!(
-                    "proxy CONNECT {host}:{port} timed out after {}s; check node transport, cipher and key",
-                    PROXY_CONNECT_TIMEOUT.as_secs()
-                ))
-            })?
+        tokio::time::timeout(
+            PROXY_CONNECT_TIMEOUT,
+            self.open_proxy_stream_inner(host, port),
+        )
+        .await
+        .map_err(|_| {
+            CoreError::Timeout(format!(
+                "proxy CONNECT {host}:{port} timed out after {}s",
+                PROXY_CONNECT_TIMEOUT.as_secs()
+            ))
+        })?
     }
 
     async fn open_proxy_stream_inner(&mut self, host: &str, port: u16) -> Result<OutboundStream> {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="192dp" android:height="84dp" android:viewportWidth="384" android:viewportHeight="168" android:autoMirrored="true">
+    <path android:pathData="M0,0H384V168H0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="20" android:startY="8" android:endX="356" android:endY="150"
+                android:startColor="@color/hero_base" android:endColor="@color/hero_end" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M273,-8C295,32 221,52 242,93C254,117 282,119 287,150C290,170 318,182 348,179H412V-8Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:startX="237" android:startY="15" android:endX="390" android:endY="154"
+                android:startColor="@color/hero_fold_light" android:endColor="@color/hero_fold" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M275,-8C297,32 223,52 244,93C256,117 284,119 289,150C292,170 320,182 350,179"
+        android:strokeWidth="1" android:strokeColor="@color/surface_glint" android:strokeAlpha=".48" />
+    <path android:pathData="M332,-8C348,21 311,36 297,63C276,100 298,130 336,144C354,151 367,163 373,177H402V-8Z"
+        android:fillColor="@color/hero_fold" android:fillAlpha=".47" />
+</vector>

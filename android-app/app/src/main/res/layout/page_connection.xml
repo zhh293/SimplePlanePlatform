@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/connectionPage" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fillViewport="true" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingStart="18dp" android:paddingEnd="18dp"
+        android:paddingTop="16dp" android:paddingBottom="18dp" android:clipToPadding="false">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+            android:gravity="center_vertical" android:layout_marginBottom="13dp">
+            <TextView android:id="@+id/connectionPageTitle" style="@style/AppPageTitle"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_marginBottom="0dp"
+                android:text="@string/dashboard_title" />
+            <androidx.appcompat.widget.AppCompatImageButton android:id="@+id/openLogButton"
+                android:layout_width="48dp" android:layout_height="48dp" android:padding="13dp"
+                android:background="@drawable/inset_capsule" android:backgroundTint="@color/app_surface"
+                android:foreground="?attr/selectableItemBackgroundBorderless" android:contentDescription="@string/open_session_log"
+                app:srcCompat="@drawable/ic_journal" app:tint="@color/app_text_secondary" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/connectionCard" style="@style/DashboardCard">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                android:minHeight="164dp" android:gravity="center_vertical" android:background="@drawable/dashboard_hero"
+                android:paddingStart="20dp" android:paddingEnd="12dp" android:paddingTop="16dp" android:paddingBottom="16dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                        android:orientation="vertical" android:paddingStart="0dp" android:paddingEnd="4dp">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical">
+                            <TextView style="@style/AppBodyText" android:layout_width="wrap_content"
+                                android:textSize="12sp" android:textStyle="bold" android:text="@string/status_label" />
+                            <TextView android:id="@+id/vpnStatusText" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp" android:paddingStart="8dp" android:paddingEnd="8dp"
+                                android:paddingTop="3dp" android:paddingBottom="3dp" android:gravity="center_vertical"
+                                android:background="@drawable/inset_capsule" app:drawableStartCompat="@drawable/ic_status_dot"
+                                android:drawablePadding="4dp" android:textSize="12sp" android:textStyle="bold"
+                                android:text="@string/vpn_status_idle" android:accessibilityLiveRegion="polite" />
+                        </LinearLayout>
+                        <LinearLayout android:id="@+id/nodePickerButton" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:minHeight="58dp" android:layout_marginTop="8dp" android:orientation="vertical"
+                            android:gravity="center_vertical" android:focusable="true" android:clickable="true"
+                            android:foreground="?attr/selectableItemBackground">
+                            <TextView android:id="@+id/actionValue" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                app:drawableEndCompat="@drawable/ic_chevron" app:drawableTint="@color/app_text_secondary"
+                                android:drawablePadding="4dp" android:textSize="26sp" android:textStyle="bold"
+                                android:letterSpacing="-0.02" android:maxLines="2" android:ellipsize="end"
+                                android:textColor="@color/app_text_primary" />
+                            <TextView android:id="@+id/nodeMetadata" style="@style/AppBodyText" android:textSize="13sp" />
+                        </LinearLayout>
+                        <TextView android:id="@+id/sessionDuration" style="@style/AppBodyText" android:layout_marginTop="5dp"
+                            android:textSize="12sp" android:fontFeatureSettings="tnum" android:visibility="gone" />
+                    </LinearLayout>
+                    <com.google.android.material.button.MaterialButton android:id="@+id/toggleVpnButton"
+                        style="@style/Widget.Material3.Button.IconButton" android:layout_width="88dp" android:layout_height="88dp"
+                        android:gravity="center" android:padding="0dp" android:insetLeft="0dp" android:insetRight="0dp"
+                        android:insetTop="0dp" android:insetBottom="0dp" android:background="@drawable/power_feedback"
+                        android:stateListAnimator="@animator/power_press" app:backgroundTint="@null" app:iconTint="@color/power_glyph"
+                        android:contentDescription="@string/connect_vpn" app:icon="@drawable/ic_power" app:iconSize="30dp"
+                        app:iconGravity="textStart" app:iconPadding="0dp" />
+                </LinearLayout>
+                <TextView android:id="@+id/vpnDetailText" style="@style/AppBodyText" android:layout_marginTop="8dp"
+                    android:textSize="13sp" android:visibility="gone" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView style="@style/DashboardCard" android:layout_marginTop="12dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="12dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical"
+                    android:paddingStart="4dp" android:paddingEnd="4dp" android:paddingTop="2dp" android:layout_marginBottom="10dp">
+                    <TextView style="@style/DashboardSection" android:layout_width="0dp" android:layout_weight="1"
+                        android:gravity="center_vertical" app:drawableStartCompat="@drawable/ic_activity" android:drawablePadding="7dp"
+                        app:drawableTint="@color/app_text_secondary" android:text="@string/traffic_title" />
+                    <TextView style="@style/AppBodyText" android:layout_width="wrap_content" android:textSize="12sp"
+                        android:background="@drawable/inset_capsule" android:paddingStart="9dp" android:paddingEnd="9dp"
+                        android:paddingTop="3dp" android:paddingBottom="3dp" android:text="@string/traffic_window" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/trafficMetrics" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:baselineAligned="false">
+                    <com.proxy.android.TrafficMetricView android:id="@+id/uploadMetric" style="@style/DashboardMetric" />
+                    <Space android:layout_width="8dp" android:layout_height="8dp" />
+                    <com.proxy.android.TrafficMetricView android:id="@+id/downloadMetric" style="@style/DashboardMetric" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView style="@style/DashboardCard" android:layout_marginTop="12dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <include android:id="@+id/defaultRouteShortcut" layout="@layout/dashboard_action" />
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginStart="65dp"
+                    android:layout_marginEnd="16dp" android:background="@color/surface_edge" />
+                <include android:id="@+id/routingShortcut" layout="@layout/dashboard_action" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/sessionConnections" style="@style/DashboardCard"
+            android:layout_marginTop="12dp" android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="17dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView style="@style/DashboardSection" android:layout_width="0dp" android:layout_weight="1"
+                        android:text="@string/session_connections" />
+                    <TextView android:id="@+id/activeConnectionCount" style="@style/AppBodyText" android:layout_width="wrap_content"
+                        android:background="@drawable/inset_capsule" android:paddingStart="9dp" android:paddingEnd="9dp"
+                        android:paddingTop="3dp" android:paddingBottom="3dp" android:textSize="12sp" android:fontFeatureSettings="tnum" />
+                </LinearLayout>
+                <TextView android:id="@+id/statsText" style="@style/AppBodyText" android:layout_marginTop="6dp" android:fontFeatureSettings="tnum" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>
