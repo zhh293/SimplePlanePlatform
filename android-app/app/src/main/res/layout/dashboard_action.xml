@@ -1,15 +1,16 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="66dp"
     android:orientation="horizontal" android:gravity="center_vertical"
     android:focusable="true" android:clickable="true" android:foreground="?attr/selectableItemBackground"
     android:paddingStart="18dp" android:paddingEnd="16dp" android:paddingTop="10dp" android:paddingBottom="10dp">
-    <ImageView android:id="@+id/actionIcon" android:layout_width="23dp" android:layout_height="23dp"
+    <ImageView android:id="@+id/actionIcon" android:layout_width="36dp" android:layout_height="36dp"
+        android:padding="8dp" android:background="@drawable/inset_tile"
         android:importantForAccessibility="no" app:tint="@color/app_primary" />
     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-        android:layout_marginStart="16dp" android:layout_marginEnd="8dp" android:orientation="vertical">
+        android:layout_marginStart="12dp" android:layout_marginEnd="8dp" android:orientation="vertical">
         <TextView android:id="@+id/actionTitle" style="@style/DashboardSection" android:textSize="15sp" />
-        <TextView android:id="@+id/actionValue" style="@style/AppBodyText" android:textSize="13sp" />
+        <TextView android:id="@+id/shortcutValue" style="@style/AppBodyText" android:textSize="13sp" />
     </LinearLayout>
     <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_chevron"
         android:importantForAccessibility="no" app:tint="@color/app_text_secondary" />

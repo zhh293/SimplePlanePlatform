@@ -130,6 +130,30 @@ class MainActivityRegressionTest {
     }
 
     @Test
+    fun dashboardShowsTheDraftRouteAndTheJournalButtonScrollsToLogs() {
+        launch().use { scenario ->
+            scenario.onActivity { activity ->
+                val nav = activity.findViewById<BottomNavigationView>(R.id.bottomNavigation)
+                val shortcut = activity.findViewById<View>(R.id.defaultRouteShortcut)
+                shortcut.performClick()
+                assertEquals(R.id.nav_routing, nav.selectedItemId)
+                val spinner = activity.findViewById<Spinner>(R.id.defaultRouteSpinner)
+                val next = (spinner.selectedItemPosition + 1) % spinner.count
+                spinner.setSelection(next)
+                nav.selectedItemId = R.id.nav_connection
+                assertEquals(spinner.getItemAtPosition(next), shortcut.findViewById<TextView>(R.id.shortcutValue).text)
+                activity.findViewById<View>(R.id.openLogButton).performClick()
+                assertEquals(R.id.nav_settings, nav.selectedItemId)
+            }
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            scenario.onActivity { activity ->
+                val heading = activity.findViewById<View>(R.id.logSectionTitle)
+                assertTrue(heading.getGlobalVisibleRect(android.graphics.Rect()))
+            }
+        }
+    }
+
+    @Test
     fun deletingAnEarlierNodeKeepsTheSelectedNode() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val original = VpnConfigStore.load(context)

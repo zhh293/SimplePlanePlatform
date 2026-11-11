@@ -2,17 +2,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
     android:focusableInTouchMode="true" android:paddingStart="20dp" android:paddingEnd="20dp"
-    android:paddingTop="20dp" android:paddingBottom="12dp">
-    <TextView style="@style/DashboardSection" android:textSize="22sp" android:text="@string/node_picker_title" />
+    android:paddingTop="9dp" android:paddingBottom="14dp">
+    <View android:layout_width="34dp" android:layout_height="4dp" android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="15dp" android:background="@drawable/inset_capsule"
+        android:backgroundTint="@color/app_outline" android:importantForAccessibility="no" />
+    <TextView style="@style/DashboardSection" android:textSize="24sp" android:letterSpacing="-0.02" android:text="@string/node_picker_title" />
     <TextView android:id="@+id/nodeLockHint" style="@style/AppBodyText" android:text="@string/node_picker_locked"
         android:visibility="gone" android:paddingTop="4dp" />
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="12dp" android:layout_marginBottom="8dp"
-        android:hint="@string/node_picker_search" app:endIconMode="clear_text">
+        android:layout_marginTop="12dp" android:layout_marginBottom="8dp" app:hintEnabled="false"
+        app:startIconDrawable="@drawable/ic_search" app:endIconMode="clear_text"
+        app:boxBackgroundColor="@color/surface_inset" app:boxStrokeWidth="0dp" app:boxStrokeWidthFocused="1dp"
+        app:boxCornerRadiusTopStart="16dp" app:boxCornerRadiusTopEnd="16dp"
+        app:boxCornerRadiusBottomStart="16dp" app:boxCornerRadiusBottomEnd="16dp">
         <com.google.android.material.textfield.TextInputEditText android:id="@+id/nodeSearchInput"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:inputType="text" android:singleLine="true" android:imeOptions="actionDone" />
+            android:minHeight="48dp" android:paddingTop="10dp" android:paddingBottom="10dp"
+            android:hint="@string/node_picker_search" android:inputType="text" android:singleLine="true" android:imeOptions="actionDone" />
     </com.google.android.material.textfield.TextInputLayout>
     <ListView android:id="@+id/nodeChoiceList" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:divider="@null" android:nestedScrollingEnabled="true" />

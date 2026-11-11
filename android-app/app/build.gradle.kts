@@ -39,8 +39,8 @@ android {
         applicationId = "com.proxy.android"
         minSdk = 24            // Android 7.0（任务文档 0.2）
         targetSdk = 34
-        versionCode = 8
-        versionName = "0.1.7"
+        versionCode = 9
+        versionName = "0.1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

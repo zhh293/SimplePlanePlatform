@@ -1,16 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="app_background">#F5F7FB</color>
-    <color name="app_surface">#FFFFFF</color>
-    <color name="app_primary">#2359C4</color>
+    <color name="app_background">#F2F2F6</color>
+    <color name="app_surface">#FFFEFF</color>
+    <color name="app_primary">#2F55C5</color>
     <color name="app_on_primary">#FFFFFF</color>
-    <color name="app_primary_container">#DCE7FF</color>
-    <color name="app_on_primary_container">#163C85</color>
-    <color name="app_text_primary">#182239</color>
-    <color name="app_text_secondary">#566279</color>
-    <color name="app_outline">#C3CCDC</color>
-    <color name="traffic_upload">#12685F</color>
-    <color name="traffic_upload_surface">#E8F4EF</color>
-    <color name="traffic_download_surface">#EBF0FC</color>
+    <color name="app_primary_container">#E2E9FF</color>
+    <color name="app_on_primary_container">#223D88</color>
+    <color name="app_text_primary">#20222C</color>
+    <color name="app_text_secondary">#585C6B</color>
+    <color name="app_outline">#8D8F9B</color>
+    <color name="surface_inset">#F1F1F5</color>
+    <color name="surface_edge">#E2E2EA</color>
+    <color name="surface_glint">#FFFFFF</color>
+    <color name="traffic_upload">#674DA8</color>
+    <color name="traffic_upload_surface">#F2EFF9</color>
+    <color name="traffic_download_surface">#EDF2FD</color>
+    <color name="hero_base">#FDFDFF</color>
+    <color name="hero_end">#E3EBFF</color>
+    <color name="hero_fold">#C3D4FA</color>
+    <color name="hero_fold_light">#F3F7FF</color>
+    <color name="power_top">#81AEFF</color>
+    <color name="power_mid">#507BF5</color>
+    <color name="power_bottom">#3553CF</color>
+    <color name="power_glyph">#FFFFFF</color>
+    <color name="status_good">#126846</color>
+    <color name="status_good_surface">#D7F2E4</color>
+    <color name="status_wait">#795200</color>
+    <color name="status_wait_surface">#FFF0C9</color>
+    <color name="status_error">#93293B</color>
+    <color name="status_error_surface">#FBE5E8</color>
     <color name="ic_launcher_background">#1565C0</color>
 </resources>

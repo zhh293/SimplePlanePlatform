@@ -148,7 +148,7 @@
 
         <TextView
             style="@style/AppSectionTitle"
-            android:text="@string/log_title" />
+            android:id="@+id/logSectionTitle" android:text="@string/log_title" />
 
         <TextView
             android:layout_width="match_parent"

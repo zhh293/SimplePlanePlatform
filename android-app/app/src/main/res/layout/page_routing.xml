@@ -22,7 +22,7 @@
             android:text="@string/routing_intro"
             android:layout_marginBottom="16dp" />
 
-        <TextView style="@style/AppSectionTitle" android:text="@string/app_routing_title"
+        <TextView android:id="@+id/scopeSectionTitle" style="@style/AppSectionTitle" android:text="@string/app_routing_title"
             android:labelFor="@id/appRoutingModeSpinner" />
         <Spinner android:id="@+id/appRoutingModeSpinner" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:minHeight="48dp" android:saveEnabled="false" />
@@ -34,7 +34,7 @@
 
         <TextView
             style="@style/AppSectionTitle"
-            android:text="@string/default_route_label"
+            android:id="@+id/defaultRouteTitle" android:text="@string/default_route_label"
             android:labelFor="@id/defaultRouteSpinner" />
 
         <Spinner

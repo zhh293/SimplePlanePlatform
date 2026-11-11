@@ -77,9 +77,10 @@ internal class NodeRow private constructor(
             fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
             val root = MaterialCardView(context).apply {
                 layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) }
-                radius = dp(20).toFloat()
-                cardElevation = 0f
-                strokeWidth = 0
+                radius = dp(24).toFloat()
+                cardElevation = dp(1).toFloat()
+                strokeWidth = dp(1)
+                strokeColor = ContextCompat.getColor(context, R.color.surface_edge)
                 setCardBackgroundColor(ContextCompat.getColor(context, R.color.app_surface))
             }
             val content = LinearLayout(context).apply {

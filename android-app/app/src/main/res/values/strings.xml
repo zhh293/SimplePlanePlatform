@@ -47,6 +47,9 @@
     <string name="nav_routing">路由</string>
     <string name="nav_settings">设置</string>
     <string name="dashboard_title">仪表盘</string>
+    <string name="open_session_log">查看运行日志</string>
+    <string name="enabled_node_count">已启用 %1$d 个节点</string>
+    <string name="node_picker_action">选择连接节点，%1$s</string>
     <string name="traffic_title">实时流量</string>
     <string name="traffic_window">近 30 秒</string>
     <string name="traffic_upload">上传</string>
@@ -57,7 +60,8 @@
     <string name="traffic_total">累计 %1$s</string>
     <string name="session_duration">已运行 %1$s</string>
     <string name="session_connections">会话连接</string>
-    <string name="connection_counts">活跃 %1$d · 累计 %2$d\n代理 %3$d · 直连 %4$d · 拒绝 %5$d</string>
+    <string name="active_connection_count">%1$d 活跃</string>
+    <string name="connection_counts">累计 %1$d · 代理 %2$d · 直连 %3$d · 拒绝 %4$d</string>
     <string name="active_node">当前节点　%1$s</string>
     <string name="node_picker_title">选择节点</string>
     <string name="node_picker_search">搜索名称、地址或协议</string>
@@ -75,7 +79,6 @@
     <string name="config_locked">断开 VPN 后可修改配置</string>
     <string name="status_label">VPN 状态</string>
     <string name="ready_detail">VPN 已启动，首次代理请求成功后将显示已连接。</string>
-    <string name="connected_detail">代理请求已成功通过当前节点。</string>
     <string name="offline_detail">VPN 保持开启，网络恢复后将自动重建连接。</string>
     <string name="recovery_detail">旧连接已清理，等待新的代理请求验证。</string>
     <string name="failure_detail">请检查网络或节点配置，详细原因可在设置的日志中查看。</string>

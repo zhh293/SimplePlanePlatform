@@ -8,7 +8,7 @@ import android.view.WindowManager
 import android.widget.BaseAdapter
 import android.widget.EditText
 import android.widget.ListView
-import android.widget.RadioButton
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.widget.doAfterTextChanged
@@ -77,10 +77,9 @@ class NodePickerSheet : BottomSheetDialogFragment() {
             val detail = if (choice.enabled) choice.detail else
                 getString(R.string.node_disabled) + " · " + choice.detail
             row.findViewById<TextView>(R.id.choiceDetail).text = detail
-            row.findViewById<RadioButton>(R.id.choiceRadio).apply {
-                isChecked = selected
-                isEnabled = this@ChoiceAdapter.isEnabled(position)
-            }
+            row.isActivated = selected
+            row.findViewById<ImageView>(R.id.choiceIcon).setImageResource(if (choice.index == -1) R.drawable.ic_route else R.drawable.ic_nodes)
+            row.findViewById<View>(R.id.choiceCheck).visibility = if (selected) View.VISIBLE else View.INVISIBLE
             ViewCompat.setStateDescription(row, if (selected) getString(R.string.node_selected) else null)
             return row
         }

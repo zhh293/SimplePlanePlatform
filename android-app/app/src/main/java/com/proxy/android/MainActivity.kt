@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.ColorStateList
 import android.net.VpnService
 import android.net.Uri
 import android.os.Build
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.provider.Settings
 import android.text.format.DateUtils
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.WindowManager
 import android.widget.ArrayAdapter
@@ -21,6 +23,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -31,6 +34,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.doOnLayout
+import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -65,6 +70,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var logText: TextView
     private lateinit var navigation: BottomNavigationView
     private lateinit var nodePickerButton: View
+    private lateinit var defaultRouteShortcut: View
     private lateinit var routingShortcut: View
     private lateinit var uploadMetric: TrafficMetricView
     private lateinit var downloadMetric: TrafficMetricView
@@ -146,6 +152,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         mainContent = findViewById(R.id.mainContent)
+        findViewById<View>(R.id.connectionCard).clipToOutline = true
         findViewById<TextView>(R.id.nativeVersionText).text =
             getString(R.string.version_label, packageManager.getPackageInfo(packageName, 0).versionName, readNativeVersion())
         vpnStatusText = findViewById(R.id.vpnStatusText)
@@ -160,13 +167,23 @@ class MainActivity : AppCompatActivity() {
                     LinearLayout.LayoutParams.WRAP_CONTENT)
             }
         }
-        nodePickerButton = dashboardAction(R.id.nodePickerButton, R.string.node_selection_title, R.drawable.ic_nodes) {
-            if (supportFragmentManager.findFragmentByTag(NodePickerSheet.TAG) == null) {
-                NodePickerSheet().show(supportFragmentManager, NodePickerSheet.TAG)
+        nodePickerButton = findViewById<View>(R.id.nodePickerButton).apply {
+            TooltipCompat.setTooltipText(this, getString(R.string.node_selection_title))
+            setOnClickListener {
+                if (supportFragmentManager.findFragmentByTag(NodePickerSheet.TAG) == null) {
+                    NodePickerSheet().show(supportFragmentManager, NodePickerSheet.TAG)
+                }
             }
         }
-        routingShortcut = dashboardAction(R.id.routingShortcut, R.string.scope_shortcut_title, R.drawable.ic_route) {
-            navigation.selectedItemId = R.id.nav_routing
+        defaultRouteShortcut = dashboardAction(R.id.defaultRouteShortcut, R.string.default_route_label, R.drawable.ic_route) {
+            openSection(R.id.nav_routing, R.id.routingPage, R.id.defaultRouteTitle)
+        }
+        routingShortcut = dashboardAction(R.id.routingShortcut, R.string.scope_shortcut_title, R.drawable.ic_scope) {
+            openSection(R.id.nav_routing, R.id.routingPage, R.id.scopeSectionTitle)
+        }
+        findViewById<View>(R.id.openLogButton).apply {
+            TooltipCompat.setTooltipText(this, getString(R.string.open_session_log))
+            setOnClickListener { openSection(R.id.nav_settings, R.id.settingsPage, R.id.logSectionTitle) }
         }
         nodesContainer = findViewById(R.id.nodesContainer)
         addNodeButton = findViewById<Button>(R.id.addNodeButton).apply {
@@ -200,7 +217,10 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { saveCurrentConfig(showSavedToast = true) }
         }
         toggleVpnButton = findViewById<MaterialButton>(R.id.toggleVpnButton).apply {
-            setOnClickListener { onToggleClicked() }
+            setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onToggleClicked()
+            }
         }
         findViewById<Button>(R.id.savePresetButton).setOnClickListener { savePreset() }
         findViewById<Button>(R.id.loadPresetButton).setOnClickListener { loadSelectedPreset() }
@@ -216,6 +236,7 @@ class MainActivity : AppCompatActivity() {
             updateLogView()
         }
         navigation = findViewById<BottomNavigationView>(R.id.bottomNavigation).apply {
+            (parent as View).clipToOutline = true
             setOnItemSelectedListener { showPage(it.itemId); true }
         }
         findViewById<Button>(R.id.notificationPermissionButton).setOnClickListener { configureNotifications() }
@@ -310,6 +331,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.configLockedText).visibility = if (vpnRunning && page != R.id.nav_connection) View.VISIBLE else View.GONE
         if (page == R.id.nav_connection) {
             refreshNodeChoices()
+            defaultRouteShortcut.findViewById<TextView>(R.id.shortcutValue).text = defaultRouteSpinner.selectedItem?.toString()
             updateStats()
         }
         if (page == R.id.nav_settings) updateLogView()
@@ -321,6 +343,17 @@ class MainActivity : AppCompatActivity() {
             findViewById<ImageView>(R.id.actionIcon).setImageResource(icon)
             setOnClickListener { onClick() }
         }
+
+    private fun openSection(page: Int, scrollId: Int, headingId: Int) {
+        navigation.selectedItemId = page
+        val scroll = findViewById<ScrollView>(scrollId)
+        scroll.doOnLayout {
+            if (selectedPage != page) return@doOnLayout
+            val heading = findViewById<View>(headingId)
+            val top = (heading.top - scroll.getChildAt(0).paddingTop).coerceAtLeast(0)
+            if (top < scroll.scrollY || top > scroll.scrollY + scroll.height / 2) scroll.scrollTo(0, top)
+        }
+    }
 
     private fun nodeName(row: NodeRow, index: Int) =
         row.nameInput.text.toString().trim().ifBlank { getString(R.string.node_fallback_name, index + 1) }
@@ -348,8 +381,15 @@ class MainActivity : AppCompatActivity() {
     private fun refreshNodeChoices() {
         val node = nodeRows.getOrNull(selectedNodeIndex)
         val name = if (node == null) getString(R.string.node_auto_title) else nodeName(node, selectedNodeIndex)
-        nodePickerButton.findViewById<TextView>(R.id.actionValue).text =
-            if (node != null && !node.enabledCheckBox.isChecked) "$name · " + getString(R.string.node_disabled) else name
+        val metadata = when {
+            node == null -> getString(R.string.enabled_node_count, nodeRows.count { it.enabledCheckBox.isChecked })
+            !node.enabledCheckBox.isChecked -> getString(R.string.node_disabled)
+            node.transportSpinner.selectedItemPosition == 1 -> "HTTP/3"
+            else -> "HTTP/2"
+        }
+        nodePickerButton.findViewById<TextView>(R.id.actionValue).text = name
+        nodePickerButton.findViewById<TextView>(R.id.nodeMetadata).text = metadata
+        nodePickerButton.contentDescription = getString(R.string.node_picker_action, "$name，$metadata")
     }
 
     private fun currentAppRouting() = AppRoutingConfig(
@@ -370,7 +410,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateAppRoutingUi() {
         val policy = currentAppRouting()
         val all = policy.mode == AppRoutingConfig.ALL
-        routingShortcut.findViewById<TextView>(R.id.actionValue).text = appRoutingSummary(policy)
+        routingShortcut.findViewById<TextView>(R.id.shortcutValue).text = appRoutingSummary(policy)
         findViewById<TextView>(R.id.appRoutingHint).setText(if (all) R.string.app_routing_hint_all else R.string.app_routing_hint)
         findViewById<Button>(R.id.selectAppsButton).apply {
             visibility = if (all) View.GONE else View.VISIBLE
@@ -715,12 +755,21 @@ class MainActivity : AppCompatActivity() {
         val status = message ?: PlaneVpnService.latestStatusMessage
         val failed = status.startsWith("VPN 已启动；代理请求失败") || status.startsWith("连接失败") || status == getString(R.string.vpn_status_error)
         vpnStatusText.text = if (failed) getString(R.string.vpn_status_error) else status
+        val (ink, surface) = when {
+            failed || status == getString(R.string.app_routing_unavailable) -> R.color.status_error to R.color.status_error_surface
+            running && status == getString(R.string.vpn_status_connected) -> R.color.status_good to R.color.status_good_surface
+            running -> R.color.status_wait to R.color.status_wait_surface
+            else -> R.color.app_text_secondary to R.color.surface_inset
+        }
+        val statusInk = ContextCompat.getColor(this, ink)
+        vpnStatusText.setTextColor(statusInk)
+        vpnStatusText.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, surface))
+        TextViewCompat.setCompoundDrawableTintList(vpnStatusText, ColorStateList.valueOf(statusInk))
         val detail = when {
             status == getString(R.string.app_routing_unavailable) -> R.string.app_routing_choose_installed
             failed -> R.string.failure_detail
             status == getString(R.string.vpn_status_no_network) -> R.string.offline_detail
             status == getString(R.string.vpn_status_recovering) -> R.string.recovery_detail
-            status == getString(R.string.vpn_status_connected) -> R.string.connected_detail
             status == getString(R.string.vpn_status_ready) -> R.string.ready_detail
             else -> null
         }
@@ -779,10 +828,14 @@ class MainActivity : AppCompatActivity() {
         val hasConnections = stats?.has("active_connections") == true
         findViewById<View>(R.id.sessionConnections).visibility = if (hasConnections) View.VISIBLE else View.GONE
         if (stats != null && hasConnections) {
-            val counts = getString(R.string.connection_counts, stats.optLong("active_connections"), stats.optLong("total_connections"),
+            val active = getString(R.string.active_connection_count, stats.optLong("active_connections"))
+            findViewById<TextView>(R.id.activeConnectionCount).apply { if (text != active) text = active }
+            val counts = getString(R.string.connection_counts, stats.optLong("total_connections"),
                 stats.optLong("proxy_connections"), stats.optLong("direct_connections"), stats.optLong("rejected_connections"))
             val node = stats.optString("active_node")
-            statsText.text = if (node.isBlank()) counts else getString(R.string.active_node, node) + "\n" + counts
+            val fixedNode = nodeRows.getOrNull(selectedNodeIndex)?.let { nodeName(it, selectedNodeIndex) }
+            val summary = if (node.isNotBlank() && node != fixedNode) getString(R.string.active_node, node) + "\n" + counts else counts
+            if (statsText.text != summary) statsText.text = summary
         }
     }
 
