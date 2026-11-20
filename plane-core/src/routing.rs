@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr};
+use std::sync::OnceLock;
 
 use ipnet::IpNet;
 
@@ -40,6 +42,73 @@ pub struct Router {
 
 const CN_IPV4_RANGES: &[u8] = include_bytes!("../data/cn_ipv4_ranges.bin");
 
+// Reuse the desktop snapshot so API/CDN subdomains do not depend on a small
+// hand-maintained allowlist. Its source and license are kept beside the data.
+const DIRECT_PROVIDER: &str =
+    include_str!("../../proxy-local/src/main/resources/routing/providers/direct-list.txt");
+
+struct DomainProvider {
+    suffixes: HashSet<String>,
+    exact: HashSet<String>,
+}
+
+impl DomainProvider {
+    fn parse(text: &str) -> Self {
+        let mut provider = Self {
+            suffixes: HashSet::new(),
+            exact: HashSet::new(),
+        };
+        for line in text.lines() {
+            let line = line.split('#').next().unwrap_or_default().trim();
+            let (exact, value) = match line.strip_prefix("full:") {
+                Some(value) => (true, value),
+                None => (false, line),
+            };
+            let value = value
+                .strip_prefix("domain_suffix:")
+                .unwrap_or(value)
+                .trim_start_matches("+.");
+            // Like the desktop suffix provider, do not interpret regexp/keyword
+            // entries as suffixes. They require a different matching language.
+            if value.contains(':') {
+                continue;
+            }
+            let domain = normalize_domain_value(value);
+            if domain.is_empty() || domain.parse::<IpAddr>().is_ok() {
+                continue;
+            }
+            if exact {
+                provider.exact.insert(domain);
+            } else {
+                provider.suffixes.insert(domain);
+            }
+        }
+        provider
+    }
+
+    fn matches(&self, domain: &str) -> bool {
+        if self.exact.contains(domain) {
+            return true;
+        }
+        let mut suffix = domain;
+        loop {
+            if self.suffixes.contains(suffix) {
+                return true;
+            }
+            let Some((_, rest)) = suffix.split_once('.') else {
+                return false;
+            };
+            suffix = rest;
+        }
+    }
+}
+
+fn direct_provider() -> &'static DomainProvider {
+    static PROVIDER: OnceLock<DomainProvider> = OnceLock::new();
+    PROVIDER.get_or_init(|| DomainProvider::parse(DIRECT_PROVIDER))
+}
+
+// Retain the original domains for compatibility with existing Android defaults.
 const CN_DOMAIN_SUFFIXES: &[&str] = &[
     "126.com",
     "163.com",
@@ -248,6 +317,9 @@ impl Rule for PortRule {
 impl Router {
     pub fn from_config(config: &RoutingConfig) -> Result<Self> {
         let default_action = parse_action(&config.default_action)?;
+        if config.cn_direct {
+            let _ = direct_provider();
+        }
         let mut rules: Vec<Box<dyn Rule>> = Vec::new();
 
         for rule_cfg in &config.rules {
@@ -351,9 +423,10 @@ fn is_cn_domain(domain: &str) -> bool {
     if domain == "cn" || domain.ends_with(".cn") {
         return true;
     }
-    CN_DOMAIN_SUFFIXES
-        .iter()
-        .any(|suffix| domain_matches_suffix(&domain, suffix))
+    direct_provider().matches(&domain)
+        || CN_DOMAIN_SUFFIXES
+            .iter()
+            .any(|suffix| domain_matches_suffix(&domain, suffix))
 }
 
 fn domain_matches_suffix(domain: &str, suffix: &str) -> bool {
@@ -406,6 +479,7 @@ fn normalize_domain_value(value: &str) -> String {
         .trim()
         .trim_start_matches("*.")
         .trim_start_matches('.')
+        .trim_end_matches('.')
         .to_ascii_lowercase()
 }
 
@@ -535,6 +609,78 @@ mod tests {
 
         assert_eq!(
             router.route(&info(Some("api.xiaomi.com"), [198, 18, 0, 2], 443)),
+            RouteAction::Proxy
+        );
+    }
+
+    #[test]
+    fn domestic_app_resources_are_direct_with_fake_ip() {
+        let router = Router::from_config(&RoutingConfig::default()).unwrap();
+        for domain in [
+            "www.bilibili.com",
+            "api.biliapi.net",
+            "biliapi.com",
+            "biliimg.com",
+            "bilivideo.net",
+            "docs.qq.com",
+            "mp.weixin.qq.com",
+            "res.wx.qq.com",
+            "gtimg.com",
+            "weixinbridge.com",
+            "apd-pcdnwxstat.teg.tencent-cloud.net",
+        ] {
+            assert_eq!(
+                router.route(&info(Some(domain), [198, 18, 0, 2], 443)),
+                RouteAction::Direct,
+                "domestic resource misrouted: {domain}"
+            );
+        }
+    }
+
+    #[test]
+    fn provider_preserves_exact_matches_and_domain_boundaries() {
+        let provider = DomainProvider::parse("# comment\nfull:Exact.Test\ndomain_suffix:cdn.test\n*.images.test\n+.media.test\nregexp:.*\n");
+        assert!(provider.matches("exact.test"));
+        assert!(!provider.matches("sub.exact.test"));
+        assert!(provider.matches("sub.cdn.test"));
+        assert!(provider.matches("images.test"));
+        assert!(provider.matches("sub.media.test"));
+        assert!(!provider.matches("evilcdn.test"));
+        assert!(!provider.matches("cdn.test.evil.test"));
+        assert!(!provider.matches("unrelated.test"));
+    }
+
+    #[test]
+    fn domestic_provider_respects_user_override_and_disable_switch() {
+        let mut config = RoutingConfig::default();
+        let target = info(Some("api.biliapi.net"), [198, 18, 0, 2], 443);
+        config.rules.push(RuleConfig {
+            rule_type: "domain_suffix".into(),
+            value: "biliapi.net".into(),
+            action: "proxy".into(),
+        });
+        assert_eq!(
+            Router::from_config(&config).unwrap().route(&target),
+            RouteAction::Proxy
+        );
+        config.rules.clear();
+        config.cn_direct = false;
+        assert_eq!(
+            Router::from_config(&config).unwrap().route(&target),
+            RouteAction::Proxy
+        );
+        config.cn_direct = true;
+        let router = Router::from_config(&config).unwrap();
+        assert_eq!(
+            router.route(&info(Some("API.BILIAPI.NET."), [198, 18, 0, 2], 443)),
+            RouteAction::Direct
+        );
+        assert_eq!(
+            router.route(&info(Some("biliapi.net.evil.test"), [198, 18, 0, 2], 443)),
+            RouteAction::Proxy
+        );
+        assert_eq!(
+            router.route(&info(Some("mtalk.google.com"), [198, 18, 0, 2], 5228)),
             RouteAction::Proxy
         );
     }

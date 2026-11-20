@@ -36,8 +36,14 @@ data class AndroidVpnConfig(
     val mtu: Int = VpnConfigStore.DEFAULT_MTU,
     val remotes: List<RemoteNodeConfig>,
     val routing: AndroidRoutingConfig = AndroidRoutingConfig(),
+    /** -1 keeps ordered failover; otherwise only this node may carry proxy traffic. */
+    val selectedNodeIndex: Int = -1,
+    val appRouting: AppRoutingConfig = AppRoutingConfig(),
 ) {
     fun validate(): String? {
+        appRouting.validate()?.let { return it }
+        if (selectedNodeIndex < -1 || selectedNodeIndex >= remotes.size) return "所选节点不存在，请重新选择"
+        if (selectedNodeIndex >= 0 && !remotes[selectedNodeIndex].enabled) return "所选节点已停用，请启用或重新选择"
         val enabled = remotes.filter { it.enabled }
         if (enabled.isEmpty()) return "至少需要一个已启用节点"
         enabled.forEachIndexed { index, node ->
@@ -64,9 +70,19 @@ data class AndroidVpnConfig(
         return null
     }
 
+    fun forConnection(): AndroidVpnConfig {
+        require(validate() == null) { validate().orEmpty() }
+        return copy(
+            remotes = if (selectedNodeIndex >= 0) listOf(remotes[selectedNodeIndex]) else remotes.filter { it.enabled },
+            selectedNodeIndex = -1,
+        )
+    }
+
     fun toJsonString(indent: Int = 0): String {
         val root = JSONObject()
             .put("mtu", mtu)
+            .put("selected_node_index", selectedNodeIndex)
+            .put("app_routing", appRouting.toJson())
             .put("remotes", JSONArray().apply {
                 remotes.forEach { node ->
                     put(JSONObject()
@@ -179,13 +195,25 @@ data class AndroidVpnConfig(
                     ))
                 },
                 routing = routing,
+                selectedNodeIndex = if (root.has("selected_node_index")) root.getInt("selected_node_index") else -1,
+                appRouting = AppRoutingConfig.fromJson(root),
             )
         }
 
         fun fromImportText(text: String): AndroidVpnConfig {
-            val trimmed = text.trim()
+            val trimmed = text.removePrefix("\uFEFF").trim()
             if (trimmed.isBlank()) error("导入内容为空")
             return if (trimmed.startsWith("{")) {
+                val root = JSONObject(trimmed)
+                if (root.has("remotes") || root.has("remoteServers")) {
+                    val nodes = root.optJSONArray("remotes") ?: root.optJSONArray("remoteServers")
+                    require(nodes != null && nodes.length() > 0) { "配置中没有可导入的节点" }
+                    for (i in 0 until nodes.length()) {
+                        require(nodes.optJSONObject(i) != null) { "节点 ${i + 1} 格式无效" }
+                    }
+                } else {
+                    require(root.optString("remote_host").isNotBlank()) { "文件不包含 SimplePlane 节点配置" }
+                }
                 fromJson(trimmed)
             } else {
                 parseDesktopYaml(trimmed)
@@ -266,7 +294,7 @@ data class AndroidVpnConfig(
             val directList = mutableListOf<String>()
 
             text.lineSequence().forEach { raw ->
-                val line = raw.substringBefore("#").trimEnd()
+                val line = stripYamlComment(raw).trimEnd()
                 val trimmed = line.trim()
                 if (trimmed.isBlank()) return@forEach
 
@@ -317,8 +345,9 @@ data class AndroidVpnConfig(
             val rules = directList.map { RouteRuleConfig("domain_pattern", it, "direct") } +
                 proxyList.map { RouteRuleConfig("domain_pattern", it, "proxy") }
 
+            require(remotes.isNotEmpty()) { "配置中没有可导入的节点" }
             return AndroidVpnConfig(
-                remotes = remotes.ifEmpty { defaultConfig().remotes },
+                remotes = remotes,
                 routing = AndroidRoutingConfig(
                     defaultAction = defaultRoute,
                     cnDirect = true,
@@ -334,12 +363,27 @@ data class AndroidVpnConfig(
             return key to value
         }
 
+        private fun stripYamlComment(line: String): String {
+            var quote: Char? = null
+            var escaped = false
+            line.forEachIndexed { index, char ->
+                if (escaped) { escaped = false; return@forEachIndexed }
+                if (quote == '"' && char == '\\') { escaped = true; return@forEachIndexed }
+                if (char == quote) quote = null
+                else if (quote == null && (char == '\'' || char == '"')) quote = char
+                else if (quote == null && char == '#' && (index == 0 || line[index - 1].isWhitespace())) return line.substring(0, index)
+            }
+            return line
+        }
+
         private fun cleanValue(value: String): String {
             val trimmed = value.trim()
             if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
                 return runCatching { JSONArray("[$trimmed]").getString(0) }.getOrDefault(trimmed.trim('"'))
             }
-            return trimmed.trim('\'')
+            return if (trimmed.startsWith('\'') && trimmed.endsWith('\'')) {
+                trimmed.substring(1, trimmed.length - 1).replace("''", "'")
+            } else trimmed
         }
 
         private fun normalizeTransport(value: String): String = when (val lower = value.lowercase(Locale.ROOT)) {

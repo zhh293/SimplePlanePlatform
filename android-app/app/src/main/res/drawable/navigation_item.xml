@@ -1,0 +1,12 @@
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="?attr/colorControlHighlight">
+    <item>
+        <selector>
+            <item android:state_checked="true">
+                <inset android:insetLeft="4dp" android:insetRight="4dp" android:insetTop="4dp" android:insetBottom="4dp">
+                    <shape><solid android:color="@color/app_primary_container" /><corners android:radius="26dp" /></shape>
+                </inset>
+            </item>
+            <item android:drawable="@android:color/transparent" />
+        </selector>
+    </item>
+</ripple>

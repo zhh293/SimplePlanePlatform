@@ -1,0 +1,6 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="@color/surface_edge" />
+    <item android:state_focused="true" android:color="@color/app_primary" />
+    <item android:state_hovered="true" android:color="@color/app_text_secondary" />
+    <item android:color="@color/app_outline" />
+</selector>

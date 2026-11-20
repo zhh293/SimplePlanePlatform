@@ -119,8 +119,9 @@ impl SocketProtector for JniProtector {
 
 pub struct CoreHandle {
     _cb: Arc<CallbackCtx>,
-    rt: tokio::runtime::Runtime,
+    rt: Option<tokio::runtime::Runtime>,
     shutdown: tokio::sync::watch::Sender<bool>,
+    network_changed: tokio::sync::watch::Sender<u64>,
     #[allow(dead_code)]
     config: AndroidConfig,
     stats: Arc<CoreStats>,
@@ -130,6 +131,12 @@ impl Drop for CoreHandle {
     fn drop(&mut self) {
         let _ = self.shutdown.send(true);
         self.stats.set_state("stopped");
+        if let Some(rt) = self.rt.take() {
+            // Android's network DNS call can outlive a cancelled spawn_blocking
+            // future. Cancel async tasks/TUN without waiting on the UI thread
+            // for that OS call to return. Resolver concurrency remains bounded.
+            rt.shutdown_background();
+        }
         tracing::debug!("CoreHandle dropped, shutdown signalled");
     }
 }
@@ -209,6 +216,7 @@ fn native_start_impl(
         .enable_all()
         .build()?;
     let (shutdown, _rx) = tokio::sync::watch::channel(false);
+    let (network_changed, _network_rx) = tokio::sync::watch::channel(0);
     let cb = Arc::new(CallbackCtx {
         vm,
         bridge: Some(bridge),
@@ -217,8 +225,9 @@ fn native_start_impl(
 
     let handle = Box::new(CoreHandle {
         _cb: Arc::clone(&cb),
-        rt,
+        rt: Some(rt),
         shutdown,
+        network_changed,
         config: config.clone(),
         stats: Arc::clone(&stats),
     });
@@ -229,7 +238,11 @@ fn native_start_impl(
         // AndroidTun wraps the raw fd in tokio::io::unix::AsyncFd, which must be
         // created while a Tokio reactor is active. nativeStart runs on a Java
         // thread, so enter the freshly-created runtime before wiring the data plane.
-        let _runtime_guard = handle.rt.enter();
+        let _runtime_guard = handle
+            .rt
+            .as_ref()
+            .expect("runtime exists until stop")
+            .enter();
         spawn_data_plane(&handle, &cb, tun_fd, &config)?;
     }
     // TUN creation does not prove that a proxy node or destination is reachable.
@@ -283,7 +296,8 @@ fn spawn_data_plane(
     let stack_shutdown_rx = handle.shutdown.subscribe();
     let stack_cb = Arc::clone(cb);
     let stack_stats = Arc::clone(&handle.stats);
-    handle.rt.spawn(async move {
+    let runtime = handle.rt.as_ref().expect("runtime exists until stop");
+    runtime.spawn(async move {
         let res = stack_loop(
             tun_reader,
             tun_writer,
@@ -308,7 +322,8 @@ fn spawn_data_plane(
     let disp_shutdown_rx = handle.shutdown.subscribe();
     let disp_cb = Arc::clone(cb);
     let disp_stats = Arc::clone(&handle.stats);
-    handle.rt.spawn(async move {
+    let network_rx = handle.network_changed.subscribe();
+    runtime.spawn(async move {
         let res = run_dispatcher(
             tcp_event_rx,
             fake_dns,
@@ -316,6 +331,7 @@ fn spawn_data_plane(
             protector,
             notify_tx,
             disp_shutdown_rx,
+            network_rx,
         )
         .await;
         match res {
@@ -360,6 +376,23 @@ pub extern "C" fn Java_com_proxy_android_NativeBridge_nativeStop(
         let _ = core.shutdown.send(true);
         drop(core);
         tracing::info!("nativeStop completed");
+        Ok(())
+    });
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_proxy_android_NativeBridge_nativeNetworkChanged(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+) {
+    catch_unwind_to_unit(|| {
+        if handle != 0 {
+            // All handle access is serialized on the Android main thread.
+            let core = unsafe { &*(handle as *const CoreHandle) };
+            core.network_changed
+                .send_modify(|value| *value = value.wrapping_add(1));
+        }
         Ok(())
     });
 }
