@@ -83,6 +83,18 @@ public final class Http3NodeController implements AutoCloseable {
         return preferred == null ? "" : preferred;
     }
     public String getNodeStatesJson() { return nodeStates; }
+    /** Serialize network resets with config changes; late old connects cannot win. */
+    public void networkChanged() {
+        runControl(() -> {
+            if (closed) return;
+            retireCurrent();
+            for (Node node : nodes.values()) closeNode(node);
+            nodes.clear();
+            checking = null;
+            initialize(snapshot);
+            log.info("Physical network changed; rebuilding node transports");
+        });
+    }
     public String getNodeStatus() {
         if (closed) return "stopped";
         return "available".equals(nodeStatus) && !cluster.isAvailable() ? "unavailable" : nodeStatus;
@@ -182,6 +194,8 @@ public final class Http3NodeController implements AutoCloseable {
                         refreshMembers();
                         if (!automatic()) {
                             cluster.setCurrentInvoker(node.wrapped);
+                            node.circuit.state = NodeCircuit.State.CLOSED;
+                            node.circuit.reason = "";
                             node.circuit.activate(clock.getAsLong());
                             nodeStatus = "available";
                         } else chooseCurrent();
@@ -245,7 +259,16 @@ public final class Http3NodeController implements AutoCloseable {
     void tickForTest() { runControl(this::tick); }
 
     private void tick() {
-        if (closed || !automatic()) return;
+        if (closed) return;
+        if (!automatic()) {
+            // Reconnect can race DHCP settling. Manual selection must retry too,
+            // while preserving its selected node and certificate failure block.
+            for (Node node : nodes.values()) {
+                if (node.raw == null && node.circuit.beginRecovery(clock.getAsLong())) beginConnect(node);
+            }
+            publishStates();
+            return;
+        }
         long now = clock.getAsLong();
         for (Node node : nodes.values()) {
             if (node.circuit.state != NodeCircuit.State.OPEN && node.raw != null

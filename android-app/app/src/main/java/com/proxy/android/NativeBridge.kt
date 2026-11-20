@@ -45,11 +45,14 @@ class NativeBridge(private val vpn: PlaneVpnService? = null) {
     external fun nativeStart(tunFd: Int, configJson: String): Long
 
     /**
-     * 停止并回收一个会话。传入 0 或已回收的 handle 是安全的（no-op）。
+     * 停止并回收一个会话。0 是 no-op；已回收的非零 handle 不得再次使用。
      *
      * 调用方必须在调用后立即把本地保存的 handle 置 0，避免重复回收（use-after-free）。
      */
     external fun nativeStop(handle: Long)
+
+    /** Clear sockets bound to the previous physical network; called on the main thread. */
+    external fun nativeNetworkChanged(handle: Long)
 
     /**
      * 返回会话统计 JSON。A2 阶段固定返回 `"{}"`，真实统计在 B7 填充。

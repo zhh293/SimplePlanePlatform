@@ -48,6 +48,14 @@ pub enum CoreError {
     #[error("协议编解码失败: {0}")]
     Protocol(String),
 
+    /// Connection setup exceeded its deadline; this does not prove a codec or key error.
+    #[error("连接超时: {0}")]
+    Timeout(String),
+
+    /// Transport disconnected; this does not imply a cipher or frame error.
+    #[error("网络连接中断: {0}")]
+    Network(String),
+
     /// The authenticated proxy is healthy but could not reach this destination.
     #[error("目标连接失败: {0}")]
     TargetRejected(String),

@@ -30,6 +30,7 @@ public final class NodeConfigWatcher implements AutoCloseable {
     private String observedDigest;
     private String appliedDigest;
     private String error = "";
+    private String networkGeneration;
 
     public NodeConfigWatcher(Path path, Http3NodeController controller, ProxyConfig startupConfig) throws Exception {
         this.configPath = path.toAbsolutePath();
@@ -43,6 +44,7 @@ public final class NodeConfigWatcher implements AutoCloseable {
         }
         controller.apply(initial);
         observedDigest = appliedDigest = digest(bytes);
+        networkGeneration = readNetworkGeneration();
         publish(true);
         scheduler.scheduleWithFixedDelay(this::poll, 500, 500, TimeUnit.MILLISECONDS);
     }
@@ -50,6 +52,11 @@ public final class NodeConfigWatcher implements AutoCloseable {
     private void poll() {
         if (closed.get()) return;
         try {
+            String generation = readNetworkGeneration();
+            if (generation != null && !generation.equals(networkGeneration)) {
+                controller.networkChanged();
+                networkGeneration = generation;
+            }
             byte[] bytes = Files.readAllBytes(configPath);
             String nextDigest = digest(bytes);
             if (!nextDigest.equals(observedDigest)) {
@@ -76,6 +83,13 @@ public final class NodeConfigWatcher implements AutoCloseable {
         } catch (Exception failure) {
             log.warn("Cannot read/publish node configuration status: {}", failure.getClass().getSimpleName());
         }
+    }
+
+    private String readNetworkGeneration() throws Exception {
+        Path path = configPath.resolveSibling(configPath.getFileName() + ".network-reset");
+        if (!Files.isRegularFile(path)) return null;
+        String token = new String(Files.readAllBytes(path), StandardCharsets.UTF_8).trim();
+        return token.isEmpty() ? null : token;
     }
 
     private static java.util.List<Object> nonNodeSettings(ProxyConfig config) {

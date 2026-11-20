@@ -1,0 +1,6 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_connection" android:icon="@drawable/ic_dashboard" android:title="@string/nav_connection" />
+    <item android:id="@+id/nav_nodes" android:icon="@drawable/ic_nodes" android:title="@string/nav_nodes" />
+    <item android:id="@+id/nav_routing" android:icon="@drawable/ic_route" android:title="@string/nav_routing" />
+    <item android:id="@+id/nav_settings" android:icon="@drawable/ic_settings" android:title="@string/nav_settings" />
+</menu>

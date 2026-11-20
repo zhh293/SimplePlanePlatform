@@ -164,34 +164,39 @@ public final class Http3Client implements Client {
 
     private void flushPending(Http3StreamState state) {
         QuicStreamChannel channel;
-        List<ProxyMessage> messages = new ArrayList<>();
         synchronized (state) {
             channel = state.channel;
             if (state.phase != Http3StreamState.Phase.READY || channel == null || !channel.isActive()
                     || !channel.isWritable()) {
                 return;
             }
-            while (!state.pending.isEmpty()) {
+            // Keep admission and write submission under the same lock: a new
+            // fast-path DATA must not overtake this stream's queued DATA.
+            while (!state.pending.isEmpty() && state.phase == Http3StreamState.Phase.READY
+                    && channel.isActive() && channel.isWritable()) {
                 ProxyMessage message = state.pending.removeFirst();
                 state.pendingBytes -= estimatedBytes(message);
                 connectionPendingBytes.addAndGet(-estimatedBytes(message));
-                messages.add(message);
+                write(channel, message);
             }
-        }
-        for (ProxyMessage message : messages) {
-            write(channel, message);
         }
     }
 
     private void write(QuicStreamChannel channel, ProxyMessage message) {
-        channel.writeAndFlush(message).addListener(f -> {
-            if (!f.isSuccess()) {
-                Http3StreamState state = streams.get(message.getStreamId());
-                if (state != null) {
-                    failStream(state, f.cause());
+        try {
+            // Always enqueue, including from the QUIC event loop. An inline
+            // write there could otherwise jump ahead of a browser event loop's
+            // earlier write that is still waiting in this executor's queue.
+            channel.eventLoop().execute(() -> channel.writeAndFlush(message).addListener(f -> {
+                if (!f.isSuccess()) {
+                    Http3StreamState state = streams.get(message.getStreamId());
+                    if (state != null) failStream(state, f.cause());
                 }
-            }
-        });
+            }));
+        } catch (java.util.concurrent.RejectedExecutionException failure) {
+            Http3StreamState state = streams.get(message.getStreamId());
+            if (state != null) failStream(state, failure);
+        }
     }
 
     private void closeState(Http3StreamState state) {

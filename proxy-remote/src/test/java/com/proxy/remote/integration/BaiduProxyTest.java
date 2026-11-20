@@ -104,9 +104,8 @@ class BaiduProxyTest {
         Response connectResp = connectFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
         assertNotNull(connectResp);
         assertTrue(connectResp.isSuccess(), "CONNECT to baidu should succeed");
-
-        // 等待出站连接建立
-        Thread.sleep(500);
+        assertEquals(1, dispatchInvoker.getSessionManager().activeCount(),
+                "CONNECT success should represent an established outbound session");
 
         // 2. 发送 HTTP GET 请求（使用 EmbeddedChannel 捕获推送）
         String httpRequest = "GET / HTTP/1.1\r\n" +
@@ -135,29 +134,22 @@ class BaiduProxyTest {
                 "Response should look like an HTTP reply from baidu, got: "
                         + responseText.substring(0, Math.min(80, responseText.length())));
 
-        // 4. 验证 session 仍然存活（连接成功）
-        assertEquals(1, dispatchInvoker.getSessionManager().activeCount(),
-                "Session should still be active after successful connection");
+        // Connection: close permits the target to close immediately after its
+        // response. Assert closure and cleanup instead of racing peer EOF with
+        // an assertion that the already-completed session must still be alive.
+        long closeDeadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TIMEOUT);
+        while (!embeddedChannel.closeFuture().isDone() && System.nanoTime() < closeDeadline) {
+            embeddedChannel.runPendingTasks();
+            Thread.sleep(10);
+        }
+        assertTrue(embeddedChannel.closeFuture().isSuccess(), "Peer EOF should close the browser channel");
+        assertEquals(0, dispatchInvoker.getSessionManager().activeCount(),
+                "Peer EOF should clean the outbound session after delivering its response");
 
         System.out.println("=== Baidu proxy test passed! ===");
         System.out.println("Successfully connected to www.baidu.com:80 through proxy");
-        System.out.println("HTTP request forwarded, session active.");
-
-        // 5. DISCONNECT
-        ProxyMessage disconnectMsg = ProxyMessage.builder()
-                .type(ProxyMessage.MessageType.DISCONNECT)
-                .host("www.baidu.com")
-                .port(80)
-                .streamId(streamId)
-                .build();
-        CompletableFuture<Response> disconnectFuture = proxyClient.request(disconnectMsg, TIMEOUT);
-        Response disconnectResp = disconnectFuture.get(TIMEOUT, TimeUnit.MILLISECONDS);
-        assertTrue(disconnectResp.isSuccess(), "DISCONNECT should succeed");
-
-        assertEquals(0, dispatchInvoker.getSessionManager().activeCount(),
-                "Session should be cleaned after DISCONNECT");
-
-        embeddedChannel.close();
+        System.out.println("HTTP request forwarded, response delivered and peer closure cleaned up.");
+        embeddedChannel.finishAndReleaseAll();
     }
 
     // ==================== 辅助方法 ====================

@@ -10,7 +10,9 @@ mod direct;
 mod error;
 mod fake_dns;
 mod logging;
+mod network_recovery;
 mod route_guard;
+mod route_policy;
 mod router;
 mod socks5;
 mod stack;
@@ -29,7 +31,8 @@ use tokio::sync::{mpsc, Mutex};
 use crate::config::Config;
 use crate::error::TunError;
 use crate::fake_dns::FakeDnsEngine;
-use crate::router::{ConnectionInfo, Protocol, RouteAction, Router};
+use crate::route_policy::RoutePolicy;
+use crate::router::{ConnectionInfo, Protocol, RouteAction};
 use crate::socks5::proxy_tcp_stream;
 use crate::stack::{SmolTcpStream, TcpEvent};
 
@@ -49,6 +52,11 @@ struct Args {
     /// Override persistent diagnostics for elevated launches.
     #[arg(long)]
     log_file: Option<PathBuf>,
+    /// Inspect policy without creating a TUN device or changing system networking.
+    #[arg(long)]
+    check_route: Option<String>,
+    #[arg(long, default_value_t = 443)]
+    check_port: u16,
 }
 
 /// 初始化 tracing 日志系统（输出到终端 + 日志文件）
@@ -120,6 +128,74 @@ async fn run() -> anyhow::Result<()> {
     // 4. 打印启动信息
     tracing::info!("tun-adapter v{} starting", env!("CARGO_PKG_VERSION"));
     config.print_summary();
+    // Validate/compile the shared policy before touching DNS or system routes.
+    let (policy, watched_paths) = RoutePolicy::new(&config.routing, config.route_source.as_deref())
+        .map_err(TunError::Route)?;
+    let router = Arc::new(policy);
+    if let Some(target) = &args.check_route {
+        let ip = target.parse().ok();
+        let info = ConnectionInfo {
+            src_ip: std::net::IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            dst_ip: ip.unwrap_or_else(|| "198.19.0.10".parse().unwrap()),
+            dst_port: args.check_port,
+            domain: ip.is_none().then(|| target.clone()),
+            protocol: Protocol::Tcp,
+        };
+        println!(
+            "Route decision: {:?} {}:{}",
+            router.route(&info),
+            target,
+            args.check_port
+        );
+        return Ok(());
+    }
+    let fake_dns = Arc::new(Mutex::new(FakeDnsEngine::new(
+        &config.fakeip.range,
+        config.fakeip.capacity,
+    )));
+    tracing::info!("FakeDNS engine initialized");
+
+    let mut recovering = false;
+    loop {
+        // Keep FakeIP mappings across session rebuilds: browser DNS caches can
+        // outlive a network outage. Every old stream is cancelled and recreated.
+        let attempt = run_session(
+            &args,
+            &config,
+            router.clone(),
+            watched_paths.clone(),
+            fake_dns.clone(),
+            recovering,
+        );
+        let result = attempt.await;
+        match result {
+            Ok(false) => break,
+            Ok(true) => recovering = true,
+            Err(error) if recovering => {
+                tracing::warn!("Network recovery not ready; retrying: {error:#}")
+            }
+            Err(error) => return Err(error),
+        }
+        tokio::select! {
+            _ = tokio::time::sleep(Duration::from_secs(3)) => {},
+            _ = wait_for_stop(args.stop_file.as_deref()) => break,
+            _ = tokio::signal::ctrl_c() => break,
+        }
+    }
+    if let Some(path) = &args.ready_file {
+        let _ = std::fs::remove_file(path);
+    }
+    Ok(())
+}
+
+async fn run_session(
+    args: &Args,
+    config: &Config,
+    router: Arc<RoutePolicy>,
+    watched_paths: Vec<PathBuf>,
+    fake_dns: Arc<Mutex<FakeDnsEngine>>,
+    recovering: bool,
+) -> anyhow::Result<bool> {
     let direct_egress = Arc::new(direct::DirectEgress::discover()?);
 
     // 5. 创建 TUN 设备（包括路由设置和回环防护）
@@ -129,17 +205,25 @@ async fn run() -> anyhow::Result<()> {
     let (tun_reader, tun_writer, _route_guard) = tun_mgr.split();
     tracing::info!("TUN device ready (route guard active)");
 
-    // 6. 初始化 FakeDNS
-    let fake_dns = Arc::new(Mutex::new(FakeDnsEngine::new(
-        &config.fakeip.range,
-        config.fakeip.capacity,
-    )));
-    tracing::info!("FakeDNS engine initialized");
-
+    // Do this after bypass routes are installed so new transports cannot loop.
+    if recovering {
+        if let Some(path) = &config.proxy_reconnect_file {
+            let token = format!(
+                "{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)?
+                    .as_nanos()
+            );
+            write_reconnect_request(path, &token)?;
+            tracing::info!("Requested local proxy transport reset after network recovery");
+        }
+    }
     // 7. 初始化路由引擎
-    let router = Arc::new(
-        Router::from_config(&config.routing).map_err(|e| TunError::Route(format!("{}", e)))?,
-    );
+    let route_watch_handle = config.route_source.clone().map(|path| {
+        tracing::info!("Using shared desktop route policy: {}", path.display());
+        tokio::spawn(route_policy::watch(router.clone(), path, watched_paths))
+    });
     tracing::info!("Router initialized");
 
     // 8. 健康状态标记
@@ -220,6 +304,7 @@ async fn run() -> anyhow::Result<()> {
         std::fs::write(path, std::process::id().to_string())?;
     }
     let mut failure = None;
+    let mut reconnect = false;
 
     // 12. 等待退出信号或任一核心任务异常
     #[cfg(unix)]
@@ -253,6 +338,8 @@ async fn run() -> anyhow::Result<()> {
     {
         // Windows: 只监听 Ctrl+C（无 SIGTERM 概念）
         tokio::select! {
+            _ = network_recovery::wait_for_change() => { reconnect = true; }
+
             _ = tokio::signal::ctrl_c() => {
                 tracing::info!("Received Ctrl+C, shutting down...");
             }
@@ -275,15 +362,23 @@ async fn run() -> anyhow::Result<()> {
     health_handle.abort();
     stack_handle.abort();
     conn_handle.abort();
-    if let Some(path) = &args.ready_file {
-        let _ = std::fs::remove_file(path);
+    if !stack_handle.is_finished() {
+        let _ = stack_handle.await;
+    }
+    if !conn_handle.is_finished() {
+        let _ = conn_handle.await;
+    }
+    let _ = health_handle.await;
+    if let Some(handle) = route_watch_handle {
+        handle.abort();
+        let _ = handle.await;
     }
 
     // Drop Guard 会自动恢复路由表
     tracing::info!("TUN adapter stopped");
     match failure {
         Some(error) => Err(anyhow::anyhow!(error)),
-        None => Ok(()),
+        None => Ok(reconnect),
     }
 }
 
@@ -299,9 +394,35 @@ async fn wait_for_stop(path: Option<&std::path::Path>) {
     }
 }
 
+fn write_reconnect_request(path: &std::path::Path, token: &str) -> std::io::Result<()> {
+    let temp = path.with_extension(format!("network-reset-{}.tmp", std::process::id()));
+    let result = (|| {
+        std::fs::write(&temp, token)?;
+        std::fs::rename(&temp, path)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(temp);
+    }
+    result
+}
+
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
+
+    #[test]
+    fn reconnect_requests_replace_atomically_and_do_not_change_configuration() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("proxy-java.yml");
+        let marker = dir.path().join("proxy-java.yml.network-reset");
+        std::fs::write(&config, "original").unwrap();
+        for token in ["first-generation", "second-generation"] {
+            write_reconnect_request(&marker, token).unwrap();
+            assert_eq!(std::fs::read_to_string(&marker).unwrap(), token);
+        }
+        assert_eq!(std::fs::read_to_string(config).unwrap(), "original");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
+    }
 
     #[tokio::test]
     async fn stop_request_is_scoped_to_this_run() {
@@ -324,7 +445,7 @@ mod lifecycle_tests {
 async fn connection_dispatcher(
     mut rx: mpsc::Receiver<TcpEvent>,
     fake_dns: Arc<Mutex<FakeDnsEngine>>,
-    router: Arc<Router>,
+    router: Arc<RoutePolicy>,
     socks5_addr: SocketAddr,
     _health_state: Arc<AtomicBool>,
     notify_tx: mpsc::Sender<()>,
@@ -335,7 +456,12 @@ async fn connection_dispatcher(
     // 并发连接数限制，防止 fd 耗尽
     let semaphore = Arc::new(tokio::sync::Semaphore::new(512));
 
-    while let Some(event) = rx.recv().await {
+    let mut streams = tokio::task::JoinSet::new();
+    loop {
+        let event = tokio::select! {
+            event = rx.recv() => match event { Some(event) => event, None => break },
+            _ = streams.join_next(), if !streams.is_empty() => continue,
+        };
         match event {
             TcpEvent::NewConnection {
                 src_ip,
@@ -360,8 +486,6 @@ async fn connection_dispatcher(
                 };
 
                 let action = router.route(&info);
-
-
 
                 // 4. 尝试获取并发许可（非阻塞）
                 let permit = match semaphore.clone().try_acquire_owned() {
@@ -396,7 +520,7 @@ async fn connection_dispatcher(
                 match action {
                     RouteAction::Proxy => {
                         let notify = notify_tx.clone();
-                        tokio::spawn(async move {
+                        streams.spawn(async move {
                             let _permit = permit;
                             let stream = SmolTcpStream::new(stream_tx, stream_rx, notify);
                             if let Err(e) =
@@ -415,17 +539,23 @@ async fn connection_dispatcher(
                         let target_owned = target.clone();
                         let egress = direct_egress.clone();
                         let notify = notify_tx.clone();
-                        tokio::spawn(async move {
+                        streams.spawn(async move {
                             let _permit = permit;
                             let stream = SmolTcpStream::new(stream_tx, stream_rx, notify);
-                            if let Err(e) =
+                            if let Err(e) = {
+                                #[cfg(windows)]
                                 {
-                                    #[cfg(windows)]
-                                    { direct_tcp_stream(stream, &target_owned, dst_port, &egress).await }
-                                    #[cfg(not(windows))]
-                                    { let _ = egress; proxy_tcp_stream(&target_owned, dst_port, stream, socks5_addr).await.map_err(TunError::Socks5) }
+                                    direct_tcp_stream(stream, &target_owned, dst_port, &egress)
+                                        .await
                                 }
-                            {
+                                #[cfg(not(windows))]
+                                {
+                                    let _ = egress;
+                                    proxy_tcp_stream(&target_owned, dst_port, stream, socks5_addr)
+                                        .await
+                                        .map_err(TunError::Socks5)
+                                }
+                            } {
                                 tracing::warn!(
                                     "Direct connection error for {}:{}: {}",
                                     target_owned,
@@ -449,8 +579,14 @@ async fn connection_dispatcher(
 }
 
 /// Direct streams use the physical interface, never SOCKS5 or system DNS.
-async fn direct_tcp_stream(app_stream: SmolTcpStream, host: &str, port: u16, egress: &direct::DirectEgress) -> Result<(), TunError> {
-    let stream = tokio::time::timeout(Duration::from_secs(15), egress.connect(host, port)).await
+async fn direct_tcp_stream(
+    app_stream: SmolTcpStream,
+    host: &str,
+    port: u16,
+    egress: &direct::DirectEgress,
+) -> Result<(), TunError> {
+    let stream = tokio::time::timeout(Duration::from_secs(15), egress.connect(host, port))
+        .await
         .map_err(|_| TunError::Network(format!("Direct connect timed out for {host}:{port}")))??;
     socks5::relay_with_idle_timeout(app_stream, stream, Duration::from_secs(120)).await?;
     Ok(())

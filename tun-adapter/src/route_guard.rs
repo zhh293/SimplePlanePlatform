@@ -30,6 +30,8 @@ pub struct RouteGuard {
     /// macOS: 已创建的 /etc/resolver/ 文件列表
     /// Windows: NRPT 规则的 namespace 列表（用于恢复时删除）
     resolver_files: Vec<String>,
+    #[cfg(target_os = "macos")]
+    loopback_alias_owned: bool,
 }
 
 /// 保存的原始 DNS 设置
@@ -100,6 +102,26 @@ fn cidr_to_ip_and_mask(cidr: &str) -> (String, String) {
 }
 
 impl RouteGuard {
+    #[cfg(target_os = "macos")]
+    fn setup_tun_loopback_alias(&mut self) -> Result<(), TunError> {
+        let output = Command::new("/sbin/ifconfig").arg("lo0").output()
+            .map_err(|e| TunError::SystemRoute(format!("Cannot inspect loopback alias: {e}")))?;
+        if !output.status.success() {
+            return Err(TunError::SystemRoute("Cannot inspect loopback interface".into()));
+        }
+        if String::from_utf8_lossy(&output.stdout).lines().any(|line| {
+            let mut words = line.split_whitespace();
+            words.next() == Some("inet") && words.next() == Some("127.0.0.2")
+        }) { return Ok(()); }
+        let output = Command::new("/sbin/ifconfig").args(["lo0", "inet", "127.0.0.2/32", "alias"]).output()
+            .map_err(|e| TunError::SystemRoute(format!("Cannot configure TUN loopback alias: {e}")))?;
+        if !output.status.success() {
+            return Err(TunError::SystemRoute(format!("Cannot configure TUN loopback alias: {}", String::from_utf8_lossy(&output.stderr))));
+        }
+        self.loopback_alias_owned = true;
+        tracing::info!("Configured macOS TUN SOCKS5 source alias 127.0.0.2");
+        Ok(())
+    }
     // ========================================================================
     // setup() — macOS
     // ========================================================================
@@ -123,7 +145,10 @@ impl RouteGuard {
             routes_added: Vec::new(),
             original_dns: None,
             resolver_files: Vec::new(),
+            loopback_alias_owned: false,
         };
+
+        guard.setup_tun_loopback_alias()?;
 
         if let Some(orig_gw) = &guard.original_gateway {
             let gw_str = orig_gw.to_string();
@@ -794,7 +819,7 @@ impl RouteGuard {
     /// 使用 PowerShell Get-NetRoute 获取默认路由的 NextHop。
     #[cfg(target_os = "windows")]
     fn get_default_gateway() -> Result<Option<IpAddr>, TunError> {
-        let ps_cmd = "(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).NextHop";
+        let ps_cmd = "(Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Where-Object { $_.NextHop -notmatch '^(198\\.(18|19)\\.|0\\.)' } | Sort-Object @{Expression={$_.RouteMetric + $_.InterfaceMetric}} | Select-Object -First 1).NextHop";
 
         let output = Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", ps_cmd])
@@ -893,13 +918,15 @@ impl RouteGuard {
 
         if output.status.success() {
             tracing::info!("Route added successfully: {}/{} -> {}", dest_ip, mask, gateway);
-        } else if stdout.contains("already exists") || stderr.contains("already exists") {
-            tracing::info!("Route already exists: {} mask {} -> {}", dest_ip, mask, gateway);
         } else {
-            tracing::warn!(
-                "Route add may have failed (exit={}): stdout={}, stderr={}",
-                output.status, stdout.trim(), stderr.trim()
-            );
+            // Confirm an exact pre-existing route, independent of OS language.
+            // It is usable, but belongs to its creator and must not be deleted.
+            let prefix = if destination.contains('/') { destination.to_string() } else { format!("{destination}/32") };
+            let check = format!("if (Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '{}' -ErrorAction SilentlyContinue | Where-Object NextHop -eq '{}') {{ exit 0 }} else {{ exit 1 }}", prefix.replace('\'', "''"), gateway.replace('\'', "''"));
+            if Command::new("powershell").args(["-NoProfile", "-NonInteractive", "-Command", &check]).status().is_ok_and(|s| s.success()) {
+                return Ok(());
+            }
+            return Err(TunError::SystemRoute(format!("Cannot add route {destination} via {gateway}: {} {}", stdout.trim(), stderr.trim())));
         }
 
         self.routes_added.push(RouteEntry {
@@ -985,6 +1012,17 @@ impl RouteGuard {
             Err(e) => {
                 tracing::error!("Failed to run route delete command: {}", e);
             }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn delete_owned_route(entry: &RouteEntry) {
+        let (ip, mask) = cidr_to_ip_and_mask(&entry.destination);
+        // Destination-only deletion also removes the newly leased DHCP default
+        // or another application's routes. Restrict cleanup to our next hop.
+        let result = Command::new("route").args(["delete", &ip, "mask", &mask, &entry.gateway]).output();
+        if !matches!(&result, Ok(output) if output.status.success()) {
+            tracing::debug!("Owned route already absent or could not be removed: {:?}", entry);
         }
     }
 
@@ -1139,7 +1177,7 @@ impl RouteGuard {
     #[cfg(target_os = "windows")]
     fn get_active_interface_name() -> Result<String, TunError> {
         let ps_cmd = r#"
-            $route = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1
+            $route = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Where-Object { $_.NextHop -notmatch '^(198\.(18|19)\.|0\.)' } | Sort-Object @{Expression={$_.RouteMetric + $_.InterfaceMetric}} | Select-Object -First 1
             if ($route) {
                 (Get-NetAdapter -InterfaceIndex $route.InterfaceIndex -ErrorAction SilentlyContinue).Name
             }
@@ -1180,35 +1218,20 @@ impl RouteGuard {
     /// 获取指定网络接口的当前 DNS 服务器列表 — Windows
     #[cfg(target_os = "windows")]
     fn get_dns_servers_win(interface_name: &str) -> Result<Vec<String>, TunError> {
+        // Effective ServerAddresses includes DHCP-provided DNS. Only the static
+        // NameServer override records whether the user actually selected manual DNS.
         let ps_cmd = format!(
-            "(Get-DnsClientServerAddress -InterfaceAlias '{}' -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses -join ','",
-            interface_name
+            r"$ErrorActionPreference='Stop'; $adapter=Get-NetAdapter | Where-Object {{ $_.Name -eq '{}' }} | Select-Object -First 1; if (!$adapter) {{ throw 'DNS interface not found' }}; $guid=([guid]$adapter.InterfaceGuid).ToString('B'); $settings=Get-ItemProperty -LiteralPath ('HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\'+$guid); if ([string]::IsNullOrWhiteSpace($settings.NameServer)) {{ 'DHCP' }} else {{ $settings.NameServer }}",
+            interface_name.replace('\'', "''")
         );
-
         let output = Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &ps_cmd])
             .output()
-            .map_err(|e| TunError::SystemRoute(format!("failed to get DNS servers: {}", e)))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let result = stdout.trim();
-
-        if result.is_empty() {
-            // 没有手动设置的 DNS，表示使用 DHCP
-            return Ok(vec!["DHCP".to_string()]);
+            .map_err(|e| TunError::SystemRoute(format!("failed to read DNS mode: {}", e)))?;
+        if !output.status.success() {
+            return Err(TunError::SystemRoute(format!("failed to read DNS mode: {}", String::from_utf8_lossy(&output.stderr).trim())));
         }
-
-        let servers: Vec<String> = result
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        if servers.is_empty() {
-            Ok(vec!["DHCP".to_string()])
-        } else {
-            Ok(servers)
-        }
+        parse_windows_dns_override(&String::from_utf8_lossy(&output.stdout))
     }
 
     /// 获取 TUN 接口的网关地址 — Windows
@@ -1320,10 +1343,16 @@ impl Drop for RouteGuard {
 
         // 3. 删除所有添加的路由（逆序删除）
         for entry in self.routes_added.iter().rev() {
+            #[cfg(target_os = "windows")]
+            Self::delete_owned_route(entry);
+            #[cfg(not(target_os = "windows"))]
             Self::delete_route(&entry.destination);
         }
 
-        // 4. 恢复原始默认路由
+        // Windows keeps DHCP's current default: TUN owns only the /1 routes.
+        // Restoring a captured gateway would resurrect a stale route on roaming.
+        // macOS changes the default route and must restore it.
+        #[cfg(target_os = "macos")]
         if let Some(gateway) = &self.original_gateway {
             tracing::info!("Restoring original default gateway: {}", gateway);
 
@@ -1348,32 +1377,40 @@ impl Drop for RouteGuard {
                 }
             }
 
-            #[cfg(target_os = "windows")]
-            {
-                let result = Command::new("route")
-                    .args(["add", "0.0.0.0", "mask", "0.0.0.0", &gateway.to_string()])
-                    .output();
-
-                match result {
-                    Ok(output) => {
-                        if output.status.success() {
-                            tracing::info!("Default gateway restored successfully");
-                        } else {
-                            let stdout = String::from_utf8_lossy(&output.stdout);
-                            let stderr = String::from_utf8_lossy(&output.stderr);
-                            tracing::warn!(
-                                "Gateway restore may have issues: stdout={}, stderr={}",
-                                stdout.trim(), stderr.trim()
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!("Failed to restore default gateway: {}", e);
-                    }
-                }
-            }
         }
 
+        #[cfg(target_os = "macos")]
+        if self.loopback_alias_owned {
+            match Command::new("/sbin/ifconfig").args(["lo0", "inet", "127.0.0.2", "-alias"]).output() {
+                Ok(output) if output.status.success() => tracing::info!("Removed owned TUN loopback alias"),
+                other => tracing::warn!("Could not remove owned TUN loopback alias: {:?}", other),
+            }
+        }
         tracing::info!("RouteGuard cleanup completed");
+    }
+}
+
+/// Parse the registry override, never the currently effective DHCP server list.
+fn parse_windows_dns_override(value: &str) -> Result<Vec<String>, TunError> {
+    let value = value.trim();
+    if value == "DHCP" { return Ok(vec!["DHCP".into()]); }
+    let servers: Vec<String> = value.split(|ch: char| ch == ',' || ch.is_whitespace())
+        .filter(|s| !s.is_empty()).map(str::to_string).collect();
+    if servers.is_empty() || servers.iter().any(|s| s.parse::<std::net::IpAddr>().is_err()) {
+        return Err(TunError::SystemRoute("Invalid static DNS backup; refusing to replace network settings".into()));
+    }
+    Ok(servers)
+}
+
+#[cfg(test)]
+mod dns_mode_tests {
+    use super::*;
+    #[test] fn automatic_mode_is_preserved_as_a_mode() {
+        assert_eq!(parse_windows_dns_override("DHCP\r\n").unwrap(), vec!["DHCP"]);
+    }
+    #[test] fn manual_servers_are_preserved_in_order() {
+        assert_eq!(parse_windows_dns_override("1.1.1.1, 8.8.8.8").unwrap(), vec!["1.1.1.1", "8.8.8.8"]);
+        assert!(parse_windows_dns_override("").is_err());
+        assert!(parse_windows_dns_override("unexpected output").is_err());
     }
 }
