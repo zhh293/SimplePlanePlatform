@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-21",
+  "environment": "WSL Ubuntu 22.04; rustc 1.93.1; Linux host tests",
+  "command": "CARGO_HOME=/mnt/e/SimplePlanePlatform/.cargo-local cargo test --offline --locked --manifest-path plane-core/Cargo.toml --target-dir .build/android-udp-adaptation/target",
+  "total": 119,
+  "passed": 117,
+  "failed": 0,
+  "ignored": 2,
+  "ignored_cases": [
+    "crypto_interop_tests::crypto_remote_echo (requires CRYPTO_TEST_PORT/CRYPTO_TEST_SUITE/CRYPTO_TEST_KEY_FILE)",
+    "dispatcher::tests::configured_node_http_probe (requires PLANE_NODE_HOST/PLANE_NODE_PORT/PLANE_NODE_KEY)"
+  ],
+  "android_device_tested": false,
+  "apk_built_in_this_commit": false,
+  "tun_harness": "UnixDatagram fd passed through production AndroidTun/stack/dispatcher; not a real VpnService device",
+  "initial_default_cache_offline_attempt": "rustc-hash missing; no compilation; retry used existing complete repository Cargo cache",
+  "raw_log": ".build/udp-canary-20261121/android-review-tests-shared-cache.log",
+  "raw_log_sha256": "07364765945bc40aea0ff21ca66fc393782478cb16f2009329e61cb2cc5dbf20",
+  "committed_android_source_sha256_lf": {
+    "plane-core/src/dispatcher.rs": "a74b2a87b26e3f85835c7bd416c4c42f88d05295821bc303cf3893f680252b82",
+    "plane-core/src/lib.rs": "fa8832dfab61f5375a9336f4b462150f0078d561e8e0ae33daf05ff4c98ad5c7",
+    "plane-core/src/outbound.rs": "2b1c44e411694712dc1abdeef527d912304d8567c6319315b4a2d5fc53282654",
+    "plane-core/src/outbound_h3.rs": "014b3cd07da3fc20d9587edcfd1d812b150b48871441122a278ddcfacb572749",
+    "plane-core/src/proxy_proto.rs": "4bb249c7c7e52026ae5d69df72d17f300ce72e5c063778b80e3f35da1d3349b3",
+    "plane-core/src/tcp_stack.rs": "41021ffac4b70267904474f5d9356e1b8404d741ee3c65605e1d1ee3a4ceb263",
+    "plane-core/src/transport.rs": "50d29c9125d20027020bc3ff5fef770eaaec6d1d286acd6a03d2024d4653a4a6",
+    "plane-core/src/udp.rs": "b5c595aa001ef79384294d681b76d603d7c7996e4b705c51f816e3b7fd6eb38e"
+  }
+}

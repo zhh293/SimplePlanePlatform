@@ -41,6 +41,7 @@ pub mod routing;
 pub mod stats;
 pub mod tcp_stack;
 pub mod transport;
+pub mod udp;
 
 use jni::objects::JClass;
 use jni::sys::jstring;

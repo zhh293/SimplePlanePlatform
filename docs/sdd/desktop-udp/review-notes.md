@@ -18,7 +18,7 @@
 
 发布限制尚未解决：H3 灰度节点重启恢复约 61 秒；512 包无节流突发时 H2/H3 分别仅收到 104/59 包，尚未逐跳定位全部丢失；公网 speed.cloudflare.com 的 QUIC 握手在代理及远端直连均失败。macOS 实机、安装后的完整桌面 TUN 接管流程、长时间浸泡和全量容量没有验收。此分支供代码 review，不代表已满足全量上线标准。
 
-提交不包含原有 Android plane-core 并行改动、旧设计文档、update-server 证据变更、SPI 换行差异，也不包含先前已存在的 Http3Client 34 行诊断新增；它们保留在用户本地工作区。本次 Http3Client 的 UDP 建流/限额/关闭语义改动单独入库。
+首个桌面提交 e8014bf 不包含原有 Android plane-core 并行改动、旧设计文档、update-server 证据变更、SPI 换行差异，也不包含先前已存在的 Http3Client 34 行诊断新增；本次 Http3Client 的 UDP 建流/限额/关闭语义改动单独入库。随后用户要求将 Android 改动追加到同一分支，作为独立提交一并 review，见 [Android 追加记录](android-review.md)；其余既有改动仍保留在本地。
 
 原 verification / canary 源码 SHA-256 清单记录的是测试执行时的完整工作区，其中 Http3Client 包含上述既有诊断代码；原清单作为历史证据保留。`evidence/review-source-sha256.json` 单独记录本次提交实际收录的实现、测试及构建脚本（Git blob 内容，统一为 LF），避免将两种快照混为一谈。本地 .build、密钥、依赖缓存和构建产物均不在本次提交中。
 
