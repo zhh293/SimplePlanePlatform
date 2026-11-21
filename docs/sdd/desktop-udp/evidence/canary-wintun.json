@@ -1,0 +1,49 @@
+[
+  {
+    "name": "real Wintun adapter/routes created",
+    "status": "passed",
+    "interface_name": "SP-UDP-Canary-16160",
+    "fake_ips": {
+      "stun.l.google.com": "198.19.254.1",
+      "time.cloudflare.com": "198.19.254.2",
+      "cloudflare-quic.com": "198.19.254.3",
+      "127.0.0.1": "198.19.254.4"
+    },
+    "default_routes_modified": false,
+    "dns_modified": false
+  },
+  {
+    "name": "real Wintun remote UDP echo",
+    "status": "passed",
+    "sizes": [
+      0,
+      1,
+      1472
+    ],
+    "fake_ip_response_verified": true
+  },
+  {
+    "name": "real Wintun STUN",
+    "status": "passed",
+    "mapped_ip": "20.78.53.111",
+    "mapped_port": 37658
+  },
+  {
+    "name": "real Wintun NTP",
+    "status": "passed",
+    "stratum": 3
+  },
+  {
+    "name": "real Wintun HTTP3 webpage",
+    "status": "passed",
+    "http_status": 200,
+    "alpn": "h3",
+    "certificate_verified": true,
+    "egress_ip": "20.78.53.111",
+    "bytes": 196
+  },
+  {
+    "name": "Wintun cleanup/default route/DNS verification",
+    "status": "passed"
+  }
+]

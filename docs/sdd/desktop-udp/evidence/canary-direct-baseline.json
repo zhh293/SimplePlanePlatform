@@ -1,0 +1,16 @@
+[
+  {
+    "direct_target": "cloudflare-quic.com",
+    "result": {
+      "http_status": 200,
+      "alpn": "h3",
+      "certificate_verified": true,
+      "egress_ip": "20.78.53.111",
+      "bytes": 196
+    }
+  },
+  {
+    "direct_target": "speed.cloudflare.com",
+    "error": "ConnectionError:"
+  }
+]

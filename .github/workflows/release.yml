@@ -106,10 +106,24 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_ENV, 'TAURI_SIGNING_PRIVATE_KEY=' + key + '\n');
           NODE
 
+      - name: Prepare macOS TUN loopback source
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.2', 0)); s.close()" || sudo /sbin/ifconfig lo0 inet 127.0.0.2/32 alias
+          python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.2', 0)); s.close(); print('TUN loopback source is available')"
+
+      - name: Build TUN UDP packet probe
+        run: cargo build --manifest-path tun-adapter/Cargo.toml --locked --example udp_probe
+
       # Step 1: Build fat-jar
       - name: Build and test proxy-local fat-jar
         timeout-minutes: 20
-        run: mvn package -pl proxy-local -am -q
+        shell: bash
+        run: |
+          probe="$PWD/tun-adapter/target/debug/examples/udp_probe"
+          if [ "$RUNNER_OS" = "Windows" ]; then probe="$(cygpath -m "$probe.exe")"; fi
+          mvn package -pl proxy-local -am -q "-Dproxy.udp.tunProbe=$probe"
 
       - name: Upload Java test reports
         if: always()
@@ -195,13 +209,6 @@ jobs:
           Get-ChildItem $RESOURCES
 
       # Step 5: Build Tauri app (branch push / PR — build only, no release)
-      - name: Prepare macOS TUN loopback source
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.2', 0)); s.close()" || sudo /sbin/ifconfig lo0 inet 127.0.0.2/32 alias
-          python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.2', 0)); s.close(); print('TUN loopback source is available')"
-
       - name: Test TUN adapter
         timeout-minutes: 5
         run: cargo test --manifest-path tun-adapter/Cargo.toml --locked

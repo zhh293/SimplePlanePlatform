@@ -1,0 +1,96 @@
+[
+  {
+    "name": "netty/aes-gcm-v2 foreign-source/malformed rejection",
+    "status": "passed"
+  },
+  {
+    "name": "netty/aes-gcm-v2 cancel-opening cleanup",
+    "status": "passed",
+    "cycles": 40,
+    "fd_before": 26,
+    "fd_after": 28
+  },
+  {
+    "name": "netty/aes-gcm-v2 target loss/reorder/duplicate",
+    "status": "passed",
+    "sent": 84,
+    "unique_received": 72,
+    "intentional_drops": 12,
+    "duplicates": 3,
+    "reordering_observed": true,
+    "corruption": 0
+  },
+  {
+    "name": "netty/aes-gcm-v2 bounded burst",
+    "status": "passed",
+    "sent": 512,
+    "received": 104,
+    "corruption": 0,
+    "healthy_after": true
+  },
+  {
+    "name": "netty/aes-gcm-v2 concurrent isolation",
+    "status": "passed",
+    "associations": 32,
+    "datagrams": 640,
+    "seconds": 4.16,
+    "p50_ms": 203.0,
+    "p95_ms": 219.0,
+    "p99_ms": 422.0
+  },
+  {
+    "name": "netty/aes-gcm-v2 canary restart recovery",
+    "status": "passed",
+    "recovery_seconds": 2.656,
+    "same_socks_control": true
+  },
+  {
+    "name": "http3/aes-gcm-v2 foreign-source/malformed rejection",
+    "status": "passed"
+  },
+  {
+    "name": "http3/aes-gcm-v2 cancel-opening cleanup",
+    "status": "passed",
+    "cycles": 40,
+    "fd_before": 23,
+    "fd_after": 25
+  },
+  {
+    "name": "http3/aes-gcm-v2 target loss/reorder/duplicate",
+    "status": "passed",
+    "sent": 84,
+    "unique_received": 72,
+    "intentional_drops": 12,
+    "duplicates": 3,
+    "reordering_observed": true,
+    "corruption": 0
+  },
+  {
+    "name": "http3/aes-gcm-v2 bounded burst",
+    "status": "passed",
+    "sent": 512,
+    "received": 59,
+    "corruption": 0,
+    "healthy_after": true
+  },
+  {
+    "name": "http3/aes-gcm-v2 concurrent isolation",
+    "status": "passed",
+    "associations": 32,
+    "datagrams": 640,
+    "seconds": 2.38,
+    "p50_ms": 109.0,
+    "p95_ms": 171.0,
+    "p99_ms": 328.0
+  },
+  {
+    "name": "http3/aes-gcm-v2 recovery",
+    "status": "failed",
+    "error": "AssertionError: UDP did not recover after canary restart"
+  },
+  {
+    "name": "http3/aes-gcm-v2 idle",
+    "status": "failed",
+    "error": "TimeoutError: timed out"
+  }
+]

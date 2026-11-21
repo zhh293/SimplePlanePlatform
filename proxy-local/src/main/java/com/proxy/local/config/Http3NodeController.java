@@ -184,6 +184,7 @@ public final class Http3NodeController implements AutoCloseable {
                         if (!automatic()) nodeStatus = "unavailable";
                     } else {
                         result.setStreamRegistry(StreamChannelRegistry.getInstance().getInternalMap());
+                        result.setDatagramRegistry(StreamChannelRegistry.getInstance().getDatagramMap());
                         node.raw = new ClientInvoker(result, snapshot.getTimeoutMs(), node.config.getId());
                         FilterChainBuilder builder = ExtensionLoader.getLoader(FilterChainBuilder.class).getDefaultExtension();
                         node.wrapped = builder.build(new Invoker() {

@@ -69,11 +69,14 @@ public class ClientInvoker implements Invoker, AutoCloseable {
         // 活跃计数 +1
         activeCount.incrementAndGet();
 
-        return exchangeClient.request(message, timeoutMs)
+        CompletableFuture<Response> request = exchangeClient.request(message, timeoutMs);
+        CompletableFuture<Response> result = request
                 .whenComplete((response, throwable) -> {
                     // 活跃计数 -1
                     activeCount.decrementAndGet();
                 });
+        result.whenComplete((response, error) -> { if (result.isCancelled()) request.cancel(false); });
+        return result;
     }
 
     public String getNodeId() { return nodeId; }

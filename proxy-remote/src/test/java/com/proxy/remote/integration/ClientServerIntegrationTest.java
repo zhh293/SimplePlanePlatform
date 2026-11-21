@@ -157,6 +157,7 @@ class ClientServerIntegrationTest {
      */
     @Test
     void testDisconnect() throws Exception {
+        openStream(3);
         ProxyMessage message = ProxyMessage.builder()
                 .type(ProxyMessage.MessageType.DISCONNECT)
                 .host("www.example.com")
@@ -278,6 +279,23 @@ class ClientServerIntegrationTest {
         channels.forEach(EmbeddedChannel::close);
     }
 
+    @Test
+    void dataAndDisconnectCannotCreateUnknownStream() throws Exception {
+        int count = client.getClient().getActiveStreamCount();
+        assertThrows(IllegalStateException.class, () -> client.send(ProxyMessage.builder()
+                .type(ProxyMessage.MessageType.DATA).streamId(99999).data(new byte[]{1}).build()));
+        assertFalse(client.request(ProxyMessage.builder().type(ProxyMessage.MessageType.DISCONNECT)
+                .streamId(99999).build(), TIMEOUT).get(TIMEOUT, TimeUnit.MILLISECONDS).isSuccess());
+        assertEquals(count, client.getClient().getActiveStreamCount());
+    }
+
+    private void openStream(long id) throws Exception {
+        Response response = client.request(ProxyMessage.builder().type(ProxyMessage.MessageType.CONNECT)
+                .host("www.example.com").port(443).streamId(id).build(), TIMEOUT)
+                .get(TIMEOUT, TimeUnit.MILLISECONDS);
+        assertTrue(response.isSuccess(), "A DATA/DISCONNECT test must establish its stream first");
+    }
+
     /**
      * 测试用例 6：异常验证 — 服务端线程池满时控制面请求返回错误响应
      * <p>
@@ -349,7 +367,7 @@ class ClientServerIntegrationTest {
      * 创建一个 EmbeddedChannel 并注册到 streamRegistry，用于捕获推送数据。
      * 推送到来时，数据会被放入 pushQueue。
      */
-    private EmbeddedChannel createPushCapture(long streamId, BlockingQueue<byte[]> pushQueue) {
+    private EmbeddedChannel createPushCapture(long streamId, BlockingQueue<byte[]> pushQueue) throws Exception {
         // ExchangeHandler.handlePush 使用注册 context 的 writeAndFlush，属于 outbound 事件；
         // 捕获器必须位于该 context 的前面，不能通过 inbound channelRead 捕获。
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
@@ -374,6 +392,7 @@ class ClientServerIntegrationTest {
         });
         // 注册 ctx 到 streamRegistry（ExchangeHandler.handlePush 会按 streamId 查找并写入）
         streamRegistry.put(streamId, channel.pipeline().lastContext());
+        openStream(streamId);
         return channel;
     }
 

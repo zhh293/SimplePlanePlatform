@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-21",
+  "snapshot": "staged Git index exported with checkout-index; existing uncommitted diagnostics excluded",
+  "source_manifest": "review-source-sha256.json",
+  "command": "mvn -B -o test -pl proxy-local,proxy-remote -am -Dtest=UdpEndToEndIntegrationTest,ExplicitUdpRouteTest -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.repo.local=E:/SimplePlanePlatform/.m2/repository -Djvm=E:/SimplePlane/resources/jre/bin/java.exe -Djacoco.skip=true -Dproxy.udp.tunProbe=E:/SimplePlanePlatform/tun-adapter/target/debug/examples/udp_probe.exe",
+  "tests": 7,
+  "passed": 7,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "raw_log": ".build/udp-canary-20261121/review-snapshot-tests.log",
+  "raw_log_sha256": "2cf081320fca73175c0cea8e0b8bec738c2e6f694f11fcc764fcad52488ea9cc",
+  "test_classes": [
+    ", Time elapsed: 0.040 s -- in com.proxy.cluster.ExplicitUdpRouteTest",
+    ", Time elapsed: 17.25 s -- in com.proxy.local.UdpEndToEndIntegrationTest"
+  ]
+}

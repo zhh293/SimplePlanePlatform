@@ -1,0 +1,3 @@
+PASS: TUN running -> error is visible; system proxy toggle and label agree with mode
+PASS updater progress, unknown size, stalls, duplicate clicks, stages, failure/retry and handoff
+PASS installer: owned Java exits, unrelated Java survives, locked DLL aborts, retry succeeds

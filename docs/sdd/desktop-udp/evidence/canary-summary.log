@@ -1,0 +1,9 @@
+Java: 246 total, 242 passed, 4 existing condition skips, 0 failures/errors
+TUN Rust: 84 + 2 passed; 4 existing manual ignored
+Remote matrix: 60/60 passed; real Wintun: 6/6 passed
+Controlled HTTP3 1MiB: H2 and H3 SHA256 verified
+Production TCP/TLS: passed over original public H3 service
+Release limitations: H3 restart 61.312s; 512-packet burst H2=104 H3=59 received
+Initial lifecycle recovery/idle failures and external endpoint failure retained
+Gray nginx: 7 ECONNREFUSED errors during injected restarts; 0 overflow markers
+Cleanup: owned services/ports/NAT/credentials/adapter/routes gone; production PID/restarts/nginx hash unchanged

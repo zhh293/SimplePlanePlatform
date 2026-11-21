@@ -42,6 +42,10 @@ public class RouterFilter implements Filter {
 
     @Override
     public CompletableFuture<Response> invoke(Invoker invoker, Invocation invocation) throws ProxyException {
+        // Preserve a final routing decision already made by the ingress.
+        if ("proxy".equals(invocation.getAttachment("route"))) {
+            return invoker.invoke(invocation);
+        }
         String host = invocation.getTargetHost();
 
         if (shouldDirect(host)) {

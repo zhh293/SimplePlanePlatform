@@ -1,0 +1,180 @@
+{
+  "date": "2026-11-21",
+  "base_commit": "c3ef1d7d4bc0d27f53029cd52b6f4d3d03cac0b7",
+  "server": "20.78.53.111",
+  "verdict": "udp_functionality_verified_with_release_limitations",
+  "scope": "desktop TUN/local/Linux remote; Android and macOS device not validated",
+  "paths": {
+    "http3": "public QUIC via physical-bound local UDP relay and exact-tuple canary NAT into isolated nginx",
+    "http2": "SSH TCP forwarding to isolated H2; not native public H2 performance"
+  },
+  "artifacts": {
+    "remote_gray_jar_sha256": "f17638ba57f36ac1de17e7b89f09cbd44fef485f17e4dd1328b3d1b9d02d0074",
+    "local_jar_sha256": "70c4c7fb7d74e063e75e41d226361affd31b69a6fac2581ab32d2f4f83dca690"
+  },
+  "automated": {
+    "java": {
+      "total": 246,
+      "passed": 242,
+      "failures": 0,
+      "errors": 0,
+      "existing_condition_skips": 4
+    },
+    "tun_rust": {
+      "passed_unit_component": 84,
+      "passed_integration": 2,
+      "existing_manual_ignored": 4
+    }
+  },
+  "remote_matrix": {
+    "checks": 60,
+    "passed": 60,
+    "combinations": 6,
+    "concurrent_identity_checked_datagrams": 1920
+  },
+  "additional_concurrency": {
+    "associations_per_transport": 32,
+    "datagrams_per_transport": 640,
+    "loss_or_corruption": 0
+  },
+  "real_wintun": {
+    "checks": 6,
+    "passed": 6,
+    "temporary_adapter_removed": true,
+    "test_routes_removed": true,
+    "default_route_and_dns_unchanged": true,
+    "full_installed_desktop_tun_flow_tested": false
+  },
+  "limitations": {
+    "h3_restart_recovery_seconds": 61.312,
+    "h2_restart_recovery_seconds": 2.656,
+    "initial_35_second_recovery_failed": true,
+    "initial_following_idle_precheck_failed": true,
+    "burst_512_received": {
+      "h2": 104,
+      "h3": 59
+    },
+    "burst_loss_not_fully_localized": true,
+    "external_speed_cloudflare_quic_failed_on_proxy_and_remote_direct": true,
+    "long_soak_tested": false,
+    "full_capacity_tested": false
+  },
+  "cancel_opening_fd_samples": {
+    "h2": [
+      26,
+      28
+    ],
+    "h3": [
+      23,
+      25
+    ],
+    "cycles_each": 40,
+    "allowed_warmup_delta": 2,
+    "not_a_long_term_leak_proof": true
+  },
+  "observed_final_resources_before_cleanup": {
+    "h2": {
+      "MainPID": "311116",
+      "NRestarts": "0",
+      "MemoryCurrent": "73809920",
+      "ActiveState": "active",
+      "fd_count": 25
+    },
+    "h3": {
+      "MainPID": "311331",
+      "NRestarts": "0",
+      "MemoryCurrent": "106319872",
+      "ActiveState": "active",
+      "fd_count": 25
+    },
+    "nginx": {
+      "MainPID": "308683",
+      "NRestarts": "0",
+      "MemoryCurrent": "1794048",
+      "ActiveState": "active",
+      "fd_count": 7
+    },
+    "fixture": {
+      "MainPID": "308681",
+      "NRestarts": "0",
+      "MemoryCurrent": "5861376",
+      "ActiveState": "active",
+      "fd_count": 6
+    },
+    "h3-app": {
+      "MainPID": "312672",
+      "NRestarts": "0",
+      "MemoryCurrent": "22745088",
+      "ActiveState": "active",
+      "fd_count": 7
+    },
+    "lease": {
+      "MainPID": "308679",
+      "NRestarts": "0",
+      "MemoryCurrent": "3432448",
+      "ActiveState": "active",
+      "fd_count": 3
+    }
+  },
+  "nginx": {
+    "gray_error_lines": 7,
+    "upstream_refused_errno_111": 7,
+    "buffer_overflow_markers": 0,
+    "host_udp_kernel_counter_delta_available": false
+  },
+  "production_before": {
+    "MainPID": "292611",
+    "NRestarts": "13",
+    "ActiveState": "active",
+    "nginx_config_sha256": "152a8deaa534f13f17549c7f7c74bf755500c82926ebdafc9975c6f62ca26de9"
+  },
+  "production_after": {
+    "MainPID": "292611",
+    "NRestarts": "13",
+    "ActiveState": "active",
+    "nginx_config_sha256": "152a8deaa534f13f17549c7f7c74bf755500c82926ebdafc9975c6f62ca26de9"
+  },
+  "production_jar_config_initial_hash_missing": true,
+  "cleanup": {
+    "remote_units_inactive": true,
+    "remote_test_ports_closed": true,
+    "exact_nat_rules_removed": true,
+    "remote_test_credentials_removed": true,
+    "local_relay_and_test_clients_exited": true
+  },
+  "raw_files_relative_to": ".build/udp-canary-20261121/",
+  "raw_log_sha256": {
+    "full-regression.log": "3ef6585f355c29d2353eddc41b0b1443528eaa27b1ea58a0ad4f47ebe7f2fa9b",
+    "route-regression.log": "d81df718a92c35901815634af8f83bed61fcae8ea5f5f01a1079f534157a8f19",
+    "final-route-check.log": "7fcf7b36c6fd82007b131548c877ba19fa9a1074c3dbf83527b55816a5e550f2",
+    "matrix.log": "222d50e8d53f1b9168bf6ab7466f6f659519878bc15cbc2049aae2b1ced1bfcc",
+    "lifecycle.log": "d7e94e2c04e9949bca28c353c9c70ac71c7a8e187ecbcc3b20fef49278698467",
+    "recovery.log": "92fa133de3be892377c28d8129d8db5d2f3379187bd3765c7fa40208f54388bd",
+    "wintun-trial.log": "7657987efe8324960ca8d7e740321d08c610c4e7abf6b38295edd340f529667c",
+    "wintun-before.json": "af41610fd62cb4217ec10c30affecd26bef70f9fa76574ce4feb5681c4597925",
+    "wintun-after.json": "af41610fd62cb4217ec10c30affecd26bef70f9fa76574ce4feb5681c4597925",
+    "rust-regression.log": "a4a9406c36b84040a9cac66d431204336b1ea5b8bb16b9ac0a9354f330c0b6c1",
+    "controlled-download-final.log": "649cd055c203ad6972ad30a6a689e68c6bc6bdf5c5367616eab15214331581bf",
+    "download.log": "56cb694602ad26861cd6e3d5d2ea05407a0854b4dd033ba2c9e62d1614c2dd07",
+    "direct-quic-baseline.log": "6049e8860c695ecf7e4d3bc62257a6a1986bee8e7e4c078447e68b0520261c2b",
+    "canary-nginx-error.log": "2d5508093488fd9757fb6bf8e152df198acdfb7cdfde31d360fd5c159f98ea06",
+    "production-smoke.log": "f2be78c1cacd10d025f542dcd1634178f1932fa6ebf1aa5c33087aac5a686efb",
+    "controlled-download.log": "d1b0758963e20ee56b9f44f07c33727ce3b8ca52d79cef82211f4e46120cf52d",
+    "controlled-download-rerun.log": "4fea39f43fab6b4b2bf815f2d2c79dc16b30ca961d83e985a339f9c9f6371854"
+  },
+  "test_script_sha256": {
+    "campaign.py": "fc3ad7fb0445bc3ed038c0cb0cebf6163ae6a731192899309673447059f9d343",
+    "relay.py": "605d0583c1438a237dafd9d91c4a1c772bd6bb241aaf73c56eed6dcc0831e5a0",
+    "refresh_nat.py": "8852e628bd45a68bbcad7d1c8159efca05907aa822b9c3a90181046364bcf8ca",
+    "lifecycle.py": "d5d4d1b2a3400a1b8efa3bbdd4f0157b6ac4727ab5a39a8adfc2dcde5ab528b5",
+    "lifecycle_helpers.py": "d1425dd2d0db25d1d55ef487b5a63683ed6a33f19bd7a1529681a9a88520a38b",
+    "recovery_followup.py": "b180c26992ab0435ea45e17d47993e02ba54fb7f68a695b997c3c26e3216e44a",
+    "wintun_trial.py": "ee26e3e19b163fc7700642ff7ca6d9e591dfa029ebd2cb09e08db74e3c6e26f3",
+    "controlled_h3.py": "c4db7c64bc1bba2f46117aa09f12f3a5163ba8287df935d6fea83bba0b148689",
+    "controlled_download.py": "26efec47e12b3bdafa6d3eec6133379678f1ba312fe9daa385d940468727bd79",
+    "production_smoke.py": "97302e44778a48a71907d941b299bb6cc7b45d140a1f2acb9e8a3e2017991723",
+    "remote_final.py": "f1540a7af6cf735b6d6d8884198d8a58f50ffac832f13190db23b63ace10159a"
+  },
+  "result_field_normalization": "matrix HTTP numeric status moved to http_status; status means assertion result; initial failed cases retained separately",
+  "preexisting_user_changes_preserved": true
+}

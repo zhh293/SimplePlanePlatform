@@ -1,0 +1,53 @@
+{
+  "MainPID": "292611",
+  "NRestarts": "13",
+  "ActiveState": "active",
+  "nginx_config_sha256": "152a8deaa534f13f17549c7f7c74bf755500c82926ebdafc9975c6f62ca26de9",
+  "canary": {
+    "h2": {
+      "MainPID": "0",
+      "NRestarts": "0",
+      "MemoryCurrent": "[not set]",
+      "ActiveState": "inactive"
+    },
+    "h3": {
+      "MainPID": "0",
+      "NRestarts": "0",
+      "MemoryCurrent": "[not set]",
+      "ActiveState": "inactive"
+    },
+    "nginx": {
+      "MainPID": "0",
+      "NRestarts": "0",
+      "MemoryCurrent": "[not set]",
+      "ActiveState": "inactive"
+    },
+    "fixture": {
+      "MainPID": "0",
+      "NRestarts": "0",
+      "MemoryCurrent": "[not set]",
+      "ActiveState": "inactive"
+    },
+    "h3-app": {
+      "MainPID": "0",
+      "NRestarts": "0",
+      "MemoryCurrent": "[not set]",
+      "ActiveState": "inactive"
+    },
+    "lease": {
+      "MainPID": "0",
+      "NRestarts": "0",
+      "MemoryCurrent": "[not set]",
+      "ActiveState": "inactive"
+    }
+  },
+  "canary_nat_rules": [],
+  "owned_listeners": [],
+  "test_secret_files_present": [],
+  "canary_nginx_errors": {
+    "lines": 7,
+    "buffer_overflow": 0,
+    "send_failed": 3,
+    "recv_failures": 4
+  }
+}

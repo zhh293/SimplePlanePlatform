@@ -23,7 +23,9 @@ public class ProxyMessage {
         /** 心跳请求 */
         HEARTBEAT_REQUEST,
         /** 心跳响应 */
-        HEARTBEAT_RESPONSE
+        HEARTBEAT_RESPONSE,
+        /** Fixed-target UDP association; DATA preserves datagram boundaries. */
+        UDP_CONNECT
     }
 
     private long requestId;

@@ -1,0 +1,1 @@
+PASS installer: owned Java exits, unrelated Java survives, locked DLL aborts, retry succeeds

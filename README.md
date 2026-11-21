@@ -4,6 +4,12 @@
 
 加密层新增 `chacha20-poly1305-v2` 与 `aes-gcm-v2`：使用标准 AEAD、认证记录头、HKDF 派生密钥及独立 stream 状态。两端必须选择同名套件，v2 的共享密钥须恰为 32 字节；保留原有 `Cipher` SPI 和传输分帧。旧 `chacha20` 存在密钥流重叠风险，仅为迁移保留兼容实现，不能把它视为标准 ChaCha20-Poly1305。配置、迁移边界和测试方法见 [加密 v2 规范](docs/design/crypto-v2.md) 与 [验证报告](docs/design/crypto-v2-validation.md)。
 
+## 桌面 UDP 转发
+
+桌面 TUN 支持 IPv4 UDP，经标准 SOCKS5 UDP ASSOCIATE 接入 local，再通过 HTTP/2 或 HTTP/3 隧道交给服务端 UDP socket。支持 FakeIP 回包、空数据报与直连/代理/拒绝分流；两端需要包含 UDP 改动的新构建。首期不支持通用 IPv6 UDP、IP/SOCKS 分片，业务 payload 上限为 1472 字节。现有可靠流承载会产生重传等待，不等同于 QUIC DATAGRAM。
+
+规格、设计、任务和验收记录见 [UDP SDD](docs/sdd/desktop-udp/verification.md)。开发者可运行 `python scripts/test-desktop-udp.py`，验证 Rust、Java 与六组 TUN 包注入全链路；macOS 需预先配置项目使用的 `127.0.0.2` loopback 别名。
+
 ## 桌面端：添加节点与证书
 
 Windows 与 macOS 安装包内含 Java 运行时。安装后仍需填写与服务端一致的地址、端口、协议、加密方式和密钥；使用自签名证书的节点还需要导入该节点的公开证书。
