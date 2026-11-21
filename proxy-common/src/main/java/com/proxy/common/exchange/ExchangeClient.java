@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * </p>
  */
 public interface ExchangeClient {
+    default void setDatagramRegistry(ConcurrentHashMap<Long, DatagramReceiver> receivers) { }
     default void setStreamClosedListener(java.util.function.LongConsumer listener) { }
 
     /**

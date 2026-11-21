@@ -10,6 +10,8 @@ final class Http3StreamState {
     enum Phase { OPENING, WAITING_RESPONSE, READY, FAILED, CLOSED }
 
     final long streamId;
+    boolean udp;
+    final java.util.concurrent.atomic.AtomicInteger writes = new java.util.concurrent.atomic.AtomicInteger();
     final Deque<ProxyMessage> pending = new ArrayDeque<>();
     volatile QuicStreamChannel channel;
     volatile Phase phase = Phase.OPENING;

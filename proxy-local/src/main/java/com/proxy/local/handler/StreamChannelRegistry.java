@@ -37,6 +37,8 @@ public class StreamChannelRegistry {
      * streamId → 浏览器 ChannelHandlerContext
      */
     private final ConcurrentHashMap<Long, ChannelHandlerContext> registry = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, com.proxy.common.exchange.DatagramReceiver> datagrams = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<Long, com.proxy.common.exchange.DatagramReceiver> getDatagramMap() { return datagrams; }
 
     private StreamChannelRegistry() {
     }

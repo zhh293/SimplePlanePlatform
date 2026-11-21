@@ -1,0 +1,524 @@
+[
+  {
+    "name": "netty/chacha20-poly1305-v2 boundaries/multi-target",
+    "status": "passed",
+    "max_rtt_ms": 375.0,
+    "sizes": [
+      0,
+      1,
+      2,
+      127,
+      1024,
+      1472
+    ],
+    "oversize_dropped": true,
+    "fragment_dropped": true
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 production TUN/FakeIP WAN echo",
+    "status": "passed",
+    "sizes": [
+      0,
+      1,
+      1472
+    ]
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 TCP/TLS regression",
+    "status": "passed",
+    "tcp_echo_bytes": 131072,
+    "bing_https": "HTTP/1.1 200 OK"
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 DNS example.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 1,
+    "rtt_ms": 344.0,
+    "bytes": 72
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 DNS www.bing.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 4,
+    "rtt_ms": 125.0,
+    "bytes": 306
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 DNS NXDOMAIN",
+    "status": "passed",
+    "rcode": 3,
+    "answers": 0,
+    "rtt_ms": 125.0,
+    "bytes": 124
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 STUN via production TUN",
+    "status": "passed",
+    "rtt_ms": 297.0,
+    "mapped_ip": "20.78.53.111",
+    "mapped_port": 43368
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 NTP via production TUN",
+    "status": "passed",
+    "host": "time.cloudflare.com",
+    "stratum": 3,
+    "clock_delta_seconds": -3.363
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 real HTTP3 via production TUN",
+    "status": "passed",
+    "alpn": "h3",
+    "certificate_verified": true,
+    "egress_ip": "20.78.53.111",
+    "bytes": 201,
+    "http_status": 200
+  },
+  {
+    "name": "netty/chacha20-poly1305-v2 concurrent isolation",
+    "status": "passed",
+    "associations": 16,
+    "datagrams": 320,
+    "seconds": 4.27,
+    "p50_ms": 203.0,
+    "p95_ms": 328.0,
+    "p99_ms": 437.0
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 boundaries/multi-target",
+    "status": "passed",
+    "max_rtt_ms": 437.0,
+    "sizes": [
+      0,
+      1,
+      2,
+      127,
+      1024,
+      1472
+    ],
+    "oversize_dropped": true,
+    "fragment_dropped": true
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 production TUN/FakeIP WAN echo",
+    "status": "passed",
+    "sizes": [
+      0,
+      1,
+      1472
+    ]
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 TCP/TLS regression",
+    "status": "passed",
+    "tcp_echo_bytes": 131072,
+    "bing_https": "HTTP/1.1 200 OK"
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 DNS example.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 1,
+    "rtt_ms": 313.0,
+    "bytes": 72
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 DNS www.bing.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 4,
+    "rtt_ms": 109.0,
+    "bytes": 306
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 DNS NXDOMAIN",
+    "status": "passed",
+    "rcode": 3,
+    "answers": 0,
+    "rtt_ms": 109.0,
+    "bytes": 124
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 STUN via production TUN",
+    "status": "passed",
+    "rtt_ms": 359.0,
+    "mapped_ip": "20.78.53.111",
+    "mapped_port": 55284
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 NTP via production TUN",
+    "status": "passed",
+    "host": "time.cloudflare.com",
+    "stratum": 3,
+    "clock_delta_seconds": -3.368
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 real HTTP3 via production TUN",
+    "status": "passed",
+    "alpn": "h3",
+    "certificate_verified": true,
+    "egress_ip": "20.78.53.111",
+    "bytes": 201,
+    "http_status": 200
+  },
+  {
+    "name": "http3/chacha20-poly1305-v2 concurrent isolation",
+    "status": "passed",
+    "associations": 16,
+    "datagrams": 320,
+    "seconds": 2.33,
+    "p50_ms": 109.0,
+    "p95_ms": 125.0,
+    "p99_ms": 328.0
+  },
+  {
+    "name": "netty/aes-gcm-v2 boundaries/multi-target",
+    "status": "passed",
+    "max_rtt_ms": 516.0,
+    "sizes": [
+      0,
+      1,
+      2,
+      127,
+      1024,
+      1472
+    ],
+    "oversize_dropped": true,
+    "fragment_dropped": true
+  },
+  {
+    "name": "netty/aes-gcm-v2 production TUN/FakeIP WAN echo",
+    "status": "passed",
+    "sizes": [
+      0,
+      1,
+      1472
+    ]
+  },
+  {
+    "name": "netty/aes-gcm-v2 TCP/TLS regression",
+    "status": "passed",
+    "tcp_echo_bytes": 131072,
+    "bing_https": "HTTP/1.1 200 OK"
+  },
+  {
+    "name": "netty/aes-gcm-v2 DNS example.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 1,
+    "rtt_ms": 328.0,
+    "bytes": 72
+  },
+  {
+    "name": "netty/aes-gcm-v2 DNS www.bing.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 4,
+    "rtt_ms": 125.0,
+    "bytes": 306
+  },
+  {
+    "name": "netty/aes-gcm-v2 DNS NXDOMAIN",
+    "status": "passed",
+    "rcode": 3,
+    "answers": 0,
+    "rtt_ms": 125.0,
+    "bytes": 124
+  },
+  {
+    "name": "netty/aes-gcm-v2 STUN via production TUN",
+    "status": "passed",
+    "rtt_ms": 297.0,
+    "mapped_ip": "20.78.53.111",
+    "mapped_port": 41810
+  },
+  {
+    "name": "netty/aes-gcm-v2 NTP via production TUN",
+    "status": "passed",
+    "host": "time.cloudflare.com",
+    "stratum": 3,
+    "clock_delta_seconds": -3.364
+  },
+  {
+    "name": "netty/aes-gcm-v2 real HTTP3 via production TUN",
+    "status": "passed",
+    "alpn": "h3",
+    "certificate_verified": true,
+    "egress_ip": "20.78.53.111",
+    "bytes": 202,
+    "http_status": 200
+  },
+  {
+    "name": "netty/aes-gcm-v2 concurrent isolation",
+    "status": "passed",
+    "associations": 16,
+    "datagrams": 320,
+    "seconds": 4.48,
+    "p50_ms": 203.0,
+    "p95_ms": 312.0,
+    "p99_ms": 453.0
+  },
+  {
+    "name": "http3/aes-gcm-v2 boundaries/multi-target",
+    "status": "passed",
+    "max_rtt_ms": 422.0,
+    "sizes": [
+      0,
+      1,
+      2,
+      127,
+      1024,
+      1472
+    ],
+    "oversize_dropped": true,
+    "fragment_dropped": true
+  },
+  {
+    "name": "http3/aes-gcm-v2 production TUN/FakeIP WAN echo",
+    "status": "passed",
+    "sizes": [
+      0,
+      1,
+      1472
+    ]
+  },
+  {
+    "name": "http3/aes-gcm-v2 TCP/TLS regression",
+    "status": "passed",
+    "tcp_echo_bytes": 131072,
+    "bing_https": "HTTP/1.1 200 OK"
+  },
+  {
+    "name": "http3/aes-gcm-v2 DNS example.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 1,
+    "rtt_ms": 312.0,
+    "bytes": 72
+  },
+  {
+    "name": "http3/aes-gcm-v2 DNS www.bing.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 4,
+    "rtt_ms": 110.0,
+    "bytes": 306
+  },
+  {
+    "name": "http3/aes-gcm-v2 DNS NXDOMAIN",
+    "status": "passed",
+    "rcode": 3,
+    "answers": 0,
+    "rtt_ms": 109.0,
+    "bytes": 124
+  },
+  {
+    "name": "http3/aes-gcm-v2 STUN via production TUN",
+    "status": "passed",
+    "rtt_ms": 360.0,
+    "mapped_ip": "20.78.53.111",
+    "mapped_port": 42862
+  },
+  {
+    "name": "http3/aes-gcm-v2 NTP via production TUN",
+    "status": "passed",
+    "host": "time.cloudflare.com",
+    "stratum": 3,
+    "clock_delta_seconds": -3.363
+  },
+  {
+    "name": "http3/aes-gcm-v2 real HTTP3 via production TUN",
+    "status": "passed",
+    "alpn": "h3",
+    "certificate_verified": true,
+    "egress_ip": "20.78.53.111",
+    "bytes": 197,
+    "http_status": 200
+  },
+  {
+    "name": "http3/aes-gcm-v2 concurrent isolation",
+    "status": "passed",
+    "associations": 16,
+    "datagrams": 320,
+    "seconds": 2.31,
+    "p50_ms": 109.0,
+    "p95_ms": 125.0,
+    "p99_ms": 344.0
+  },
+  {
+    "name": "netty/chacha20 boundaries/multi-target",
+    "status": "passed",
+    "max_rtt_ms": 390.0,
+    "sizes": [
+      0,
+      1,
+      2,
+      127,
+      1024,
+      1472
+    ],
+    "oversize_dropped": true,
+    "fragment_dropped": true
+  },
+  {
+    "name": "netty/chacha20 production TUN/FakeIP WAN echo",
+    "status": "passed",
+    "sizes": [
+      0,
+      1,
+      1472
+    ]
+  },
+  {
+    "name": "netty/chacha20 TCP/TLS regression",
+    "status": "passed",
+    "tcp_echo_bytes": 131072,
+    "bing_https": "HTTP/1.1 200 OK"
+  },
+  {
+    "name": "netty/chacha20 DNS example.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 1,
+    "rtt_ms": 360.0,
+    "bytes": 72
+  },
+  {
+    "name": "netty/chacha20 DNS www.bing.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 4,
+    "rtt_ms": 125.0,
+    "bytes": 306
+  },
+  {
+    "name": "netty/chacha20 DNS NXDOMAIN",
+    "status": "passed",
+    "rcode": 3,
+    "answers": 0,
+    "rtt_ms": 125.0,
+    "bytes": 124
+  },
+  {
+    "name": "netty/chacha20 STUN via production TUN",
+    "status": "passed",
+    "rtt_ms": 328.0,
+    "mapped_ip": "20.78.53.111",
+    "mapped_port": 40645
+  },
+  {
+    "name": "netty/chacha20 NTP via production TUN",
+    "status": "passed",
+    "host": "time.cloudflare.com",
+    "stratum": 3,
+    "clock_delta_seconds": -3.363
+  },
+  {
+    "name": "netty/chacha20 real HTTP3 via production TUN",
+    "status": "passed",
+    "alpn": "h3",
+    "certificate_verified": true,
+    "egress_ip": "20.78.53.111",
+    "bytes": 201,
+    "http_status": 200
+  },
+  {
+    "name": "netty/chacha20 concurrent isolation",
+    "status": "passed",
+    "associations": 16,
+    "datagrams": 320,
+    "seconds": 4.22,
+    "p50_ms": 203.0,
+    "p95_ms": 219.0,
+    "p99_ms": 422.0
+  },
+  {
+    "name": "http3/chacha20 boundaries/multi-target",
+    "status": "passed",
+    "max_rtt_ms": 422.0,
+    "sizes": [
+      0,
+      1,
+      2,
+      127,
+      1024,
+      1472
+    ],
+    "oversize_dropped": true,
+    "fragment_dropped": true
+  },
+  {
+    "name": "http3/chacha20 production TUN/FakeIP WAN echo",
+    "status": "passed",
+    "sizes": [
+      0,
+      1,
+      1472
+    ]
+  },
+  {
+    "name": "http3/chacha20 TCP/TLS regression",
+    "status": "passed",
+    "tcp_echo_bytes": 131072,
+    "bing_https": "HTTP/1.1 200 OK"
+  },
+  {
+    "name": "http3/chacha20 DNS example.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 1,
+    "rtt_ms": 312.0,
+    "bytes": 72
+  },
+  {
+    "name": "http3/chacha20 DNS www.bing.com",
+    "status": "passed",
+    "rcode": 0,
+    "answers": 4,
+    "rtt_ms": 109.0,
+    "bytes": 306
+  },
+  {
+    "name": "http3/chacha20 DNS NXDOMAIN",
+    "status": "passed",
+    "rcode": 3,
+    "answers": 0,
+    "rtt_ms": 110.0,
+    "bytes": 124
+  },
+  {
+    "name": "http3/chacha20 STUN via production TUN",
+    "status": "passed",
+    "rtt_ms": 390.0,
+    "mapped_ip": "20.78.53.111",
+    "mapped_port": 48684
+  },
+  {
+    "name": "http3/chacha20 NTP via production TUN",
+    "status": "passed",
+    "host": "time.cloudflare.com",
+    "stratum": 3,
+    "clock_delta_seconds": -3.361
+  },
+  {
+    "name": "http3/chacha20 real HTTP3 via production TUN",
+    "status": "passed",
+    "alpn": "h3",
+    "certificate_verified": true,
+    "egress_ip": "20.78.53.111",
+    "bytes": 202,
+    "http_status": 200
+  },
+  {
+    "name": "http3/chacha20 concurrent isolation",
+    "status": "passed",
+    "associations": 16,
+    "datagrams": 320,
+    "seconds": 2.36,
+    "p50_ms": 109.0,
+    "p95_ms": 125.0,
+    "p99_ms": 360.0
+  }
+]

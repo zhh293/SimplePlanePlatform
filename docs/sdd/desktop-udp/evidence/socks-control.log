@@ -1,0 +1,39 @@
+23:47:16,024 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+23:47:16,024 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [file:/E:/SimplePlanePlatform/proxy-local/target/classes/logback.xml]
+23:47:16,024 |-WARN in ch.qos.logback.classic.LoggerContext[default] - Resource [logback.xml] occurs multiple times on the classpath.
+23:47:16,024 |-WARN in ch.qos.logback.classic.LoggerContext[default] - Resource [logback.xml] occurs at [file:/E:/SimplePlanePlatform/proxy-local/target/classes/logback.xml]
+23:47:16,024 |-WARN in ch.qos.logback.classic.LoggerContext[default] - Resource [logback.xml] occurs at [file:/E:/SimplePlanePlatform/proxy-remote/target/classes/logback.xml]
+23:47:16,074 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - debug attribute not set
+23:47:16,074 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+23:47:16,074 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [CONSOLE]
+23:47:16,074 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+23:47:16,104 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+23:47:16,104 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [FILE]
+23:47:16,104 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@172678484 - No compression will be used
+23:47:16,104 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@172678484 - Will use the pattern logs/proxy-local.%d{yyyy-MM-dd}.log for the active file
+23:47:16,115 |-INFO in c.q.l.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy - The date pattern is 'yyyy-MM-dd' from file name pattern 'logs/proxy-local.%d{yyyy-MM-dd}.log'.
+23:47:16,115 |-INFO in c.q.l.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy - Roll-over at midnight.
+23:47:16,124 |-INFO in c.q.l.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy - Setting initial period to Fri Nov 20 23:46:28 CST 2026
+23:47:16,124 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+23:47:16,124 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[FILE] - Active log file name: logs/proxy-local.log
+23:47:16,124 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[FILE] - File property is set to [logs/proxy-local.log]
+23:47:16,124 |-INFO in ch.qos.logback.classic.joran.action.LoggerAction - Setting level of logger [com.proxy] to INFO
+23:47:16,124 |-INFO in ch.qos.logback.classic.joran.action.LoggerAction - Setting level of logger [io.netty] to WARN
+23:47:16,124 |-INFO in ch.qos.logback.classic.joran.action.RootLoggerAction - Setting level of ROOT logger to INFO
+23:47:16,124 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [CONSOLE] to Logger[ROOT]
+23:47:16,124 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [FILE] to Logger[ROOT]
+23:47:16,124 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - End of configuration.
+23:47:16,124 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@141e5bef - Registering current configuration as safe fallback point
+
+23:47:24.712 [main] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: 1.2.3.4:80 from embedded
+23:47:24.726 [main] INFO  c.p.l.handler.Socks5ConnectHandler - Route PROXY (SOCKS5): 1.2.3.4:80
+23:47:24.733 [main] WARN  c.p.l.handler.Socks5ConnectHandler - CONNECT rejected for 1.2.3.4:80: test rejection
+23:47:24.754 [main] INFO  c.p.l.handler.Socks5ConnectHandler - SOCKS5 CONNECT request: 1.2.3.4:80 from embedded
+23:47:24.754 [main] INFO  c.p.l.handler.Socks5ConnectHandler - Route PROXY (SOCKS5): 1.2.3.4:80
+23:47:24.754 [main] WARN  c.p.l.handler.Socks5ConnectHandler - CONNECT rejected for 1.2.3.4:80: test rejection
+23:47:25.769 [main] INFO  com.proxy.local.handler.RouteEngine - RouteEngine initialized: systemRules=2, userRules=0, default=REJECT, version=1
+23:47:26.243 [main] INFO  com.proxy.local.handler.RouteEngine - RouteEngine initialized: systemRules=2, userRules=0, default=DIRECT, version=1
+23:47:26.282 [nioEventLoopGroup-3-2] WARN  i.n.r.d.DefaultDnsServerAddressStreamProvider - Default DNS servers: [/8.8.8.8:53, /8.8.4.4:53] (Google Public DNS as a fallback)
+23:47:26.657 [main] INFO  com.proxy.local.handler.RouteEngine - RouteEngine initialized: systemRules=2, userRules=0, default=PROXY, version=1
+23:47:26.694 [main] INFO  com.proxy.local.handler.RouteEngine - RouteEngine initialized: systemRules=2, userRules=0, default=PROXY, version=1
+23:47:26.827 [main] INFO  com.proxy.local.handler.RouteEngine - RouteEngine initialized: systemRules=2, userRules=0, default=PROXY, version=1

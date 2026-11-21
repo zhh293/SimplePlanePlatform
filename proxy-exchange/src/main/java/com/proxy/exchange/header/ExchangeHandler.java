@@ -64,7 +64,13 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
      * </p>
      */
     private volatile ConcurrentHashMap<Long, ChannelHandlerContext> streamRegistry;
+    private volatile ConcurrentHashMap<Long, com.proxy.common.exchange.DatagramReceiver> datagramRegistry;
+    private final ConcurrentHashMap<Long, com.proxy.common.exchange.DatagramReceiver> ownedDatagrams = new ConcurrentHashMap<>();
+    public void setDatagramRegistry(ConcurrentHashMap<Long, com.proxy.common.exchange.DatagramReceiver> receivers) {
+        datagramRegistry = receivers;
+    }
     private static final AttributeKey<Long> STREAM_ID = AttributeKey.valueOf("proxy.logical.streamId");
+    private static final AttributeKey<Boolean> UDP_ASSOCIATION = AttributeKey.valueOf("proxy.udp.association");
     private final ConcurrentHashMap<Long, PendingRequest> pendingRequests = new ConcurrentHashMap<>();
     // CONNECT futures finish before established streams; retain stream ownership until closure.
     private final java.util.Set<Long> ownedStreams = ConcurrentHashMap.newKeySet();
@@ -86,6 +92,10 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
 
     void trackRequest(long requestId, long streamId, DefaultFuture future, boolean cancelWithBrowser) {
         if (cancelWithBrowser) ownedStreams.add(streamId);
+        if (cancelWithBrowser && datagramRegistry != null) {
+            com.proxy.common.exchange.DatagramReceiver receiver = datagramRegistry.get(streamId);
+            if (receiver != null) ownedDatagrams.put(streamId, receiver);
+        }
         PendingRequest pending = new PendingRequest(streamId, future);
         pendingRequests.put(requestId, pending);
         future.whenComplete((response, error) -> pendingRequests.remove(requestId, pending));
@@ -205,7 +215,8 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
             if (ctx.channel().isActive()) {
                 io.netty.channel.ChannelFuture write = ctx.writeAndFlush(reply);
                 if (message.getType() == ProxyMessage.MessageType.DISCONNECT
-                        || (message.getType() == ProxyMessage.MessageType.CONNECT && !response.isSuccess())) {
+                        || ((message.getType() == ProxyMessage.MessageType.CONNECT
+                        || message.getType() == ProxyMessage.MessageType.UDP_CONNECT) && !response.isSuccess())) {
                     write.addListener(done -> {
                         if (done.isSuccess()) finishOutput(ctx);
                         else ctx.close();
@@ -267,6 +278,17 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
      * </p>
      */
     private void handlePush(ProxyMessage message) {
+        long udpId = message.getStreamId();
+        com.proxy.common.exchange.DatagramReceiver receiver = datagramRegistry == null ? null : datagramRegistry.get(udpId);
+        if (receiver != null) {
+            if (!ownedStreams.contains(udpId) || ownedDatagrams.get(udpId) != receiver) return;
+            if (message.getType() == ProxyMessage.MessageType.DATA) {
+                receiver.onDatagram(message.getData() == null ? new byte[0] : message.getData());
+            } else if (message.getType() == ProxyMessage.MessageType.DISCONNECT) {
+                onStreamClosed(udpId, null);
+            }
+            return;
+        }
         if (streamRegistry == null) {
             log.debug("Received push but no streamRegistry configured: type={}, streamId={}",
                     message.getType(), message.getStreamId());
@@ -374,6 +396,13 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
     @Override
     public void onStreamClosed(long streamId, Throwable cause) {
         boolean owned = ownedStreams.remove(streamId);
+        if (owned && datagramRegistry != null) {
+            com.proxy.common.exchange.DatagramReceiver receiver = ownedDatagrams.remove(streamId);
+            if (receiver != null) {
+                datagramRegistry.remove(streamId, receiver);
+                receiver.onClosed(cause);
+            }
+        }
         Throwable failure = cause != null ? cause : new java.nio.channels.ClosedChannelException();
         for (PendingRequest pending : pendingRequests.values()) {
             if (pending.streamId == streamId) pending.future.completeExceptionally(failure);
@@ -399,6 +428,12 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         );
         invocation.setAttachment("requestId", message.getRequestId());
         String sessionKey = String.valueOf(message.getStreamId());
+        if (message.getType() == ProxyMessage.MessageType.UDP_CONNECT) {
+            ctx.channel().attr(UDP_ASSOCIATION).set(true);
+        }
+        if (Boolean.TRUE.equals(ctx.channel().attr(UDP_ASSOCIATION).get())) {
+            sessionKey = "udp:" + ctx.channel().id().asLongText() + ":" + sessionKey;
+        }
         invocation.setAttachment("streamId", sessionKey);
         invocation.setAttachment("rawStreamId", message.getStreamId());
         invocation.setAttachment("inboundCtx", ctx);

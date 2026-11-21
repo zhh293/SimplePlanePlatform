@@ -1,4 +1,4 @@
-//! Windows direct egress: pin both DNS and TCP to the pre-TUN interface.
+//! Direct egress: pin DNS and transport sockets to the pre-TUN interface.
 use hickory_proto::{
     op::{Message, MessageType, Query, ResponseCode},
     rr::{Name, RData, RecordType},
@@ -24,6 +24,14 @@ struct EgressSnapshot {
     dns: Vec<Ipv4Addr>,
 }
 impl DirectEgress {
+    #[cfg(test)]
+    pub(crate) fn test_egress() -> Self {
+        Self::from_snapshot(EgressSnapshot {
+            index: 1,
+            source: Ipv4Addr::LOCALHOST,
+            dns: Vec::new(),
+        })
+    }
     pub fn discover() -> io::Result<Self> {
         Ok(Self::from_snapshot(EgressSnapshot::discover()?))
     }
@@ -36,6 +44,21 @@ impl DirectEgress {
     pub async fn connect(&self, host: &str, port: u16) -> io::Result<TcpStream> {
         self.connect_with(host, port, EgressSnapshot::discover)
             .await
+    }
+    /// UDP uses the same captured physical interface and DNS as direct TCP.
+    pub async fn connect_udp(&self, host: &str, port: u16) -> io::Result<UdpSocket> {
+        let snapshot = self.current.read().unwrap().clone();
+        if snapshot.index == 0 || snapshot.source.is_unspecified() {
+            return Err(io::Error::other("No verified physical UDP egress"));
+        }
+        let addresses = snapshot.resolve(host).await?;
+        let ip = addresses
+            .first()
+            .ok_or_else(|| io::Error::other("No UDP IPv4 target"))?;
+        let socket = UdpSocket::bind((snapshot.source, 0)).await?;
+        snapshot.pin(&socket)?;
+        socket.connect((*ip, port)).await?;
+        Ok(socket)
     }
     async fn connect_with<F>(&self, host: &str, port: u16, discover: F) -> io::Result<TcpStream>
     where
@@ -111,7 +134,51 @@ impl EgressSnapshot {
             }
             Self::parse(&String::from_utf8_lossy(&out.stdout))
         }
-        #[cfg(not(windows))]
+        #[cfg(target_os = "macos")]
+        {
+            let discovered = (|| -> io::Result<Self> {
+                fn command(program: &str, args: &[&str]) -> io::Result<String> {
+                    let out = std::process::Command::new(program).args(args).output()?;
+                    if !out.status.success() {
+                        return Err(io::Error::other(
+                            String::from_utf8_lossy(&out.stderr).to_string(),
+                        ));
+                    }
+                    Ok(String::from_utf8_lossy(&out.stdout).to_string())
+                }
+                let route = command("/sbin/route", &["-n", "get", "default"])?;
+                let interface = route
+                    .lines()
+                    .find_map(|line| line.trim().strip_prefix("interface:"))
+                    .map(str::trim)
+                    .filter(|name| !name.starts_with("utun"))
+                    .ok_or_else(|| io::Error::other("No physical default interface"))?;
+                let name = std::ffi::CString::new(interface).map_err(io::Error::other)?;
+                let index = unsafe { libc::if_nametoindex(name.as_ptr()) };
+                let source = command("/usr/sbin/ipconfig", &["getifaddr", interface])?;
+                let resolvers = command("/usr/sbin/scutil", &["--dns"])?;
+                let dns: Vec<String> = resolvers
+                    .lines()
+                    .filter(|line| line.trim().starts_with("nameserver["))
+                    .filter_map(|line| line.split_once(':'))
+                    .map(|(_, ip)| ip.trim().to_string())
+                    .collect();
+                Self::parse(&format!("{index}\n{}\n{}", source.trim(), dns.join("\n")))
+            })();
+            match discovered {
+                Ok(snapshot) => Ok(snapshot),
+                Err(error) => {
+                    tracing::warn!("Physical UDP egress unavailable: {error}");
+                    // Keep existing proxy/TCP operation available; DIRECT UDP fails closed.
+                    Ok(Self {
+                        index: 0,
+                        source: Ipv4Addr::UNSPECIFIED,
+                        dns: Vec::new(),
+                    })
+                }
+            }
+        }
+        #[cfg(not(any(windows, target_os = "macos")))]
         {
             Ok(Self {
                 index: 0,
@@ -265,14 +332,62 @@ impl EgressSnapshot {
         }
         Ok(())
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    fn pin<S: std::os::fd::AsRawFd>(&self, socket: &S) -> io::Result<()> {
+        let index = self.index;
+        let result = unsafe {
+            libc::setsockopt(
+                socket.as_raw_fd(),
+                libc::IPPROTO_IP,
+                libc::IP_BOUND_IF,
+                (&index as *const u32).cast(),
+                std::mem::size_of::<u32>() as libc::socklen_t,
+            )
+        };
+        if result != 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     fn pin<S>(&self, _: &S) -> io::Result<()> {
         Err(io::Error::new(
             io::ErrorKind::Unsupported,
-            "Direct egress is Windows-only",
+            "Pinned direct egress requires Windows or macOS",
         ))
     }
 }
+#[cfg(all(test, any(windows, target_os = "macos")))]
+mod udp_tests {
+    use super::*;
+    #[tokio::test]
+    async fn pinned_udp_preserves_empty_and_maximum_datagrams_without_socks() {
+        let target = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let egress = DirectEgress::test_egress();
+        let client = egress
+            .connect_udp("127.0.0.1", target.local_addr().unwrap().port())
+            .await
+            .unwrap();
+        let mut bytes = vec![0; 65535];
+        for size in [0, 1, 1472] {
+            let payload = vec![size as u8; size];
+            client.send(&payload).await.unwrap();
+            let (n, peer) =
+                tokio::time::timeout(Duration::from_secs(2), target.recv_from(&mut bytes))
+                    .await
+                    .unwrap()
+                    .unwrap();
+            assert_eq!(&bytes[..n], payload);
+            target.send_to(&bytes[..n], peer).await.unwrap();
+            let n = tokio::time::timeout(Duration::from_secs(2), client.recv(&mut bytes))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(&bytes[..n], payload);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

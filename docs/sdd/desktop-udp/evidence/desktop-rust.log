@@ -1,0 +1,24 @@
+
+warning: `simple-plane-desktop` (bin "simple-plane-desktop" test) generated 2 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.41s
+     Running unittests src\main.rs (.build/ci-desktop-target\debug\deps\simple_plane_desktop-b2105955642af823.exe)
+
+running 16 tests
+test commands::updater_progress_tests::progress_wire_contract_uses_camel_case_fields ... ok
+test config::node_tests::duplicate_and_missing_selected_node_are_rejected ... ok
+test update::tests::duplicate_updates_are_rejected_and_failure_releases_ownership ... ok
+test config::node_tests::importing_nodes_preserves_ids_and_http3_options ... ok
+test config::node_tests::legacy_config_migrates_to_one_stable_manual_node ... ok
+test config::node_tests::java_yaml_contains_all_nodes_selection_and_escaped_credentials ... ok
+test config::node_tests::importing_certificate_rejects_private_keys_and_non_pem_files ... ok
+test config::node_tests::blank_tls_name_uses_each_node_host_without_changing_other_options ... ok
+test config::node_tests::automatic_selection_preserves_manual_choice_and_validates_preferred ... ok
+test config::node_tests::importing_public_certificate_copies_it_and_reimport_changes_config_path ... ok
+test update::tests::independent_instances_cannot_download_concurrently ... ok
+test tun_process::tests::readiness_is_per_run_and_matches_real_pid ... ok
+test tun_process::tests::native_handle_observes_exit_code_259_as_terminated ... ok
+test process::tun_lifecycle_tests::exited_process_cannot_be_ready_and_running_becomes_error ... ok
+test process::tun_lifecycle_tests::missing_readiness_times_out_even_when_process_alive ... ok
+test process::tun_lifecycle_tests::stopping_owned_process_leaves_unrelated_process_alive ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s

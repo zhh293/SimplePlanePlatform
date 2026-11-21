@@ -16,6 +16,19 @@ pub enum ProxyConnection {
 }
 
 impl ProxyConnection {
+    pub async fn open_udp_stream(&mut self, host: &str, port: u16) -> Result<ProxyStream> {
+        match self {
+            Self::Http2(connection) => connection
+                .open_udp_stream(host, port)
+                .await
+                .map(ProxyStream::Http2),
+            Self::Http3(connection) => connection
+                .open_udp_stream(host, port)
+                .await
+                .map(|stream| ProxyStream::Http3(Box::new(stream))),
+        }
+    }
+
     pub async fn open_proxy_stream(&mut self, host: &str, port: u16) -> Result<ProxyStream> {
         match self {
             Self::Http2(connection) => connection
@@ -36,6 +49,20 @@ pub enum ProxyStream {
 }
 
 impl ProxyStream {
+    pub async fn send_datagram(&mut self, payload: &[u8]) -> Result<()> {
+        match self {
+            Self::Http2(stream) => stream.send_datagram(payload).await,
+            Self::Http3(stream) => stream.send_payload(payload).await,
+        }
+    }
+
+    pub fn stream_id(&self) -> i64 {
+        match self {
+            Self::Http2(stream) => stream.stream_id(),
+            Self::Http3(stream) => stream.stream_id(),
+        }
+    }
+
     pub async fn send_payload(&mut self, payload: &[u8]) -> Result<()> {
         match self {
             Self::Http2(stream) => stream.send_payload(payload),

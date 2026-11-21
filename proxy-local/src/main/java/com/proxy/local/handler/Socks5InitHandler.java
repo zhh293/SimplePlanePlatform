@@ -1,101 +1,31 @@
 package com.proxy.local.handler;
-
 import com.proxy.common.filter.Invoker;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import java.util.List;
 
-/**
- * SOCKS5 初始化握手 Handler —— 处理认证方法协商
- * <p>
- * SOCKS5 握手流程（RFC 1928）：
- * <pre>
- * Client → Server:
- *   +----+----------+----------+
- *   |VER | NMETHODS | METHODS  |
- *   +----+----------+----------+
- *   | 1  |    1     | 1 to 255 |
- *   +----+----------+----------+
- *
- * Server → Client:
- *   +----+--------+
- *   |VER | METHOD |
- *   +----+--------+
- *   | 1  |   1    |
- *   +----+--------+
- * </pre>
- * 本实现选择 NO AUTHENTICATION (0x00)。
- * 握手完成后替换为 Socks5ConnectHandler 处理 CONNECT 请求。
- * </p>
- */
-public class Socks5InitHandler extends ChannelInboundHandlerAdapter {
-
-    private static final Logger log = LoggerFactory.getLogger(Socks5InitHandler.class);
-
-    private static final byte SOCKS5_VERSION = 0x05;
-    private static final byte NO_AUTH = 0x00;
-
+/** Accumulates negotiation; remaining bytes are forwarded to the command decoder. */
+public final class Socks5InitHandler extends ByteToMessageDecoder {
     private final Invoker invoker;
     private final RouteRule routeRule;
-
     public Socks5InitHandler(Invoker invoker, RouteRule routeRule) {
-        this.invoker = invoker;
-        this.routeRule = routeRule;
+        this.invoker = invoker; this.routeRule = routeRule;
     }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!(msg instanceof ByteBuf)) {
-            ctx.fireChannelRead(msg);
-            return;
-        }
-
-        ByteBuf buf = (ByteBuf) msg;
-        try {
-            if (buf.readableBytes() < 2) {
-                // 数据不够
-                return;
-            }
-
-            byte version = buf.readByte();
-            if (version != SOCKS5_VERSION) {
-                log.warn("Invalid SOCKS version: 0x{}", String.format("%02X", version));
-                ctx.close();
-                return;
-            }
-
-            int nMethods = buf.readByte() & 0xFF;
-            if (buf.readableBytes() < nMethods) {
-                // 数据不够，等下一次（实际上 SOCKS5 握手包很小，一般一次就到了）
-                buf.resetReaderIndex();
-                return;
-            }
-
-            // 跳过 methods 列表（我们统一回复 NO_AUTH）
-            buf.skipBytes(nMethods);
-
-            // 回复：选择 NO AUTHENTICATION
-            ByteBuf response = Unpooled.buffer(2);
-            response.writeByte(SOCKS5_VERSION);
-            response.writeByte(NO_AUTH);
-            ctx.writeAndFlush(response);
-
-            log.debug("SOCKS5 auth negotiation complete (NO_AUTH) for {}", ctx.channel().remoteAddress());
-
-            // 替换为 CONNECT 请求处理器
-            ctx.pipeline().addLast("socks5-connect", new Socks5ConnectHandler(invoker, routeRule));
-            ctx.pipeline().remove(this);
-        } finally {
-            buf.release();
-        }
+    @Override protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        if (in.readableBytes() < 2) return;
+        int start = in.readerIndex();
+        if (in.getUnsignedByte(start) != 5) { ctx.close(); return; }
+        int count = in.getUnsignedByte(start + 1);
+        if (in.readableBytes() < 2 + count) return;
+        boolean accepted = false;
+        for (int i = 0; i < count; i++) accepted |= in.getUnsignedByte(start + 2 + i) == 0;
+        in.skipBytes(2 + count);
+        ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{5, (byte) (accepted ? 0 : 255)}));
+        if (!accepted) { in.skipBytes(in.readableBytes()); ctx.close(); return; }
+        ctx.pipeline().addAfter(ctx.name(), "socks5-connect", new Socks5CommandDecoder(invoker, routeRule));
+        ctx.pipeline().remove(this);
     }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("SOCKS5 init error from {}", ctx.channel().remoteAddress(), cause);
-        ctx.close();
-    }
+    @Override public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) { ctx.close(); }
 }

@@ -15,6 +15,7 @@ mod route_guard;
 mod route_policy;
 mod router;
 mod socks5;
+mod udp;
 mod stack;
 mod tun_device;
 
@@ -270,6 +271,7 @@ async fn run_session(
         intranet_dns_info.domain_suffixes
     );
 
+    let udp = udp::UdpManager::new(fake_dns.clone(), router.clone(), socks5_addr, direct_egress.clone());
     let mut stack_handle = tokio::spawn(async move {
         stack::stack_loop(
             tun_reader,
@@ -279,6 +281,7 @@ async fn run_session(
             notify_tx_stack,
             notify_rx,
             intranet_dns_info,
+            udp,
         )
         .await
     });

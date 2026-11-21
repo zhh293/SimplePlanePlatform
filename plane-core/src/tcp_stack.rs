@@ -41,10 +41,15 @@ use tokio::sync::{mpsc, Mutex};
 use crate::android_tun::{TunReader, TunWriter};
 use crate::error::CoreError;
 use crate::net_probe::FakeDnsEngine;
+use crate::udp::{parse_ipv4_udp, UdpDatagram};
 
-/// TCP 事件：新连接建立通知（上报给 [`crate::dispatcher`]）。
+/// TUN events for the dispatcher: established TCP connections and UDP datagrams.
 #[derive(Debug)]
 pub enum TcpEvent {
+    UdpDatagram {
+        datagram: UdpDatagram,
+        response_tx: mpsc::Sender<Vec<u8>>,
+    },
     /// 一条新的 TCP 连接已建立（smoltcp 三次握手完成）。
     NewConnection {
         /// 源 IP（TUN 内的应用侧）。
@@ -110,6 +115,7 @@ pub async fn stack_loop(
     let mut accepted_connections: HashSet<(Ipv4Addr, u16, Ipv4Addr, u16)> = HashSet::new();
 
     let mut read_buf = vec![0u8; 2048];
+    let (udp_response_tx, mut udp_response_rx) = mpsc::channel::<Vec<u8>>(256);
 
     let mut pkt_count: u64 = 0;
     let mut last_stats = std::time::Instant::now();
@@ -150,10 +156,18 @@ pub async fn stack_loop(
                             last_stats = std::time::Instant::now();
                         }
 
-                        // DNS 拦截：dst port 53 → FakeDNS 分配 FakeIP，原路写回响应。
-                        if let Some(dns_response) = try_handle_dns_packet(packet_data, &fake_dns).await {
-                            if let Err(e) = tun_writer.write_all(&dns_response).await {
-                                tracing::warn!("写回 DNS 响应到 TUN 失败: {}", e);
+                        if packet_data.len() >= 20 && packet_data[0] >> 4 == 4 && packet_data[9] == 17 {
+                            if let Some(datagram) = parse_ipv4_udp(packet_data) {
+                                // DNS stays local, including malformed DNS requests (never proxy them).
+                                if datagram.flow.dst_port == 53 {
+                                    if let Some(response) = try_handle_dns_packet(packet_data, &fake_dns).await {
+                                        tun_writer.write_all(&response).await?;
+                                    }
+                                } else {
+                                    let _ = tcp_event_tx.try_send(TcpEvent::UdpDatagram {
+                                        datagram, response_tx: udp_response_tx.clone(),
+                                    });
+                                }
                             }
                         } else {
                             // TCP 包处理：过滤未知连接的非 SYN 包，避免 smoltcp 回 RST。
@@ -224,11 +238,23 @@ pub async fn stack_loop(
                 }
             }
 
+            Some(response) = udp_response_rx.recv() => {
+                tun_writer.write_all(&response).await?;
+            }
+
             _ = notify_rx.recv() => {
                 while notify_rx.try_recv().is_ok() {}
             }
 
             _ = tokio::time::sleep(poll_interval) => {}
+        }
+
+        // A continuous TUN upload must not starve queued UDP replies in the biased select.
+        for _ in 0..8 {
+            let Ok(response) = udp_response_rx.try_recv() else {
+                break;
+            };
+            tun_writer.write_all(&response).await?;
         }
 
         // ===== 驱动 smoltcp =====
@@ -477,7 +503,7 @@ async fn try_handle_dns_packet(
 }
 
 /// 构造 IPv4 + UDP 响应包（移植自桌面 `stack.rs`）。
-fn build_udp_response(
+pub(crate) fn build_udp_response(
     src_ip: [u8; 4],
     dst_ip: [u8; 4],
     src_port: u16,

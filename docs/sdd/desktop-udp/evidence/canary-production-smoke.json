@@ -1,0 +1,8 @@
+[
+  {
+    "name": "unchanged production public HTTP3 TCP/TLS smoke",
+    "status": "passed",
+    "tcp_echo_bytes": 131072,
+    "bing_https": "HTTP/1.1 200 OK"
+  }
+]

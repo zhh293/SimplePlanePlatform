@@ -1,0 +1,38 @@
+{
+  "canary-nginx-error.log": {
+    "before_sha256": "97c6f97968a86184bdf9f7ba84d8ca97f97dc966e6310198fb64a7f3f2676e63",
+    "published_sha256": "139ab18c9516e4314be77fda23cb4dc1032df4255c5c2ba3e5e7d4621805e831"
+  },
+  "canary-summary.log": {
+    "before_sha256": "ddb3746c81042249a4818ef7bef3b5bb0be226d98d8cb706525049c208992063",
+    "published_sha256": "858dd15ec106e8aba3605aebf0a83badcb6fd1ad7e2e6d0a80e79313216ca44e"
+  },
+  "clippy.log": {
+    "before_sha256": "d28b830668e305913bba73533690f263c1984ac5afc2fa4053a70d82aaef082f",
+    "published_sha256": "7c2b62fc49b686fe0e8c43e8c2a6a2cf5243dd937e2ddacbce0ec17d410ed9ea"
+  },
+  "desktop-rust.log": {
+    "before_sha256": "9c708e3b7573f693705c5d5837b30d87d3ede0efbe228ddc28fc131a72e6c07f",
+    "published_sha256": "01f318fcc678cb4e8ef55c22830212172587d0c752691798cd37dac659a17d6c"
+  },
+  "desktop-ui.log": {
+    "before_sha256": "3d0c6ae760e6a59e7083e2dd0a8113a447509fca50c36698aa73d090e23f3fc3",
+    "published_sha256": "c43562feb38c4a13f3f9d9a8ac6c631f2177560aaee9370d4b592e0224a49cfe"
+  },
+  "installer.log": {
+    "before_sha256": "52ec0e30fdcbbba325147ac604844ee5b12ad4e0bbf3a557c61013f7b2c402e1",
+    "published_sha256": "684358da60c8f28046f921283986d4f2b427fb61dd11157b853de55bd52d9750"
+  },
+  "socket-followup.log": {
+    "before_sha256": "df67fbf4e8eea31fcd7dcc701f72e1aefa8c5e01958ca346f24e10a15632aaf8",
+    "published_sha256": "59fb888a8b429bc5cfd75a7316b50ea2d9fa46ba7670e0369ba1ac42aa3143f9"
+  },
+  "socks-control.log": {
+    "before_sha256": "2d1018499b7a4ebc6be2169b851d91b8d55b9d4dc55ca8af7fad5bb70ea54771",
+    "published_sha256": "2dff31ee0c4322d2ecfb05033b82435a7eac1809c100ff2eb06393f9ca551263"
+  },
+  "verification-summary.log": {
+    "before_sha256": "08d4871da48025617f6647aad7d6ef7714add57daf9af925560d89b44e003dc0",
+    "published_sha256": "a82fcc24cb72b5d72f813b6e6c3e5eaa0a8da26bc7cbb6bf7ffa0db662948238"
+  }
+}

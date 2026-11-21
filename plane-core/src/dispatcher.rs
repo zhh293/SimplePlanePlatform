@@ -17,10 +17,11 @@ use crate::routing::{ConnectionInfo, Protocol, RouteAction, Router};
 use crate::stats::CoreStats;
 use crate::tcp_stack::{SmolTcpStream, StreamCommand, TcpEvent};
 use crate::transport::{proxy_via_remote_counted, ProxyConnection, ProxyStream};
+use crate::udp::{UdpAssociations, UdpRequest};
 
 const PROXY_READ_BUF: usize = 16 * 1024;
 const NODE_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
-type ConnectionPool = Vec<Mutex<Option<Arc<ProxyConnection>>>>;
+pub(crate) type ConnectionPool = Vec<Mutex<Option<Arc<ProxyConnection>>>>;
 
 fn new_connection_pool(node_count: usize) -> ConnectionPool {
     (0..node_count).map(|_| Mutex::new(None)).collect()
@@ -66,6 +67,7 @@ where
 
     let router = Router::from_config(&config.routing)?;
     let mut proxy_conn = Arc::new(new_connection_pool(config.nodes.len()));
+    let mut udp = UdpAssociations::new(config.clone(), Arc::clone(&protector));
 
     tracing::info!(
         "dispatcher started with {} node(s), default route={}",
@@ -90,17 +92,42 @@ where
                 // its replacement, even if QUIC has not timed out yet. Existing
                 // flows observe the same signal and close; no payload is replayed.
                 proxy_conn = Arc::new(new_connection_pool(config.nodes.len()));
+                udp.clear();
                 config.stats.set_state("ready");
                 config.stats.set_error("");
                 config.stats.set_active_node("");
                 tracing::info!("underlying network changed; outbound cache cleared");
             }
 
+            Some(_) = udp.tasks.join_next(), if !udp.tasks.is_empty() => {}
+
             ev = event_rx.recv() => {
-                let Some(TcpEvent::NewConnection { src_ip, dst_ip, dst_port, stream_tx, stream_rx }) = ev else {
+                let Some(ev) = ev else {
                     tracing::info!("tcp event channel closed, dispatcher exiting");
                     config.stats.set_state("stopped");
                     return Ok(());
+                };
+                let (src_ip, dst_ip, dst_port, stream_tx, stream_rx) = match ev {
+                    TcpEvent::NewConnection { src_ip, dst_ip, dst_port, stream_tx, stream_rx } =>
+                        (src_ip, dst_ip, dst_port, stream_tx, stream_rx),
+                    TcpEvent::UdpDatagram { datagram, response_tx } => {
+                        let flow = datagram.flow;
+                        let engine = fake_dns.lock().await;
+                        let domain = engine.lookup_domain(&flow.dst_ip).map(str::to_owned);
+                        if domain.is_none() && engine.is_fake_ip(&flow.dst_ip) {
+                            tracing::debug!(?flow, "UDP dropped: expired FakeIP mapping");
+                            continue;
+                        }
+                        drop(engine);
+                        let host = domain.clone().unwrap_or_else(|| flow.dst_ip.to_string());
+                        let action = router.route(&ConnectionInfo {
+                            src_ip: IpAddr::V4(flow.src_ip), dst_ip: IpAddr::V4(flow.dst_ip),
+                            dst_port: flow.dst_port, domain, protocol: Protocol::Udp,
+                        });
+                        udp.dispatch(UdpRequest { datagram, host, action, response_tx },
+                            Arc::clone(&proxy_conn), shutdown_rx.clone(), network_rx.clone());
+                        continue;
+                    }
                 };
 
                 let domain = {
@@ -227,6 +254,27 @@ async fn open_proxy_with_failover<P>(
 where
     P: SocketProtector + 'static,
 {
+    open_with_failover(config, protector, pool, host, port, false).await
+}
+
+pub(crate) async fn open_udp_with_failover<P: SocketProtector + 'static>(
+    config: &DispatcherConfig,
+    protector: Arc<P>,
+    pool: &ConnectionPool,
+    host: &str,
+    port: u16,
+) -> Result<(ProxyStream, String)> {
+    open_with_failover(config, protector, pool, host, port, true).await
+}
+
+async fn open_with_failover<P: SocketProtector + 'static>(
+    config: &DispatcherConfig,
+    protector: Arc<P>,
+    pool: &ConnectionPool,
+    host: &str,
+    port: u16,
+    udp: bool,
+) -> Result<(ProxyStream, String)> {
     let mut last_error: Option<CoreError> = None;
     for (idx, node) in config.nodes.iter().enumerate() {
         // Serialize only connection creation. Waiting for a target's CONNECT
@@ -251,7 +299,12 @@ where
             }
         };
         let mut sender = connection.as_ref().clone();
-        match sender.open_proxy_stream(host, port).await {
+        let opened = if udp {
+            sender.open_udp_stream(host, port).await
+        } else {
+            sender.open_proxy_stream(host, port).await
+        };
+        match opened {
             Ok(stream) => return Ok((stream, node.name.clone())),
             // The node decrypted and answered CONNECT. A destination refusal
             // is not a broken node and must not tear down unrelated flows.
@@ -471,7 +524,7 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
     }
 }
 
-async fn resolve_server_addr_async<P>(
+pub(crate) async fn resolve_server_addr_async<P>(
     host: &str,
     port: u16,
     protector: Arc<P>,

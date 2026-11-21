@@ -1,0 +1,375 @@
+{
+  "timestamp": "2026-11-20T16:04:06.472429+00:00",
+  "base_commit": "c3ef1d7d4bc0d27f53029cd52b6f4d3d03cac0b7",
+  "platform": "Windows 11 x64",
+  "command": "python scripts/test-desktop-udp.py --offline --maven 'D:/IntelliJ IDEA 2024.3.2/plugins/maven/lib/maven3/bin/mvn.cmd' --maven-repo E:/SimplePlanePlatform/.m2/repository --test-jvm E:/SimplePlane/resources/jre/bin/java.exe",
+  "result": "passed",
+  "java": {
+    "tests": 245,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4,
+    "passed": 241
+  },
+  "java_suites": {
+    "com.proxy.common.model.UrlSecretTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.common.transport.FlowPermitTest": {
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.exchange.header.ConnectionOwnershipTest": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.exchange.header.UdpReceiverOwnershipTest": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.crypto.AeadRecordCipherTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.crypto.AeadStandardVectorTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.crypto.CipherRoundTripTest$AesCtrHmac": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.crypto.CipherRoundTripTest$AesGcm": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.crypto.CipherRoundTripTest$ChaCha20": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.crypto.CipherRoundTripTest": {
+      "tests": 0,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.crypto.CryptoVectorGenTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "com.proxy.crypto.CryptoVectorReplayTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.netty.codec.ProxyCodecTest": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.netty.handler.CipherFramingTest": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.netty.integration.CryptoChannelIntegrationTest": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.http3.Http3CodecHandlerTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.http3.Http3ExchangeIntegrationTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.http3.Http3LoopbackIntegrationTest": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.http3.Http3PendingConnectLifecycleTest": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.transport.http3.Http3SpiTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.cluster.FilterActivationTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.cluster.StickyClusterInvokerTest": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.integration.AeadAesGcmOutboundIntegrationTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.integration.AeadChaChaOutboundIntegrationTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.integration.BaiduProxyTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.integration.ClientServerIntegrationTest": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.integration.Http3OutboundIntegrationTest": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "com.proxy.remote.integration.OutboundIntegrationTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.integration.StreamFailureIsolationTest": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.integration.UdpAssociationIsolationTest": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.outbound.SessionLifecycleTest": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.remote.outbound.UdpOutboundTest": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.ClusterStreamLifecycleIntegrationTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.config.AutoNodeControllerTest": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.config.NetworkRecoveryTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.config.NodeCircuitTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.config.NodeSelectionConfigTest": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.handler.HttpProxyHandlerTest": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.handler.HttpRequestParserTest": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.handler.RouteEngineTest": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.handler.Socks5ConnectHandlerTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.handler.Socks5InitHandlerTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.handler.Socks5UdpTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.handler.TunnelHandoffTest": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.Http3AutoSwitchIntegrationTest": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.Http3ManualSwitchIntegrationTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "com.proxy.local.sysproxy.SystemProxyManagerTest": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "com.proxy.local.UdpEndToEndIntegrationTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "rust": [
+    {
+      "passed": 84,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 4
+    }
+  ],
+  "matrix": {
+    "transports": [
+      "netty HTTP/2",
+      "HTTP/3 QUIC"
+    ],
+    "ciphers": [
+      "chacha20",
+      "chacha20-poly1305-v2",
+      "aes-gcm-v2"
+    ],
+    "cases": 6,
+    "passed": 6,
+    "production_tun_packet_probe": true,
+    "real_udp_sockets": true,
+    "fake_ip": true,
+    "empty_and_1472_byte_payloads": true,
+    "connection_replacement_and_old_data_rejection": true
+  },
+  "additional": {
+    "desktop_rust_passed": 16,
+    "desktop_ui": [
+      "tun-status",
+      "updater-ui",
+      "updater-installer"
+    ],
+    "clippy": "passed with existing config/stack/main warnings",
+    "yaml": "both workflows parse successfully",
+    "socks_coalesced_followup": {
+      "tests": 6,
+      "passed": 6,
+      "raw_log": ".build/desktop-udp/socks-coalesced.log"
+    },
+    "udp_expected_close_uses_debug": true
+  },
+  "boundaries": [
+    "No real Wintun/UAC routing test in this run",
+    "No remote deployment or public-network throughput test",
+    "macOS code/CI wiring not executed locally",
+    "Linux CI covers unprivileged packet path; pinned DIRECT requires Windows/macOS",
+    "Local test JRE lacks java.instrument; JaCoCo disabled, no tests disabled"
+  ],
+  "raw_log": ".build/desktop-udp/final-verification.log",
+  "raw_log_sha256": "a7f9db6600478253b5a87f66cbc4ae88ce860d66b2a056ff440e028fa8f9882c",
+  "tool_versions": {
+    "rustc": "1.98.1",
+    "maven": "3.9.9",
+    "compiler_jdk": "11.0.24",
+    "test_jre": "Temurin 17.0.20.1+1"
+  },
+  "post_socket_cleanup_verification": {
+    "passed": 10,
+    "suites": {
+      "com.proxy.remote.outbound.UdpOutboundTest": 2,
+      "com.proxy.remote.integration.UdpAssociationIsolationTest": 2,
+      "com.proxy.local.UdpEndToEndIntegrationTest": 6
+    },
+    "raw_log": ".build/desktop-udp/socket-final.log",
+    "sha256": "59de1eb06f3f6ece3d0fccc202cde5178738b096ce0e4ae0393cb7ed8eef8ca9"
+  }
+}
