@@ -27,6 +27,8 @@ public final class StickyClusterInvoker implements ClusterInvoker {
         catch (NumberFormatException invalid) { return error("Invalid streamId"); }
         if (streamId == 0) return error("Invalid streamId");
         if (invocation.getType() != ProxyMessage.MessageType.CONNECT
+                && invocation.getType() != ProxyMessage.MessageType.UDP_CONNECT
+                && invocation.getType() != ProxyMessage.MessageType.UDP_OPEN
                 && invocation.getType() != ProxyMessage.MessageType.DATA
                 && invocation.getType() != ProxyMessage.MessageType.DISCONNECT) {
             return error("Unsupported message type");

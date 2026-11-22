@@ -1,0 +1,67 @@
+test direct::udp_tests::pinned_udp_preserves_empty_and_maximum_datagrams_without_socks ... ok
+test udp::tests::ip_round_trip_preserves_empty_maximum_and_fake_ip ... ok
+test udp::tests::reject_and_expired_fake_ip_create_no_association ... ok
+test udp::tests::rejects_truncation_fragments_checksums_and_oversize ... ok
+test udp::tests::socks_codec_keeps_boundary_and_rejects_fragments_and_bad_lengths ... ok
+test udp::tests::fake_ip_flow_passes_socks_and_restores_original_tuple_and_closes_on_drop ... ok
+test udp::tests::opening_queue_is_bounded_and_cancellation_closes_control ... ok
+test result: ok. 84 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.88s
+test result: ok. 2 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 2.02s
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 s -- in com.proxy.common.model.UrlSecretTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.057 s -- in com.proxy.common.transport.FlowPermitTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.149 s -- in com.proxy.exchange.header.ConnectionOwnershipTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in com.proxy.exchange.header.UdpReceiverOwnershipTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.726 s -- in com.proxy.crypto.AeadRecordCipherTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in com.proxy.crypto.AeadStandardVectorTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.035 s -- in com.proxy.crypto.CipherRoundTripTest$AesCtrHmac
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.048 s -- in com.proxy.crypto.CipherRoundTripTest$AesGcm
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in com.proxy.crypto.CipherRoundTripTest$ChaCha20
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.124 s -- in com.proxy.crypto.CipherRoundTripTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.009 s -- in com.proxy.crypto.CryptoVectorGenTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in com.proxy.crypto.CryptoVectorReplayTest
+[WARNING] Tests run: 39, Failures: 0, Errors: 0, Skipped: 1
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.044 s -- in com.proxy.transport.netty.codec.ProxyCodecTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.857 s -- in com.proxy.transport.netty.handler.CipherFramingTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in com.proxy.transport.netty.integration.CryptoChannelIntegrationTest
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.434 s -- in com.proxy.transport.http3.Http3CodecHandlerTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.556 s -- in com.proxy.transport.http3.Http3ExchangeIntegrationTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 18.10 s -- in com.proxy.transport.http3.Http3LoopbackIntegrationTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 16.77 s -- in com.proxy.transport.http3.Http3PendingConnectLifecycleTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in com.proxy.transport.http3.Http3SpiTest
+[INFO] Tests run: 28, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.041 s -- in com.proxy.cluster.FilterActivationTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.131 s -- in com.proxy.cluster.StickyClusterInvokerTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.987 s -- in com.proxy.remote.integration.AeadAesGcmOutboundIntegrationTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.437 s -- in com.proxy.remote.integration.AeadChaChaOutboundIntegrationTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.272 s -- in com.proxy.remote.integration.BaiduProxyTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.636 s -- in com.proxy.remote.integration.ClientServerIntegrationTest
+[WARNING] Tests run: 5, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 10.29 s -- in com.proxy.remote.integration.Http3OutboundIntegrationTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.163 s -- in com.proxy.remote.integration.OutboundIntegrationTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in com.proxy.remote.integration.StreamFailureIsolationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.187 s -- in com.proxy.remote.integration.UdpAssociationIsolationTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.231 s -- in com.proxy.remote.outbound.SessionLifecycleTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.821 s -- in com.proxy.remote.outbound.UdpOutboundTest
+[WARNING] Tests run: 42, Failures: 0, Errors: 0, Skipped: 1
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.112 s -- in com.proxy.local.ClusterStreamLifecycleIntegrationTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.217 s -- in com.proxy.local.config.AutoNodeControllerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.137 s -- in com.proxy.local.config.NetworkRecoveryTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in com.proxy.local.config.NodeCircuitTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.374 s -- in com.proxy.local.config.NodeSelectionConfigTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.092 s -- in com.proxy.local.handler.HttpProxyHandlerTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.033 s -- in com.proxy.local.handler.HttpRequestParserTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.473 s -- in com.proxy.local.handler.RouteEngineTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in com.proxy.local.handler.Socks5ConnectHandlerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in com.proxy.local.handler.Socks5InitHandlerTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.849 s -- in com.proxy.local.handler.Socks5UdpTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in com.proxy.local.handler.TunnelHandoffTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 50.30 s -- in com.proxy.local.Http3AutoSwitchIntegrationTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 19.03 s -- in com.proxy.local.Http3ManualSwitchIntegrationTest
+[WARNING] Tests run: 5, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.016 s -- in com.proxy.local.sysproxy.SystemProxyManagerTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.17 s -- in com.proxy.local.UdpEndToEndIntegrationTest
+[WARNING] Tests run: 83, Failures: 0, Errors: 0, Skipped: 2
+[INFO] BUILD SUCCESS
+[INFO] Total time:  02:58 min

@@ -71,6 +71,7 @@ pub struct IntranetDnsInfo {
     pub domain_suffixes: Vec<String>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn stack_loop(
     mut tun_reader: TunReader,
     mut tun_writer: TunWriter,
@@ -79,6 +80,7 @@ pub async fn stack_loop(
     notify_tx: mpsc::Sender<()>,
     mut notify_rx: mpsc::Receiver<()>,
     intranet_dns: IntranetDnsInfo,
+    mut udp: crate::udp::UdpManager,
 ) -> Result<(), TunError> {
     tracing::info!("User-space TCP/IP stack starting");
 
@@ -132,7 +134,10 @@ pub async fn stack_loop(
         };
 
         tokio::select! {
-            biased;  // 优先处理 TUN 读取
+            // Fair selection: UDP replies must progress during continuous TUN input.
+            Some(response) = udp.responses.recv() => {
+                tun_writer.write_all(&response).await?;
+            }
 
             read_result = tun_reader.read(&mut read_buf) => {
                 match read_result {
@@ -168,6 +173,8 @@ pub async fn stack_loop(
                             if let Err(e) = tun_writer.write_all(&dns_response).await {
                                 tracing::warn!("Failed to write DNS response to TUN: {}", e);
                             }
+                        } else if crate::udp::is_udp(packet_data) {
+                            udp.handle(packet_data).await;
                         } else {
                             // TCP 包处理：过滤掉未知连接的非 SYN 包，避免 smoltcp 回 RST
                             let should_feed = if is_tcp_packet(packet_data) {
@@ -279,6 +286,7 @@ pub async fn stack_loop(
         }
 
         // ======== 驱动 smoltcp ========
+        udp.reap();
         let timestamp = SmolInstant::now();
         iface.poll(timestamp, &mut device, &mut sockets);
 

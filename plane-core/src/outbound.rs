@@ -353,9 +353,17 @@ impl OutboundConnection {
     ///
     /// 返回 [`OutboundStream`]，后续用它收发该 stream 上的 [`ProxyMessage`]。
     pub async fn open_proxy_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+        self.open_stream(host, port, false).await
+    }
+
+    pub async fn open_udp_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+        self.open_stream(host, port, true).await
+    }
+
+    async fn open_stream(&mut self, host: &str, port: u16, udp: bool) -> Result<OutboundStream> {
         tokio::time::timeout(
             PROXY_CONNECT_TIMEOUT,
-            self.open_proxy_stream_inner(host, port),
+            self.open_proxy_stream_inner(host, port, udp),
         )
         .await
         .map_err(|_| {
@@ -366,7 +374,12 @@ impl OutboundConnection {
         })?
     }
 
-    async fn open_proxy_stream_inner(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+    async fn open_proxy_stream_inner(
+        &mut self,
+        host: &str,
+        port: u16,
+        udp: bool,
+    ) -> Result<OutboundStream> {
         let cipher = self.cipher.fresh_session()?;
         // 等待连接就绪（h2 流控 / SETTINGS）。
         let mut send_request = self
@@ -391,7 +404,11 @@ impl OutboundConnection {
         // 首个 CONNECT 消息（加密 DATA 帧）。
         let request_id = self.req_id_gen.next_id();
         let stream_id = next_stream_id();
-        let connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
+        let connect_msg = if udp {
+            ProxyMessage::udp_connect(request_id, stream_id, host, port)
+        } else {
+            ProxyMessage::connect(request_id, stream_id, host, port)
+        };
         let frame = encode_encrypted_frame(&cipher, &connect_msg)?;
         send_stream
             .send_data(Bytes::from(frame), false)
@@ -428,18 +445,7 @@ impl OutboundConnection {
             let mut connected = false;
             for message in messages {
                 if message.type_ == MessageType::ConnectResponse {
-                    if message.request_id != request_id {
-                        return Err(CoreError::Protocol(format!(
-                            "proxy CONNECT {host}:{port} rejected: status={}, request_id={}",
-                            message.status, message.request_id
-                        )));
-                    }
-                    if message.status != 200 {
-                        return Err(CoreError::TargetRejected(format!(
-                            "{host}:{port}, status={}",
-                            message.status
-                        )));
-                    }
+                    message.validate_connect_response(request_id, udp)?;
                     connected = true;
                 } else {
                     // A server greeting can share the response frame or arrive
@@ -491,6 +497,25 @@ impl OutboundStream {
             .send_data(Bytes::from(frame), false)
             .map_err(|e| CoreError::Protocol(format!("send DATA failed: {e}")))?;
         Ok(())
+    }
+
+    /// Wait for HTTP/2 capacity before queuing a datagram, bounding buffered UDP data.
+    pub async fn send_datagram(&mut self, payload: &[u8]) -> Result<()> {
+        let frame =
+            encode_encrypted_frame(&self.cipher, &ProxyMessage::data(self.stream_id, payload))?;
+        self.send_stream.reserve_capacity(frame.len());
+        while self.send_stream.capacity() < frame.len() {
+            match futures_util::future::poll_fn(|cx| self.send_stream.poll_capacity(cx)).await {
+                Some(Ok(_)) => {}
+                Some(Err(error)) => {
+                    return Err(CoreError::Network(format!("UDP h2 capacity: {error}")))
+                }
+                None => return Err(CoreError::Network("UDP h2 stream closed".into())),
+            }
+        }
+        self.send_stream
+            .send_data(Bytes::from(frame), false)
+            .map_err(|error| CoreError::Network(format!("UDP h2 send: {error}")))
     }
 
     /// 发送 DISCONNECT 并以 end_stream 关闭发送侧。
@@ -676,7 +701,14 @@ mod tests {
                             stream_id: 0, // Java ExchangeHandler replies with streamId=0.
                             host: String::new(),
                             port: 0,
-                            data: Vec::new(),
+                            data: if connect.type_ == MessageType::UdpConnect
+                                && connect.host != "legacy.test"
+                            {
+                                assert_eq!(connect.data, proxy_proto::UDP_CAPABILITY);
+                                proxy_proto::UDP_CAPABILITY.to_vec()
+                            } else {
+                                Vec::new()
+                            },
                         };
                         let mut bytes = encode_encrypted_frame(&cipher, &response).unwrap();
                         if greeting {
@@ -692,6 +724,12 @@ mod tests {
                     }
                     while let Some(Ok(chunk)) = body.data().await {
                         body.flow_control().release_capacity(chunk.len()).unwrap();
+                        for message in decoder.push_encrypted_frame(&chunk).unwrap() {
+                            if message.type_ == MessageType::Data {
+                                let frame = encode_encrypted_frame(&cipher, &message).unwrap();
+                                send.send_data(Bytes::from(frame), false).unwrap();
+                            }
+                        }
                     }
                     drop(send);
                 });
@@ -709,6 +747,46 @@ mod tests {
         .await
         .unwrap();
         (client, server)
+    }
+
+    #[tokio::test]
+    async fn http2_udp_preserves_empty_and_maximum_datagrams() {
+        for suite in ["chacha20", "chacha20-poly1305-v2", "aes-gcm-v2"] {
+            let (mut connection, server) =
+                mock_proxy_with_cipher(200, Some(200), false, suite, &[0x42; 32]).await;
+            let mut stream = connection.open_udp_stream("udp.test", 443).await.unwrap();
+            let payloads = [
+                vec![],
+                vec![0x5a; crate::udp::MAX_UDP_PAYLOAD],
+                b"last".to_vec(),
+            ];
+            for payload in &payloads {
+                stream.send_datagram(payload).await.unwrap();
+            }
+            let mut received = Vec::new();
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while received.len() < payloads.len() {
+                    received.extend(
+                        stream
+                            .recv_messages()
+                            .await
+                            .unwrap()
+                            .unwrap()
+                            .into_iter()
+                            .map(|m| m.data),
+                    );
+                }
+            })
+            .await
+            .unwrap();
+            assert_eq!(received, payloads);
+            stream.send_disconnect().unwrap();
+            assert!(matches!(
+                connection.open_udp_stream("legacy.test", 443).await,
+                Err(CoreError::TargetRejected(_))
+            ));
+            server.abort();
+        }
     }
 
     #[tokio::test]

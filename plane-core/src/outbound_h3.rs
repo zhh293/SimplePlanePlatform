@@ -355,14 +355,30 @@ impl OutboundConnection {
     }
 
     pub async fn open_proxy_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
-        tokio::time::timeout(CONNECT_TIMEOUT, self.open_proxy_stream_inner(host, port))
-            .await
-            .map_err(|_| {
-                CoreError::Timeout(format!("HTTP/3 CONNECT {host}:{port} timed out after 15s"))
-            })?
+        self.open_stream(host, port, false).await
     }
 
-    async fn open_proxy_stream_inner(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+    pub async fn open_udp_stream(&mut self, host: &str, port: u16) -> Result<OutboundStream> {
+        self.open_stream(host, port, true).await
+    }
+
+    async fn open_stream(&mut self, host: &str, port: u16, udp: bool) -> Result<OutboundStream> {
+        tokio::time::timeout(
+            CONNECT_TIMEOUT,
+            self.open_proxy_stream_inner(host, port, udp),
+        )
+        .await
+        .map_err(|_| {
+            CoreError::Timeout(format!("HTTP/3 CONNECT {host}:{port} timed out after 15s"))
+        })?
+    }
+
+    async fn open_proxy_stream_inner(
+        &mut self,
+        host: &str,
+        port: u16,
+        udp: bool,
+    ) -> Result<OutboundStream> {
         let cipher = self.cipher.fresh_session()?;
         let authority = format_authority(&self.config.server_host, self.config.server_port);
         let uri = format!("https://{authority}/proxy");
@@ -405,7 +421,11 @@ impl OutboundConnection {
         // session. The process-unique positive namespace also remains stable
         // across QUIC reconnects within this process.
         let stream_id = next_stream_id();
-        let connect_msg = ProxyMessage::connect(request_id, stream_id, host, port);
+        let connect_msg = if udp {
+            ProxyMessage::udp_connect(request_id, stream_id, host, port)
+        } else {
+            ProxyMessage::connect(request_id, stream_id, host, port)
+        };
         let frame = encode_encrypted_frame(&cipher, &connect_msg)?;
         stream
             .send_data(Bytes::from(frame))
@@ -438,18 +458,7 @@ impl OutboundConnection {
             let mut connected = false;
             for message in messages {
                 if message.type_ == MessageType::ConnectResponse {
-                    if message.request_id != request_id {
-                        return Err(CoreError::Protocol(format!(
-                            "HTTP/3 CONNECT {host}:{port} rejected: status={}, request_id={}",
-                            message.status, message.request_id
-                        )));
-                    }
-                    if message.status != 200 {
-                        return Err(CoreError::TargetRejected(format!(
-                            "{host}:{port}, status={}",
-                            message.status
-                        )));
-                    }
+                    message.validate_connect_response(request_id, udp)?;
                     connected = true;
                 } else {
                     stream.pending_messages.push(message);
@@ -494,6 +503,10 @@ pub struct OutboundStream {
 }
 
 impl OutboundStream {
+    pub fn stream_id(&self) -> i64 {
+        self.stream_id
+    }
+
     pub fn request_id(&self) -> i64 {
         self.request_id
     }
@@ -725,7 +738,7 @@ pub(crate) mod tests {
                             };
                             for message in messages {
                                 let response = match message.type_ {
-                                    MessageType::Connect => {
+                                    MessageType::Connect | MessageType::UdpConnect => {
                                         if message.host == "reset.test" {
                                             stream
                                                 .stop_stream(h3::error::Code::H3_REQUEST_REJECTED);
@@ -746,7 +759,17 @@ pub(crate) mod tests {
                                             stream_id: 0,
                                             host: String::new(),
                                             port: 0,
-                                            data: Vec::new(),
+                                            data: if message.type_ == MessageType::UdpConnect
+                                                && message.host != "legacy.test"
+                                            {
+                                                assert_eq!(
+                                                    message.data,
+                                                    crate::proxy_proto::UDP_CAPABILITY
+                                                );
+                                                crate::proxy_proto::UDP_CAPABILITY.to_vec()
+                                            } else {
+                                                Vec::new()
+                                            },
                                         };
                                         let mut bytes =
                                             encode_encrypted_frame(&cipher, &ack).unwrap();
@@ -760,7 +783,18 @@ pub(crate) mod tests {
                                         bytes
                                     }
                                     MessageType::Data => {
-                                        encode_encrypted_frame(&cipher, &message).unwrap()
+                                        let mut response =
+                                            encode_encrypted_frame(&cipher, &message).unwrap();
+                                        if message.data == b"close-after-echo" {
+                                            response.extend(
+                                                encode_encrypted_frame(
+                                                    &cipher,
+                                                    &ProxyMessage::disconnect(0, message.stream_id),
+                                                )
+                                                .unwrap(),
+                                            );
+                                        }
+                                        response
                                     }
                                     MessageType::Disconnect => {
                                         let _ = stream.finish().await;
@@ -807,6 +841,61 @@ pub(crate) mod tests {
             },
         )
         .await
+    }
+
+    #[tokio::test]
+    async fn http3_udp_preserves_datagrams_across_split_frames() {
+        for suite in ["chacha20", "chacha20-poly1305-v2", "aes-gcm-v2"] {
+            let (addr, ca_pem, server) =
+                mock_proxy_with_cipher(200, Some(200), suite, &[0x42; 32]).await;
+            let mut connection = OutboundConnection::connect(
+                addr,
+                &NoopProtector,
+                Cipher::from_name(suite, &[0x42; 32]).unwrap(),
+                OutboundConfig {
+                    server_host: "localhost".into(),
+                    server_port: addr.port(),
+                    server_name: "localhost".into(),
+                    ca_pem,
+                    tls: true,
+                },
+            )
+            .await
+            .unwrap();
+            let mut stream = connection.open_udp_stream("udp.test", 443).await.unwrap();
+            let mut received = Vec::new();
+            let payloads = [
+                b"greeting".to_vec(),
+                vec![],
+                vec![0x5a; crate::udp::MAX_UDP_PAYLOAD],
+                b"last".to_vec(),
+            ];
+            for payload in &payloads[1..] {
+                stream.send_payload(payload).await.unwrap();
+            }
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while received.len() < payloads.len() {
+                    received.extend(
+                        stream
+                            .recv_messages()
+                            .await
+                            .unwrap()
+                            .unwrap()
+                            .into_iter()
+                            .map(|m| m.data),
+                    );
+                }
+            })
+            .await
+            .unwrap();
+            assert_eq!(received, payloads);
+            stream.send_disconnect().await.unwrap();
+            assert!(matches!(
+                connection.open_udp_stream("legacy.test", 443).await,
+                Err(CoreError::TargetRejected(_))
+            ));
+            server.abort();
+        }
     }
 
     #[tokio::test]

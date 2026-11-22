@@ -1,0 +1,16 @@
+[
+  {
+    "name": "http3/aes-gcm-v2 default60s canary restart recovery",
+    "status": "passed",
+    "recovery_seconds": 61.312,
+    "same_socks_control": true
+  },
+  {
+    "name": "http3/aes-gcm-v2 real 120s idle reclamation",
+    "status": "passed",
+    "seconds": 123.06,
+    "fd_before": 24,
+    "fd_after": 23,
+    "new_association_works": true
+  }
+]

@@ -52,6 +52,35 @@ class ConnectionOwnershipTest {
         }
     }
 
+    @Test void oneWayFirstPacketIsOwnedBeforeTransportHasAStream() {
+        ExchangeHandler handler = new ExchangeHandler();
+        EmbeddedChannel local = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        ConcurrentHashMap<Long, ChannelHandlerContext> registry = new ConcurrentHashMap<>();
+        registry.put(42L, local.pipeline().lastContext());
+        handler.setStreamRegistry(registry);
+        com.proxy.common.transport.Client transport = new com.proxy.common.transport.Client() {
+            public void send(ProxyMessage message) {
+                assertEquals(0, message.getRequestId());
+                assertEquals(0, DefaultFuture.getActiveFutureCount());
+                handler.onDisconnected();
+                assertFalse(local.isOpen());
+            }
+            public boolean isAvailable() { return true; }
+            public int getActiveStreamCount() { return 0; }
+            public void close() { }
+        };
+        HeaderExchangeClient client = new HeaderExchangeClient(transport,
+                new com.proxy.common.model.URL("proxy", "localhost", 9090), handler);
+        try {
+            client.send(ProxyMessage.builder().type(ProxyMessage.MessageType.UDP_OPEN)
+                    .streamId(42).host("echo.test").port(53).data(new byte[0]).build());
+            assertTrue(registry.isEmpty());
+        } finally {
+            client.close();
+            local.finishAndReleaseAll();
+        }
+    }
+
     @Test void synchronousConnectCallbackWritesHandshakeBeforeFollowingData() {
         ExchangeHandler handler = new ExchangeHandler();
         EmbeddedChannel transport = new EmbeddedChannel(handler);

@@ -24,6 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * </p>
  */
 public class HeaderExchangeClient implements ExchangeClient {
+    @Override public void setDatagramRegistry(ConcurrentHashMap<Long, com.proxy.common.exchange.DatagramReceiver> receivers) {
+        if (exchangeHandler != null) exchangeHandler.setDatagramRegistry(receivers);
+    }
+    private static boolean opens(ProxyMessage message) {
+        return message.getType() == ProxyMessage.MessageType.CONNECT || message.getType() == ProxyMessage.MessageType.UDP_CONNECT;
+    }
 
     private static final Logger log = LoggerFactory.getLogger(HeaderExchangeClient.class);
 
@@ -58,12 +64,12 @@ public class HeaderExchangeClient implements ExchangeClient {
         long timeout = timeoutMs > 0 ? timeoutMs : getDefaultTimeout();
         DefaultFuture future = DefaultFuture.newFuture(requestId, timeout);
         if (exchangeHandler != null) exchangeHandler.trackRequest(requestId, message.getStreamId(), future,
-                message.getType() == ProxyMessage.MessageType.CONNECT);
+                opens(message));
 
         // Register before send: even an immediate write failure must release the stream.
         future.whenComplete((response, error) -> {
             if (message.getType() == ProxyMessage.MessageType.DISCONNECT
-                    || (message.getType() == ProxyMessage.MessageType.CONNECT
+                    || (opens(message)
                     && (error != null || response == null || !response.isSuccess()))) {
                 client.closeStream(message.getStreamId());
             }
@@ -73,7 +79,7 @@ public class HeaderExchangeClient implements ExchangeClient {
         try {
             if (future.isDone()) return future;
             client.send(message);
-            if (message.getType() == ProxyMessage.MessageType.CONNECT && future.isCompletedExceptionally()) {
+            if (opens(message) && future.isCompletedExceptionally()) {
                 client.closeStream(message.getStreamId());
             }
         } catch (Exception e) {
@@ -92,6 +98,9 @@ public class HeaderExchangeClient implements ExchangeClient {
         }
         // 数据面：不生成 requestId、不创建 Future，仅依赖 streamId 发后即忘
         message.setRequestId(0);
+        if (message.getType() == ProxyMessage.MessageType.UDP_OPEN && exchangeHandler != null) {
+            exchangeHandler.ownDatagramStream(message.getStreamId(), client);
+        }
         try {
             client.send(message);
         } catch (Exception e) {

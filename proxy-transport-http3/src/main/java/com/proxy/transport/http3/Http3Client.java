@@ -75,10 +75,12 @@ public final class Http3Client implements Client {
         long streamId = message.getStreamId();
         Http3StreamState state = streams.get(streamId);
         if (state == null) {
-            if (message.getType() != ProxyMessage.MessageType.CONNECT) {
+            if (message.getType() != ProxyMessage.MessageType.CONNECT
+                    && !message.getType().opensUdp()) {
                 throw new IllegalStateException("No open HTTP/3 stream for " + streamId);
             }
             Http3StreamState candidate = new Http3StreamState(streamId);
+            candidate.udp = message.getType().opensUdp();
             Http3StreamState existing = streams.putIfAbsent(streamId, candidate);
             state = existing != null ? existing : openStream(candidate);
         }
@@ -89,7 +91,7 @@ public final class Http3Client implements Client {
             QuicStreamChannel channel = state.channel;
             if (state.phase == Http3StreamState.Phase.READY && channel != null
                     && channel.isActive() && channel.isWritable() && state.pending.isEmpty()) {
-                write(channel, message);
+                write(state, channel, message);
                 return;
             }
             long bytes = estimatedBytes(message);
@@ -177,25 +179,36 @@ public final class Http3Client implements Client {
                 ProxyMessage message = state.pending.removeFirst();
                 state.pendingBytes -= estimatedBytes(message);
                 connectionPendingBytes.addAndGet(-estimatedBytes(message));
-                write(channel, message);
+                write(state, channel, message);
             }
         }
     }
 
-    private void write(QuicStreamChannel channel, ProxyMessage message) {
+    private void write(Http3StreamState state, QuicStreamChannel channel, ProxyMessage message) {
+        if (message.getType() == ProxyMessage.MessageType.UDP_OPEN
+                && !Boolean.TRUE.equals(channel.attr(Http3StreamHandler.UDP_OPEN_SUPPORTED).get())) {
+            failStream(state, new IllegalStateException("Remote does not support framed UDP"));
+            return;
+        }
+        boolean counted = state.udp && message.getType() == ProxyMessage.MessageType.DATA;
+        if (counted && state.writes.incrementAndGet() > 64) {
+            state.writes.decrementAndGet();
+            log.debug("UDP drop: HTTP/3 stream {} write task limit", state.streamId);
+            return;
+        }
         try {
             // Always enqueue, including from the QUIC event loop. An inline
             // write there could otherwise jump ahead of a browser event loop's
             // earlier write that is still waiting in this executor's queue.
             channel.eventLoop().execute(() -> channel.writeAndFlush(message).addListener(f -> {
+                if (counted) state.writes.decrementAndGet();
                 if (!f.isSuccess()) {
-                    Http3StreamState state = streams.get(message.getStreamId());
-                    if (state != null) failStream(state, f.cause());
+                    failStream(state, f.cause());
                 }
             }));
         } catch (java.util.concurrent.RejectedExecutionException failure) {
-            Http3StreamState state = streams.get(message.getStreamId());
-            if (state != null) failStream(state, failure);
+            if (counted) state.writes.decrementAndGet();
+            failStream(state, failure);
         }
     }
 
@@ -213,6 +226,10 @@ public final class Http3Client implements Client {
     }
 
     private void failStream(Http3StreamState state, Throwable cause) {
+        failStream(state, cause, false);
+    }
+
+    private void failStream(Http3StreamState state, Throwable cause, boolean expectedClose) {
         synchronized (state) {
             if (state.phase == Http3StreamState.Phase.FAILED || state.phase == Http3StreamState.Phase.CLOSED) return;
             state.phase = Http3StreamState.Phase.FAILED;
@@ -225,8 +242,9 @@ public final class Http3Client implements Client {
                     .addListener(ignored -> channel.close());
         }
         messageHandler.onStreamClosed(state.streamId, cause);
-        log.warn("HTTP/3 stream {} failed locally: {}", state.streamId,
-                cause != null ? cause.getMessage() : "unknown");
+        if (expectedClose) log.debug("UDP stream {} closed by caller", state.streamId);
+        else log.warn("HTTP/3 stream {} failed locally: {}", state.streamId,
+                    cause != null ? cause.getMessage() : "unknown");
     }
 
     private void releasePending(Http3StreamState state) {
@@ -284,7 +302,7 @@ public final class Http3Client implements Client {
         if (closed.compareAndSet(false, true)) {
             reconnectScheduler.shutdownNow();
             for (Http3StreamState state : new ArrayList<>(streams.values())) {
-                failStream(state, new IllegalStateException("HTTP/3 client closed"));
+                failStream(state, new IllegalStateException("HTTP/3 client closed"), state.udp);
             }
             streams.clear();
             connection.close();
@@ -295,7 +313,7 @@ public final class Http3Client implements Client {
     public void closeStream(long streamId) {
         Http3StreamState state = streams.remove(streamId);
         if (state != null) {
-            failStream(state, new IllegalStateException("HTTP/3 stream closed by caller"));
+            failStream(state, new IllegalStateException("HTTP/3 stream closed by caller"), state.udp);
         }
     }
 

@@ -135,6 +135,7 @@ public class ProxyLocalServer {
                 ExchangeClient exchangeClient = exchanger.connect(url);
 
                 // 注入 StreamChannelRegistry 的路由表，使 ExchangeHandler 能按 streamId 写回浏览器
+                exchangeClient.setDatagramRegistry(com.proxy.local.handler.StreamChannelRegistry.getInstance().getDatagramMap());
                 exchangeClient.setStreamRegistry(
                         com.proxy.local.handler.StreamChannelRegistry.getInstance().getInternalMap());
 

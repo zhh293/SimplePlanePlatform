@@ -60,14 +60,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 安装 JDK 8（项目编译目标）
+      - name: 安装 JDK 17（HTTP/3 与 UDP 集成测试）
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "8"
+          java-version: "17"
           cache: maven
 
-      # -pl 指定确定性模块，-am 连带构建其依赖；跳过会依赖真实网络的 proxy-remote 集成测试。
+      - name: 安装 Rust（TUN UDP 包注入探针）
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 编译生产 TUN UDP 路径探针
+        run: cargo build --manifest-path tun-adapter/Cargo.toml --locked --example udp_probe
+
+      # Java UDP 矩阵同时调用生产 TUN 的包处理代码，不创建系统网卡。
       # 根 pom 的 jacoco-maven-plugin 会在 test 阶段自动生成各模块覆盖率报告。
       - name: mvn test（确定性模块 + JaCoCo 报告）
         run: >-
@@ -76,6 +82,7 @@ jobs:
           -am
           '-Dtest=*Test,!BaiduProxyTest'
           -Dsurefire.failIfNoSpecifiedTests=false
+          -Dproxy.udp.tunProbe=${{ github.workspace }}/tun-adapter/target/debug/examples/udp_probe
 
       # 覆盖率报告作为 artifact 上传，便于在 PR 中查看；不作为门禁。
       - name: 上传 JaCoCo 覆盖率报告（信息性）

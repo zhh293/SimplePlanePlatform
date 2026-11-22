@@ -1,0 +1,24 @@
+[
+  {
+    "name": "netty controlled real HTTP3 1MiB download",
+    "status": "passed",
+    "seconds": 28.141,
+    "mbps": 0.298,
+    "http_status": 200,
+    "alpn": "h3",
+    "certificate_verified": true,
+    "bytes": 1048576,
+    "sha256": "fbbab289f7f94b25736c58be46a994c441fd02552cc6022352e3d86d2fab7c83"
+  },
+  {
+    "name": "http3 controlled real HTTP3 1MiB download",
+    "status": "passed",
+    "seconds": 11.859,
+    "mbps": 0.707,
+    "http_status": 200,
+    "alpn": "h3",
+    "certificate_verified": true,
+    "bytes": 1048576,
+    "sha256": "fbbab289f7f94b25736c58be46a994c441fd02552cc6022352e3d86d2fab7c83"
+  }
+]

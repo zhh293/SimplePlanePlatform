@@ -23,7 +23,15 @@ public class ProxyMessage {
         /** 心跳请求 */
         HEARTBEAT_REQUEST,
         /** 心跳响应 */
-        HEARTBEAT_RESPONSE
+        HEARTBEAT_RESPONSE,
+        /** Fixed-target UDP association; DATA preserves datagram boundaries. */
+        UDP_CONNECT,
+        /** Opens a fixed-target datagram stream and carries its first payload. */
+        UDP_OPEN;
+
+        public boolean opensUdp() {
+            return this == UDP_CONNECT || this == UDP_OPEN;
+        }
     }
 
     private long requestId;

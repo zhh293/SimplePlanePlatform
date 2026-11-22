@@ -23,11 +23,12 @@ use crate::error::{CoreError, Result};
 
 /// 固定头长度（字节），对齐 Java `FIXED_HEADER_SIZE`。
 pub const FIXED_HEADER_SIZE: usize = 28;
+pub const UDP_CAPABILITY: &[u8] = b"udp-v1";
 
 /// 消息类型 —— 判别值（u8）必须与 Java `MessageType` 的 ordinal 一致。
 ///
 /// Java `enum MessageType { CONNECT, CONNECT_RESPONSE, DATA, DISCONNECT,
-/// HEARTBEAT_REQUEST, HEARTBEAT_RESPONSE }`，ordinal 从 0 递增。
+/// HEARTBEAT_REQUEST, HEARTBEAT_RESPONSE, UDP_CONNECT }`，ordinal 从 0 递增。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum MessageType {
@@ -43,6 +44,8 @@ pub enum MessageType {
     HeartbeatRequest = 4,
     /// 心跳响应。
     HeartbeatResponse = 5,
+    /// Fixed-target UDP association; each DATA message is one datagram.
+    UdpConnect = 6,
 }
 
 impl MessageType {
@@ -56,6 +59,7 @@ impl MessageType {
             3 => Some(Self::Disconnect),
             4 => Some(Self::HeartbeatRequest),
             5 => Some(Self::HeartbeatResponse),
+            6 => Some(Self::UdpConnect),
             _ => None,
         }
     }
@@ -83,6 +87,32 @@ pub struct ProxyMessage {
 }
 
 impl ProxyMessage {
+    pub fn udp_connect(request_id: i64, stream_id: i64, host: &str, port: u16) -> Self {
+        let mut message = Self::connect(request_id, stream_id, host, port);
+        message.type_ = MessageType::UdpConnect;
+        message.data = UDP_CAPABILITY.to_vec();
+        message
+    }
+
+    /// Java correlates CONNECT_RESPONSE by request_id (stream_id may be zero).
+    pub(crate) fn validate_connect_response(&self, request_id: i64, udp: bool) -> Result<()> {
+        if self.type_ != MessageType::ConnectResponse || self.request_id != request_id {
+            return Err(CoreError::Protocol("uncorrelated CONNECT_RESPONSE".into()));
+        }
+        if self.status != 200 {
+            return Err(CoreError::TargetRejected(format!(
+                "CONNECT status={}",
+                self.status
+            )));
+        }
+        if udp && self.data != UDP_CAPABILITY {
+            return Err(CoreError::TargetRejected(
+                "remote did not acknowledge udp-v1".into(),
+            ));
+        }
+        Ok(())
+    }
+
     /// 构造 CONNECT 消息（请求侧）。
     pub fn connect(request_id: i64, stream_id: i64, host: &str, port: u16) -> Self {
         Self {
@@ -400,5 +430,36 @@ mod tests {
         assert_eq!(MessageType::Disconnect as u8, 3);
         assert_eq!(MessageType::HeartbeatRequest as u8, 4);
         assert_eq!(MessageType::HeartbeatResponse as u8, 5);
+        assert_eq!(MessageType::UdpConnect as u8, 6);
+        assert_eq!(MessageType::from_ordinal(6), Some(MessageType::UdpConnect));
+        assert_eq!(MessageType::from_ordinal(7), None);
+    }
+
+    #[test]
+    fn udp_connect_matches_java_wire_layout_and_requires_capability_ack() {
+        let message = ProxyMessage::udp_connect(1, 2, "a", 443);
+        let expected = [
+            6, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, b'a', 0, 0, 1, 187, 0, 0,
+            0, 6, b'u', b'd', b'p', b'-', b'v', b'1',
+        ];
+        assert_eq!(message.encode(), expected);
+        assert_eq!(ProxyMessage::decode(&expected).unwrap(), message);
+        let mut ack = ProxyMessage {
+            type_: MessageType::ConnectResponse,
+            status: 200,
+            request_id: 1,
+            stream_id: 0,
+            host: String::new(),
+            port: 0,
+            data: UDP_CAPABILITY.to_vec(),
+        };
+        assert!(ack.validate_connect_response(1, true).is_ok());
+        assert!(ack.validate_connect_response(2, true).is_err());
+        ack.data.clear();
+        assert!(matches!(
+            ack.validate_connect_response(1, true),
+            Err(CoreError::TargetRejected(_))
+        ));
+        assert!(ack.validate_connect_response(1, false).is_ok());
     }
 }

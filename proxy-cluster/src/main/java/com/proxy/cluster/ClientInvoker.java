@@ -59,7 +59,7 @@ public class ClientInvoker implements Invoker, AutoCloseable {
 
         // 数据面（DATA）：发后即忘，不生成 requestId/Future。
         // 上行数据仅依赖 streamId 寻址，服务端回包由 ExchangeHandler 按 streamId 路由写回浏览器。
-        if (invocation.getType() == ProxyMessage.MessageType.DATA) {
+        if (invocation.getType() == ProxyMessage.MessageType.DATA || invocation.getType() == ProxyMessage.MessageType.UDP_OPEN) {
             exchangeClient.send(message);
             // 流式发送无响应可等，返回已完成的 OK 供上层 whenComplete 错误处理保持一致
             return CompletableFuture.completedFuture(Response.ok());
@@ -69,11 +69,14 @@ public class ClientInvoker implements Invoker, AutoCloseable {
         // 活跃计数 +1
         activeCount.incrementAndGet();
 
-        return exchangeClient.request(message, timeoutMs)
+        CompletableFuture<Response> request = exchangeClient.request(message, timeoutMs);
+        CompletableFuture<Response> result = request
                 .whenComplete((response, throwable) -> {
                     // 活跃计数 -1
                     activeCount.decrementAndGet();
                 });
+        result.whenComplete((response, error) -> { if (result.isCancelled()) request.cancel(false); });
+        return result;
     }
 
     public String getNodeId() { return nodeId; }

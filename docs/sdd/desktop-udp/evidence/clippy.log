@@ -1,0 +1,160 @@
+cargo.exe :     Blocking waiting for file lock on package cache
+所在位置 行:2 字符: 441
++ ... /ucrt/x64'; & .cargo-local/bin/cargo.exe clippy --offline --manifest- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Blocking wa...n package cache:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+    Checking tun-adapter v0.1.0 (E:\SimplePlanePlatform\tun-adapter)
+warning: this `impl` can be derived
+   --> examples\..\src\config.rs:162:1
+    |
+162 | / impl Default for IntranetDnsConfig {
+163 | |     fn default() -> Self {
+164 | |         Self {
+165 | |             servers: Vec::new(),
+...   |
+169 | | }
+    | |_^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#derivable_impl
+s
+    = note: `#[warn(clippy::derivable_impls)]` on by default
+help: replace the manual implementation with a derive attribute
+    |
+152 + #[derive(Default)]
+153 | pub struct IntranetDnsConfig {
+    |
+
+warning: `tun-adapter` (example "udp_probe") generated 1 warning (run `cargo clippy --fix --example "udp_probe" -p tun-
+adapter -- ` to apply 1 suggestion)
+warning: this `impl` can be derived
+   --> src\config.rs:162:1
+    |
+162 | / impl Default for IntranetDnsConfig {
+163 | |     fn default() -> Self {
+164 | |         Self {
+165 | |             servers: Vec::new(),
+...   |
+169 | | }
+    | |_^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#derivable_impl
+s
+    = note: `#[warn(clippy::derivable_impls)]` on by default
+help: replace the manual implementation with a derive attribute
+    |
+152 + #[derive(Default)]
+153 | pub struct IntranetDnsConfig {
+    |
+
+warning: doc list item without indentation
+  --> src\stack.rs:65:5
+   |
+65 | /// 内网 DNS 配置（传递给协议栈用于 DNS 查询转发判断）
+   |     ^
+   |
+   = help: if this is supposed to be its own paragraph, add a blank line
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#doc_lazy_contin
+uation
+   = note: `#[warn(clippy::doc_lazy_continuation)]` on by default
+help: indent this line
+   |
+65 | ///   内网 DNS 配置（传递给协议栈用于 DNS 查询转发判断）
+   |     ++
+
+warning: this `if` statement can be collapsed
+   --> src\stack.rs:155:25
+    |
+155 | /                         if pkt_count <= 5 {
+156 | |                             if packet_data.len() >= 20 {
+157 | |                                 let version = (packet_data[0] >> 4) & 0x0F;
+158 | |                                 let proto = packet_data[9];
+...   |
+169 | |                         }
+    | |_________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `#[warn(clippy::collapsible_if)]` on by default
+help: collapse nested if block
+    |
+155 ~                         if pkt_count <= 5
+156 ~                             && packet_data.len() >= 20 {
+157 |                                 let version = (packet_data[0] >> 4) & 0x0F;
+...
+167 |                                 tracing::info!("Packet #{}: IPv{} {} {} -> {} ({} bytes)", pkt_count, version, pr
+oto_name, src, dst, n);
+168 ~                             }
+    |
+
+warning: this `map_or` can be simplified
+   --> src\stack.rs:218:54
+    |
+218 |   ...                   let has_socket = tcp_tuple.map_or(false, |(src_ip, src_port, dst_ip, dst_port)| {
+    |  ________________________________________^
+219 | | ...                       // 检查 pending_handles 中是否有匹配的 socket
+220 | | ...                       // （SynReceived 状态，需要 ACK 来完成握手）
+221 | | ...                       for &(handle, _) in pending_handles.iter() {
+...   |
+253 | | ...                       false
+254 | | ...                   });
+    | |________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unnecessary_ma
+p_or
+    = note: `#[warn(clippy::unnecessary_map_or)]` on by default
+help: use `is_some_and` instead
+    |
+218 -                                     let has_socket = tcp_tuple.map_or(false, |(src_ip, src_port, dst_ip, dst_port
+)| {
+218 +                                     let has_socket = tcp_tuple.is_some_and(|(src_ip, src_port, dst_ip, dst_port)|
+ {
+    |
+
+warning: items after a test module
+   --> src\main.rs:413:1
+    |
+413 |   mod lifecycle_tests {
+    |   ^^^^^^^^^^^^^^^^^^^
+...
+448 | / async fn connection_dispatcher(
+449 | |     mut rx: mpsc::Receiver<TcpEvent>,
+450 | |     fake_dns: Arc<Mutex<FakeDnsEngine>>,
+451 | |     router: Arc<RoutePolicy>,
+...   |
+455 | |     direct_egress: Arc<direct::DirectEgress>,
+456 | | ) {
+    | |_^
+...
+585 | / async fn direct_tcp_stream(
+586 | |     app_stream: SmolTcpStream,
+587 | |     host: &str,
+588 | |     port: u16,
+589 | |     egress: &direct::DirectEgress,
+590 | | ) -> Result<(), TunError> {
+    | |_________________________^
+...
+599 | / async fn health_check_loop(
+600 | |     socks5_addr: SocketAddr,
+601 | |     interval: Duration,
+602 | |     failure_threshold: u32,
+603 | |     state: Arc<AtomicBool>,
+604 | | ) {
+    | |_^
+...
+655 |   async fn check_proxy_health(socks5_addr: SocketAddr) -> Result<(), TunError> {
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+673 |   fn raise_fd_limit() {
+    |   ^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#items_after_te
+st_module
+    = note: `#[warn(clippy::items_after_test_module)]` on by default
+    = help: move the items to before the test module was defined
+
+warning: `tun-adapter` (bin "tun-adapter") generated 4 warnings (run `cargo clippy --fix --bin "tun-adapter" -p tun-ada
+pter -- ` to apply 3 suggestions)
+warning: `tun-adapter` (bin "tun-adapter" test) generated 5 warnings (4 duplicates) (run `cargo clippy --fix --bin "tun
+-adapter" -p tun-adapter --tests -- ` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.50s

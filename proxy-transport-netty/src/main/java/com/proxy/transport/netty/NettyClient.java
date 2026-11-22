@@ -66,23 +66,42 @@ public class NettyClient implements Client {
         }
 
         long streamId = message.getStreamId();
-        StreamState state = streams.computeIfAbsent(streamId, this::createStream);
-
-        Channel ch = state.channel;
-        if (ch != null && ch.isActive()) {
-            writeToStream(streamId, ch, message);
-            return;
+        StreamState state = streams.get(streamId);
+        if (state == null) {
+            if (message.getType() != ProxyMessage.MessageType.CONNECT
+                    && !message.getType().opensUdp()) {
+                throw new IllegalStateException("No open HTTP/2 stream for " + streamId);
+            }
+            if (streams.size() >= 1024) throw new IllegalStateException("HTTP/2 stream limit reached");
+            StreamState candidate = new StreamState();
+            candidate.udp = message.getType().opensUdp();
+            StreamState previous = streams.putIfAbsent(streamId, candidate);
+            state = previous == null ? candidate : previous;
+            if (previous == null) {
+                try { createStream(streamId, state); }
+                catch (RuntimeException failure) { closeStream(streamId); throw failure; }
+            }
         }
 
         // Stream 仍在建立中：把消息入队，建流完成后由监听器统一 flush。
         synchronized (state) {
-            ch = state.channel;
-            if (ch != null && ch.isActive()) {
-                writeToStream(streamId, ch, message);
-            } else if (state.failed) {
-                notifyError(new IllegalStateException("Stream " + streamId + " failed to open"));
+            Channel ch = state.channel;
+            if (state.failed) {
+                throw new IllegalStateException("Stream " + streamId + " is closed");
+            } else if (ch != null && ch.isActive() && (!state.udp || ch.isWritable())) {
+                writeToStream(streamId, state, ch, message);
+            } else if (ch != null && state.udp && message.getType() == ProxyMessage.MessageType.DATA) {
+                log.debug("UDP drop: HTTP/2 stream {} backpressure", streamId);
+            } else if (ch != null) {
+                throw new IllegalStateException("HTTP/2 stream is not writable");
             } else {
+                long bytes = 128L + (message.getData() == null ? 0 : message.getData().length);
+                if (state.pending.size() >= 128 || state.pendingBytes + bytes > 4194304L) {
+                    closeStream(streamId);
+                    throw new IllegalStateException("HTTP/2 pending queue limit reached");
+                }
                 state.pending.add(message);
+                state.pendingBytes += bytes;
             }
         }
     }
@@ -90,12 +109,10 @@ public class NettyClient implements Client {
     /**
      * 非阻塞地为 streamId 创建一个新的 Stream 状态，并异步开启底层 HTTP/2 Stream。
      */
-    private StreamState createStream(long streamId) {
-        StreamState state = new StreamState();
+    private void createStream(long streamId, StreamState state) {
         Future<Channel> openFuture = connection.openStream();
         openFuture.addListener(f -> onStreamOpened(streamId, state, f));
         log.debug("Requesting HTTP/2 stream for streamId={}", streamId);
-        return state;
     }
 
     @SuppressWarnings("unchecked")
@@ -107,66 +124,60 @@ public class NettyClient implements Client {
             }
             streams.remove(streamId, state);
             log.error("Failed to open HTTP/2 stream for streamId={}", streamId, f.cause());
-            notifyError(f.cause());
+            messageHandler.onStreamClosed(streamId, f.cause());
             return;
         }
 
         Channel streamChannel = (Channel) f.getNow();
-        Deque<ProxyMessage> toFlush;
         synchronized (state) {
-            if (closed.get() || state.failed) {
+            if (closed.get() || state.failed || streams.get(streamId) != state) {
                 state.pending.clear();
                 streamChannel.close();
                 return;
             }
             state.channel = streamChannel;
-            toFlush = new ArrayDeque<>(state.pending);
-            state.pending.clear();
+            while (!state.pending.isEmpty()) writeToStream(streamId, state, streamChannel, state.pending.removeFirst());
+            state.pendingBytes = 0;
         }
 
         // Stream 关闭时自动清理映射
         streamChannel.closeFuture().addListener(cf -> {
             streams.remove(streamId, state);
+            messageHandler.onStreamClosed(streamId, null);
             log.debug("Stream {} closed and removed from mapping", streamId);
         });
 
-        // flush 建流期间积压的消息
-        for (ProxyMessage msg : toFlush) {
-            writeToStream(streamId, streamChannel, msg);
+        log.debug("Created HTTP/2 stream for streamId={}", streamId);
+    }
+
+    private void writeToStream(long streamId, StreamState state, Channel channel, ProxyMessage message) {
+        boolean counted = state.udp && message.getType() == ProxyMessage.MessageType.DATA;
+        if (counted && state.writes.incrementAndGet() > 64) {
+            state.writes.decrementAndGet();
+            log.debug("UDP drop: HTTP/2 stream {} write task limit", streamId);
+            return;
         }
-        log.debug("Created HTTP/2 stream for streamId={}, flushed {} pending message(s)",
-                streamId, toFlush.size());
-    }
-
-    private void writeToStream(long streamId, Channel channel, ProxyMessage message) {
-        channel.writeAndFlush(message).addListener(future -> {
-            if (!future.isSuccess()) {
-                log.error("Failed to send message via HTTP/2 stream {}: type={}, requestId={}",
-                        streamId, message.getType(), message.getRequestId(), future.cause());
-                notifyError(future.cause());
-                streams.remove(streamId);
-                if (channel.isActive()) {
-                    channel.close();
+        try {
+            channel.eventLoop().execute(() -> channel.writeAndFlush(message).addListener(future -> {
+                if (counted) state.writes.decrementAndGet();
+                if (!future.isSuccess()) {
+                    log.error("Failed to send message via HTTP/2 stream {}: type={}, requestId={}",
+                            streamId, message.getType(), message.getRequestId(), future.cause());
+                    messageHandler.onStreamClosed(streamId, future.cause());
+                    streams.remove(streamId, state);
+                    if (channel.isActive()) channel.close();
                 }
-            }
-        });
-    }
-
-    private void notifyError(Throwable cause) {
-        if (messageHandler != null) {
-            messageHandler.onError(cause);
+            }));
+        } catch (java.util.concurrent.RejectedExecutionException stopped) {
+            if (counted) state.writes.decrementAndGet();
+            closeStream(streamId);
         }
     }
 
     @Override
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            for (StreamState state : streams.values()) {
-                Channel ch = state.channel;
-                if (ch != null && ch.isActive()) {
-                    ch.close();
-                }
-            }
+            for (Long id : streams.keySet().toArray(new Long[0])) closeStream(id);
             streams.clear();
             connection.close();
             log.info("NettyClient closed, all streams released");
@@ -204,8 +215,10 @@ public class NettyClient implements Client {
             synchronized (state) {
                 state.failed = true;
                 state.pending.clear();
+                state.pendingBytes = 0;
                 if (state.channel != null) state.channel.close();
             }
+            messageHandler.onStreamClosed(streamId, null);
         }
     }
 
@@ -226,6 +239,9 @@ public class NettyClient implements Client {
     private static final class StreamState {
         volatile Channel channel;
         volatile boolean failed;
+        boolean udp;
+        final java.util.concurrent.atomic.AtomicInteger writes = new java.util.concurrent.atomic.AtomicInteger();
         final Deque<ProxyMessage> pending = new ArrayDeque<>();
+        long pendingBytes;
     }
 }
