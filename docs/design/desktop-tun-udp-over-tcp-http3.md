@@ -114,3 +114,51 @@ DispatchInvoker 按线上首包类型分发。首包必须在该 H3 流的串行
 ### 第二轮：明确 TUN 通过 TCP 传输 UDP 帧
 
 > 那local和server的UDP链路我想的就是这样子了，TUN把捕获到的UDP包包装之后通过TCP连接发送给local-server，不用再开udp的端口服务了，协议嗅探更换socks5handler处理器并且根据首包信息确认是UDP请求之后换成这个socks5udp处理器，这个处理器调用invoker直接传输数据，在message消息中包含udp信息即可，到达远端之后分发到对应的处理逻辑中，通过dispatchinvoker实现，然后如果创建客户端的话可以先创建客户端，包什么的先通过这个disruptor队列存储起来，等到创建成功之后，先传输队列中的数据，再把新来的数据传输过去，要做好这里的竞态条件，你说改成这个思路可以吗
+
+## 附录：沿源码走一遍原有的 TCP 代理
+
+对应第一轮提示词。以提交 `43e3a5f` 为准，假设桌面手动选了节点 A，浏览器通过 TCP 访问 `example.com:443`，TUN 路由命中 PROXY。这里有三段连接：TUN 到 local 是本机 SOCKS5/TCP，local 到节点 A 是可复用的 HTTP/3 隧道，节点 A 到网站是新建的 TCP 连接。下面用 `S` 表示这条浏览器连接的业务流 ID，用 `R` 表示这一次 CONNECT 的请求 ID。
+
+### 1. 启动时，谁把节点 A 放进调用链
+
+`ProxyLocalServer.buildInvokerChain()` 发现配置了 `nodeSelection`，创建 `Http3NodeController`，把控制器持有的同一个 `StickyClusterInvoker` 交给本地入站处理器。控制器的 `initialize()` 先清空成员并将 `currentInvoker` 置空。手动模式只对 `selectedNodeId` 指定的 A 执行 `beginConnect()`。连接线程通过 `Exchanger.connect()` 建到 A 的 HTTP/3 连接，成功回调回到控制线程，依次完成三件事：
+
+1. 把本地通道注册表交给 A 的 exchange client，让以后的下行数据能按流查到本机通道。
+2. 用这个 client 构造 `ClientInvoker`，再包上观测逻辑和客户端 Filter 链。
+3. `refreshMembers()` 先把包装后的 invoker 放进集群成员，`setCurrentInvoker(node.wrapped)` 再把它设为当前节点。之后每次业务调用由 `StickyClusterInvoker.invoke()` 校验并调用当前成员。没有可用的当前成员时，该调用返回错误。
+
+到这一步，local 已经连上代理节点 A。A 到 `example.com:443` 的 TCP 连接要等下面的 CONNECT 才建立。[ProxyLocalServer](../../proxy-local/src/main/java/com/proxy/local/ProxyLocalServer.java) · [Http3NodeController](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java) · [StickyClusterInvoker](../../proxy-cluster/src/main/java/com/proxy/cluster/StickyClusterInvoker.java)
+
+### 2. TUN 发 SOCKS5 CONNECT，local 先分配流 ID
+
+1. TUN 的 TCP 路由进入 `RouteAction::Proxy → proxy_tcp_stream()`。它从 `127.0.0.2` 连本机 IPv4 SOCKS5 监听，协商无认证，发出目标为 `example.com:443` 的 SOCKS5 CONNECT，然后在 `socks5_read_response()` 等结果。[TUN 路由入口](../../tun-adapter/src/main.rs) · [SOCKS5 客户端](../../tun-adapter/src/socks5.rs)
+2. local 的 `ProtocolDetector` 看见首字节 `0x05`，装入 `Socks5InitHandler`，移除自己并转交原消息。协商成功后由 `Socks5CommandDecoder` 等到完整命令，识别 `CMD=0x01`，把它交给 `Socks5ConnectHandler`。[协议嗅探](../../proxy-local/src/main/java/com/proxy/local/handler/ProtocolDetector.java) · [方法协商](../../proxy-local/src/main/java/com/proxy/local/handler/Socks5InitHandler.java) · [命令解码](../../proxy-local/src/main/java/com/proxy/local/handler/Socks5CommandDecoder.java)
+3. `Socks5ConnectHandler.channelRead()` 解析目标并判断路由。在代理分支，它先调用 `nextStreamId()` 得到 `S`，再调用 `register(S, ctx)` 记下这条本机 SOCKS5 通道，最后把 `S` 放进 CONNECT 的 attachment 并调用 `invoker.invoke()`。从建连、后续上下行到断开，整条流沿用同一个 `S`。[SOCKS5 建连分支](../../proxy-local/src/main/java/com/proxy/local/handler/Socks5ConnectHandler.java) · [本地通道注册表](../../proxy-local/src/main/java/com/proxy/local/handler/StreamChannelRegistry.java)
+
+### 3. CONNECT 为什么要等，等到哪一步
+
+`StickyClusterInvoker → 当前成员的 Filter 链 → ClientInvoker.invoke() → HeaderExchangeClient.request()`。交换层生成 `R`、创建带超时的 `DefaultFuture`，把这个待完成请求和流 `S` 登记到 A 的 `ExchangeHandler`，然后交给 `Http3Client.send()`。HTTP/3 客户端为 `S` 打开请求流，流就绪后发送 CONNECT。此时有两个查找键：`R` 用于完成这次控制请求，`S` 用于后续转发与清理。[ClientInvoker](../../proxy-cluster/src/main/java/com/proxy/cluster/ClientInvoker.java) · [HeaderExchangeClient](../../proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchangeClient.java) · [Http3Client](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java)
+
+节点 A 的 `ExchangeHandler.handleRequest()` 将消息还原为 Invocation，附上流 ID 和入站通道，经服务端调用链进入 `DispatchInvoker`。CONNECT 被提交给业务线程池。`handleConnect()` 注册 `OutboundSession`，调用 `OutboundConnector.connect("example.com", 443, session)`。业务线程等到目标 TCP 接通，用 `setOutboundChannel()` 将会话转为 ACTIVE，再返回成功。服务端交换层回送带原 `R`、`S` 的 `CONNECT_RESPONSE`。[服务端入口](../../proxy-remote/src/main/java/com/proxy/remote/ProxyRemoteServer.java) · [DispatchInvoker](../../proxy-remote/src/main/java/com/proxy/remote/dispatch/DispatchInvoker.java) · [OutboundConnector](../../proxy-remote/src/main/java/com/proxy/remote/outbound/OutboundConnector.java)
+
+local 的 `ExchangeHandler.handleResponse() → DefaultFuture.received(R, response)` 完成控制请求，触发 `Socks5ConnectHandler` 的回调。成功时先装入持有 `S` 的 `RelayHandler`、移除建连处理器，然后才写 SOCKS5 成功应答。TUN 读到成功后开始双向复制，因此紧随应答到达的 TLS ClientHello 已经有透传处理器接手。失败时 local 注销 `S`、回复失败并关闭本机通道。[ExchangeHandler](../../proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java) · [DefaultFuture](../../proxy-exchange/src/main/java/com/proxy/exchange/header/DefaultFuture.java) · [SOCKS5 成功回调](../../proxy-local/src/main/java/com/proxy/local/handler/Socks5ConnectHandler.java)
+
+### 4. 用一段 TLS 数据走完上行和下行
+
+| 时点 | 实际调用与完成条件 |
+|---|---|
+| 浏览器发 TLS ClientHello | TUN 把字节复制到 SOCKS5 通道。`RelayHandler.channelRead()` 构造 `DATA(S, bytes)`，经集群交给 A 的 `ClientInvoker`。 |
+| local 接受上行 | `ClientInvoker` 调用 `HeaderExchangeClient.send()`，消息的 `requestId=0`。H3 流可写且没有积压时，`Http3Client.write()` 将写任务提交给该流的 Netty event loop；暂不可写时，`send()` 可将消息放进这条流的有界待发队列。底层 `send()` 正常返回后，`ClientInvoker` 在调用侧返回 `CompletableFuture.completedFuture(Response.ok())`。这个 OK 只说明本地传输层已接收本次发送，网站此时可能还没收到字节。 |
+| A 向网站写数据 | `ExchangeHandler.handleServerData() → DispatchInvoker.invoke()`。已有 ACTIVE 会话走快速路径，在当前 I/O 线程调用 `OutboundSession.forward(bytes)`，把字节写入网站 TCP 通道。服务端不为这一段 DATA 回送业务应答。 |
+| 网站返回 TLS 数据 | 目标通道的 `OutboundHandler.channelRead0() → OutboundSession.writeBack()`，构造 `DATA(streamId=S, requestId=0)`，沿原 H3 流推回。local 的 `ExchangeHandler.handlePush()` 按 `S` 查注册表并 `writeAndFlush` 到本机 SOCKS5 通道，再由 TUN 送回浏览器。 |
+
+因此你说的“上行不等下行”对应的是 DATA。连续两次上行写入，各自都能在本地提交后返回；网站之后何时回、分几次回，由目标 TCP 通道的读事件驱动。要看类似双向 RPC 的请求配对，应跟 CONNECT 的 `R → DefaultFuture`；要看网页字节往返，应跟 DATA 的 `S → ChannelHandlerContext`。[RelayHandler](../../proxy-local/src/main/java/com/proxy/local/handler/RelayHandler.java) · [H3 发送与待发队列](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java) · [OutboundHandler](../../proxy-remote/src/main/java/com/proxy/remote/outbound/OutboundHandler.java) · [OutboundSession](../../proxy-remote/src/main/java/com/proxy/remote/outbound/OutboundSession.java) · [下行分发](../../proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java)
+
+### 5. 从 A 切到 B，旧浏览器连接在哪里关闭
+
+**触发点。** 手动切换由 `NodeConfigWatcher` 将新配置交给 `Http3NodeController.apply()`。选中节点改变后，控制器退役 A、清理旧成员并按新配置初始化 B。自动模式则由 `tick()` 检查连接状态和探测结果，当前节点被判定故障时，`fail()` 退役 A 并刷新成员，再由 `chooseCurrent()` 从健康候选中选择。两条路径共用 `retireCurrent()`。[NodeConfigWatcher](../../proxy-local/src/main/java/com/proxy/local/config/NodeConfigWatcher.java) · [切换与健康检查](../../proxy-local/src/main/java/com/proxy/local/config/Http3NodeController.java)
+
+1. **暂停向 A 派发。** `retireCurrent()` 先执行 `cluster.setCurrentInvoker(null)`，再 `closeNode(A) → ClientInvoker.close() → HeaderExchangeClient.close()`。当前指针置空和集群分发共用同一把锁。切换空窗期内，新调用会得到当前节点不可用。
+2. **关闭 A 名下的本机通道。** `HeaderExchangeClient.close()` 先调用 A 的 `ExchangeHandler.onDisconnected()`，使待完成请求失败，并遍历该 client 的 `ownedStreams`。对 `S` 执行 `onStreamClosed(S, cause)` 时，从共享注册表移除并关闭对应的 SOCKS5 通道。TUN 在本机 TCP 这一端观察到关闭。注册表负责“到哪里写”，每个 client 的集合负责“退役时该关哪些”。[交换层关闭入口](../../proxy-exchange/src/main/java/com/proxy/exchange/header/HeaderExchangeClient.java) · [逐流清理](../../proxy-exchange/src/main/java/com/proxy/exchange/header/ExchangeHandler.java)
+3. **回收 H3 流和网站 TCP。** 随后 `Http3Client.close()` 停止重连，逐流处理失败、释放待发消息并清空流表，最后关闭到 A 的底层 QUIC 连接。在 A 上，`SessionManager.register()` 已给入站流挂了 `closeFuture`。A 观察到流关闭后，移除对应的 `OutboundSession` 并关闭到网站的 TCP。远端清理由远端自己的关闭事件触发，local 不等待 A 的全部会话清理完才选 B。[传输层关闭](../../proxy-transport-http3/src/main/java/com/proxy/transport/http3/Http3Client.java) · [SessionManager](../../proxy-remote/src/main/java/com/proxy/remote/outbound/SessionManager.java)
+4. **后续请求走 B。** B 成为当前成员后，浏览器重新建连会产生新的 SOCKS5 通道和业务流 ID。原连接的 TLS/TCP 状态随 A 上的会话结束。平常由浏览器主动断开的路径稍有不同：`RelayHandler.channelInactive()` 先注销 `S`，再通过 invoker 发 `DISCONNECT`，由 A 的 `handleDisconnect()` 收尾。切节点时即使这个通知送不到旧节点，第三步的入站流关闭监听仍会回收网站连接。[RelayHandler](../../proxy-local/src/main/java/com/proxy/local/handler/RelayHandler.java) · [远端断开分发](../../proxy-remote/src/main/java/com/proxy/remote/dispatch/DispatchInvoker.java)
