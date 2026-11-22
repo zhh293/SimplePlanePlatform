@@ -98,6 +98,9 @@ public class HeaderExchangeClient implements ExchangeClient {
         }
         // 数据面：不生成 requestId、不创建 Future，仅依赖 streamId 发后即忘
         message.setRequestId(0);
+        if (message.getType() == ProxyMessage.MessageType.UDP_OPEN && exchangeHandler != null) {
+            exchangeHandler.ownDatagramStream(message.getStreamId(), client);
+        }
         try {
             client.send(message);
         } catch (Exception e) {

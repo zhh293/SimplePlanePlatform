@@ -69,6 +69,7 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
     public void setDatagramRegistry(ConcurrentHashMap<Long, com.proxy.common.exchange.DatagramReceiver> receivers) {
         datagramRegistry = receivers;
     }
+    private static final AttributeKey<Boolean> FRAMED_UDP = AttributeKey.valueOf("proxy.local.framedUdp");
     private static final AttributeKey<Long> STREAM_ID = AttributeKey.valueOf("proxy.logical.streamId");
     private static final AttributeKey<Boolean> UDP_ASSOCIATION = AttributeKey.valueOf("proxy.udp.association");
     private final ConcurrentHashMap<Long, PendingRequest> pendingRequests = new ConcurrentHashMap<>();
@@ -88,6 +89,18 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
             this.streamId = streamId;
             this.future = future;
         }
+    }
+
+    // The UDP first packet is one-way: ownership must outlive the send itself.
+    void ownDatagramStream(long id, com.proxy.common.transport.Client transport) {
+        ChannelHandlerContext local = streamRegistry == null ? null : streamRegistry.get(id);
+        if (local == null || !local.channel().isActive() || !ownedStreams.add(id)) {
+            throw new IllegalStateException("No active local channel for UDP stream " + id);
+        }
+        local.channel().closeFuture().addListener(done -> {
+            transport.closeStream(id);
+            onStreamClosed(id, null);
+        });
     }
 
     void trackRequest(long requestId, long streamId, DefaultFuture future, boolean cancelWithBrowser) {
@@ -133,6 +146,16 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         if (message == null || message.getType() == null) {
             log.warn("Received null message or null type, ignoring");
             return;
+        }
+        if (invoker != null && message.getType() == ProxyMessage.MessageType.UDP_OPEN) {
+            if (message.getRequestId() != 0 || message.getStreamId() == 0
+                    || ctx.channel().attr(STREAM_ID).get() != null) {
+                FlowPermit unused = ctx.channel().attr(PERMIT_KEY).getAndSet(null);
+                if (unused != null) unused.release();
+                ctx.close();
+                return;
+            }
+            ctx.channel().attr(FRAMED_UDP).set(true);
         }
         if (message.getStreamId() != 0) ctx.channel().attr(STREAM_ID).set(message.getStreamId());
 
@@ -236,6 +259,7 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         try {
             future = invoker.invoke(invocation);
         } catch (Exception e) {
+            if (message.getType() == ProxyMessage.MessageType.UDP_OPEN) ctx.close();
             log.error("DATA invoke failed: streamId={}", message.getStreamId(), e);
             permit.release();  // 同步异常时立即释放
             return;
@@ -243,6 +267,8 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
 
         future.whenComplete((response, throwable) -> {
             permit.release();  // DATA 快速路径：future 已立即完成，本行同步执行
+            if (message.getType() == ProxyMessage.MessageType.UDP_OPEN
+                    && (throwable != null || (response != null && !response.isSuccess()))) ctx.close();
             if (throwable != null) {
                 log.error("DATA invoke completed exceptionally: streamId={}",
                         message.getStreamId(), throwable);
@@ -316,7 +342,12 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
 
         // 将目标服务器的响应数据写回浏览器
         byte[] data = message.getData();
-        if (data != null && data.length > 0) {
+        if (Boolean.TRUE.equals(browserCtx.channel().attr(FRAMED_UDP).get())) {
+            if (!ownedStreams.contains(streamId)) return;
+            if (message.getType() == ProxyMessage.MessageType.DATA && browserCtx.channel().isWritable()) {
+                browserCtx.writeAndFlush(data == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(data));
+            }
+        } else if (data != null && data.length > 0) {
             browserCtx.writeAndFlush(Unpooled.wrappedBuffer(data));
         }
 
@@ -407,7 +438,7 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         for (PendingRequest pending : pendingRequests.values()) {
             if (pending.streamId == streamId) pending.future.completeExceptionally(failure);
         }
-        if (streamRegistry != null) {
+        if (owned && streamRegistry != null) {
             ChannelHandlerContext browser = streamRegistry.remove(streamId);
             if (browser != null) browser.close();
         }
@@ -428,13 +459,16 @@ public class ExchangeHandler extends SimpleChannelInboundHandler<ProxyMessage> i
         );
         invocation.setAttachment("requestId", message.getRequestId());
         String sessionKey = String.valueOf(message.getStreamId());
-        if (message.getType() == ProxyMessage.MessageType.UDP_CONNECT) {
+        if (message.getType().opensUdp()) {
             ctx.channel().attr(UDP_ASSOCIATION).set(true);
         }
         if (Boolean.TRUE.equals(ctx.channel().attr(UDP_ASSOCIATION).get())) {
             sessionKey = "udp:" + ctx.channel().id().asLongText() + ":" + sessionKey;
         }
         invocation.setAttachment("streamId", sessionKey);
+        if (Boolean.TRUE.equals(ctx.channel().attr(FRAMED_UDP).get())) {
+            invocation.setAttachment("framedUdp", true);
+        }
         invocation.setAttachment("rawStreamId", message.getStreamId());
         invocation.setAttachment("inboundCtx", ctx);
         return invocation;

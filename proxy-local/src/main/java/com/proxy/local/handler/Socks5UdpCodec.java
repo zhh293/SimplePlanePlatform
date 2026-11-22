@@ -18,6 +18,10 @@ public final class Socks5UdpCodec {
     }
     public static Datagram decode(ByteBuf in) {
         if (in.readableBytes() < 4 || in.readUnsignedShort() != 0 || in.readUnsignedByte() != 0) return null;
+        return decodeAddress(in);
+    }
+    static Datagram decodeAddress(ByteBuf in) {
+        if (!in.isReadable()) return null;
         int type = in.readUnsignedByte(); String host;
         if (type == 1) {
             if (in.readableBytes() < 6) return null;

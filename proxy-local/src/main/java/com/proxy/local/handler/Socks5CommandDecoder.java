@@ -27,6 +27,21 @@ final class Socks5CommandDecoder extends ByteToMessageDecoder {
             ctx.pipeline().addAfter(ctx.name(), "socks5-tcp-connect", new Socks5ConnectHandler(invoker, routeRule));
             ctx.fireChannelRead(in.readRetainedSlice(length));
             ctx.pipeline().remove(this);
+        } else if (command == TunUdpRelay.COMMAND && (type == 1 || type == 3)) {
+            // The private command selects an already-routed TUN destination.
+            java.net.InetSocketAddress source = (java.net.InetSocketAddress) ctx.channel().remoteAddress();
+            if (source == null || !"127.0.0.2".equals(source.getAddress().getHostAddress())) {
+                ctx.close();
+                return;
+            }
+            ByteBuf address = in.readSlice(length);
+            address.skipBytes(3);
+            Socks5UdpCodec.Datagram target = Socks5UdpCodec.decodeAddress(address);
+            if (target == null) { ctx.close(); return; }
+            ctx.pipeline().addAfter(ctx.name(), "udp-length", new io.netty.handler.codec.LengthFieldPrepender(2));
+            ctx.pipeline().addAfter("udp-length", "tun-udp", new TunUdpRelay(invoker, target.host, target.port));
+            Socks5UdpAssociation.reply(ctx, 0, null);
+            ctx.pipeline().remove(this);
         } else if (command == 3 && type == 1) {
             byte[] ip = new byte[4]; in.getBytes(start + 4, ip);
             int port = in.getUnsignedShort(start + 8);

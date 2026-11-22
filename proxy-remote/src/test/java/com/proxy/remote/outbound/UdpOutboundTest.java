@@ -12,6 +12,37 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class UdpOutboundTest {
     @Test
+    void openingFramesDrainInOrderAndClosedSessionRejectsLateSocket() {
+        EmbeddedChannel inbound = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        EmbeddedChannel target = new EmbeddedChannel();
+        EmbeddedChannel late = new EmbeddedChannel();
+        OutboundSession session = new OutboundSession(inbound.pipeline().lastContext(), "echo.test", 9, "ordered", 7, true);
+        try {
+            session.beginFramedDatagrams(new byte[]{0});
+            for (int i = 1; i <= 64; i++) session.forwardFramedDatagram(new byte[]{(byte) i});
+            assertTrue(session.setOutboundChannel(target));
+            for (int i = 0; i < 64; i++) {
+                io.netty.buffer.ByteBuf packet = target.readOutbound();
+                assertEquals(i, packet.readUnsignedByte());
+                packet.release();
+            }
+            assertNull(target.readOutbound(), "Overflow packet must not bypass opening queue");
+            session.forwardFramedDatagram(new byte[]{100});
+            io.netty.buffer.ByteBuf next = target.readOutbound();
+            assertEquals(100, next.readUnsignedByte());
+            next.release();
+            session.close();
+            assertFalse(session.setOutboundChannel(late));
+            assertFalse(late.isOpen());
+        } finally {
+            session.close();
+            inbound.finishAndReleaseAll();
+            target.finishAndReleaseAll();
+            late.finishAndReleaseAll();
+        }
+    }
+
+    @Test
     void writeTasksAreBoundedInBothDirectionsAndRecoverWhenConsumed() {
         class HeldWrites extends io.netty.channel.ChannelOutboundHandlerAdapter {
             final java.util.List<Object> messages = new java.util.ArrayList<>();

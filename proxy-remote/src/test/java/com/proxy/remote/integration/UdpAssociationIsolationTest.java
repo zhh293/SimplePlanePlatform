@@ -15,6 +15,41 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class UdpAssociationIsolationTest {
     @Test
+    void closedInboundDuringUdpOpenCannotInstallLateSocket() throws Exception {
+        NioEventLoopGroup workers = new NioEventLoopGroup(1);
+        ExecutorService business = Executors.newSingleThreadExecutor();
+        CompletableFuture<io.netty.channel.Channel> opening = new CompletableFuture<>();
+        OutboundConnector delayed = new OutboundConnector(workers, 1000) {
+            @Override public CompletableFuture<io.netty.channel.Channel> connectUdp(String host, int port,
+                    com.proxy.remote.outbound.OutboundSession session) {
+                return opening;
+            }
+        };
+        DispatchInvoker dispatch = new DispatchInvoker(business, delayed, 5000);
+        EmbeddedChannel stream = new EmbeddedChannel(DefaultChannelId.newInstance(), new ExchangeHandler(dispatch));
+        EmbeddedChannel late = new EmbeddedChannel();
+        try {
+            stream.writeInbound(ProxyMessage.builder().type(ProxyMessage.MessageType.UDP_OPEN)
+                    .streamId(42).host("echo.test").port(53).data(new byte[]{1}).build());
+            stream.writeInbound(ProxyMessage.builder().type(ProxyMessage.MessageType.DATA)
+                    .streamId(42).data(new byte[]{2}).build());
+            assertEquals(1, dispatch.getSessionManager().activeCount());
+            stream.close().sync();
+            opening.complete(late);
+            stream.runPendingTasks();
+            assertFalse(late.isOpen());
+            assertNull(late.readOutbound());
+            assertEquals(0, dispatch.getSessionManager().activeCount());
+        } finally {
+            stream.finishAndReleaseAll();
+            late.finishAndReleaseAll();
+            dispatch.shutdown();
+            business.shutdownNow();
+            workers.shutdownGracefully(0, 1, TimeUnit.SECONDS).sync();
+        }
+    }
+
+    @Test
     void invalidCapabilityAndTargetCannotAllocateAnAssociation() throws Exception {
         NioEventLoopGroup workers = new NioEventLoopGroup(1);
         ExecutorService business = Executors.newSingleThreadExecutor();

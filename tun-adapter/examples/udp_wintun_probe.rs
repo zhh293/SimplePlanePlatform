@@ -78,7 +78,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let egress = Arc::new(direct::DirectEgress::discover()?);
     let mut cfg = tun2::Configuration::default();
     cfg.tun_name(&name)
-        .address(Ipv4Addr::new(198, 19, 254, 1))
+        // FakeDNS allocates .1 to the first target; Windows adds a /32 for the adapter itself.
+        .address(Ipv4Addr::new(198, 19, 254, 250))
         .netmask(Ipv4Addr::new(255, 255, 255, 255))
         .destination(Ipv4Addr::new(198, 19, 254, 254))
         .mtu(1500)

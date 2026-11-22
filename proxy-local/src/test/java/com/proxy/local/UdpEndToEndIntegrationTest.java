@@ -31,6 +31,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Real SOCKS UDP -> exchange -> encrypted H2/H3 -> remote UDP -> real echo. */
 class UdpEndToEndIntegrationTest {
+    private static Socket openFramed(int localPort, int targetPort) throws Exception {
+        Socket socket = new Socket();
+        socket.bind(new InetSocketAddress("127.0.0.2", 0));
+        socket.connect(new InetSocketAddress("127.0.0.1", localPort));
+        socket.setSoTimeout(5000);
+        socket.getOutputStream().write(new byte[]{5, 1, 0});
+        assertArrayEquals(new byte[]{5, 0}, socket.getInputStream().readNBytes(2));
+        socket.getOutputStream().write(new byte[]{5, (byte) 0xf0, 0, 1, 127, 0, 0, 1,
+                (byte) (targetPort >>> 8), (byte) targetPort});
+        assertEquals(0, socket.getInputStream().readNBytes(10)[1]);
+        return socket;
+    }
+
     @ParameterizedTest
     @CsvSource({"netty,chacha20","netty,chacha20-poly1305-v2","netty,aes-gcm-v2", "http3,chacha20","http3,chacha20-poly1305-v2","http3,aes-gcm-v2"})
     void udpMatrix(String transport,String cipher) throws Exception {
@@ -63,6 +76,7 @@ class UdpEndToEndIntegrationTest {
                     .addParameter("cipher",cipher).addParameter("cipherKey","0123456789abcdef0123456789abcdef")
                     .addParameter("http3.caFile",tls.ca().getAbsolutePath()).addParameter("ioThreads","2");
             client=ExtensionLoader.getLoader(Exchanger.class).getDefaultExtension().connect(url);
+            client.setStreamRegistry(StreamChannelRegistry.getInstance().getInternalMap());
             client.setDatagramRegistry(StreamChannelRegistry.getInstance().getDatagramMap());
             StickyClusterInvoker invoker=new StickyClusterInvoker();
             ClientInvoker first=new ClientInvoker(client,2000);
@@ -76,7 +90,8 @@ class UdpEndToEndIntegrationTest {
                 @Override protected void initChannel(SocketChannel ch) {ch.pipeline().addLast(new ProtocolDetector(invoker,false,rules));}
             }).bind("127.0.0.1",0).sync().channel();
             int localPort=((InetSocketAddress)local.localAddress()).getPort();
-            try(Socket control=new Socket("127.0.0.1",localPort);DatagramSocket udp=new DatagramSocket(new InetSocketAddress("127.0.0.1",0))) {
+            try(Socket framed = openFramed(localPort, echo.getLocalPort());
+                Socket control=new Socket("127.0.0.1",localPort);DatagramSocket udp=new DatagramSocket(new InetSocketAddress("127.0.0.1",0))) {
                 InetSocketAddress relay=Socks5UdpTest.associate(control,udp.getLocalPort()); udp.setSoTimeout(3000);
                 for(int n:new int[]{0,1,1472,0,1000,17}) {
                     byte[] data=new byte[n];new Random(n).nextBytes(data);
@@ -84,12 +99,17 @@ class UdpEndToEndIntegrationTest {
                     Socks5UdpCodec.Datagram response=Socks5UdpTest.receive(udp);
                     assertEquals("echo.test",response.host);assertEquals(echo.getLocalPort(),response.port);assertArrayEquals(data,response.data);
                 }
+                // The empty first frame and two following frames share one TCP write.
+                framed.getOutputStream().write(new byte[]{0, 0, 0, 1, 41, 0, 1, 42});
+                assertArrayEquals(new byte[]{0, 0, 0, 1, 41, 0, 1, 42}, framed.getInputStream().readNBytes(8));
                 long oldId=StreamChannelRegistry.getInstance().getDatagramMap().keySet().iterator().next();
                 invoker.setCurrentInvoker(null);client.close();
+                assertEquals(-1, framed.getInputStream().read(), "Retiring current must close framed TCP");
                 long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);
                 while(!StreamChannelRegistry.getInstance().getDatagramMap().isEmpty() && System.nanoTime()<until) Thread.sleep(5);
                 assertTrue(StreamChannelRegistry.getInstance().getDatagramMap().isEmpty());
                 client=ExtensionLoader.getLoader(Exchanger.class).getDefaultExtension().connect(url);
+                client.setStreamRegistry(StreamChannelRegistry.getInstance().getInternalMap());
                 client.setDatagramRegistry(StreamChannelRegistry.getInstance().getDatagramMap());
                 ClientInvoker replacement=new ClientInvoker(client,2000);
                 com.proxy.common.filter.Invoker filteredReplacement = chain.build(replacement,filters);

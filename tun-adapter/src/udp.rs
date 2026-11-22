@@ -14,7 +14,7 @@ use std::{
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpSocket, TcpStream, UdpSocket},
+    net::{TcpSocket, TcpStream},
     sync::{mpsc, Mutex},
     task::JoinSet,
 };
@@ -120,11 +120,11 @@ pub fn packet(key: FlowKey, payload: &[u8]) -> Vec<u8> {
     p
 }
 
-pub fn socks_encode(host: &str, port: u16, payload: &[u8]) -> io::Result<Vec<u8>> {
-    if payload.len() > MAX_PAYLOAD || port == 0 {
-        return Err(io::Error::other("Invalid UDP size/port"));
+fn framed_command(host: &str, port: u16) -> io::Result<Vec<u8>> {
+    if port == 0 {
+        return Err(io::Error::other("Invalid UDP port"));
     }
-    let mut p = vec![0, 0, 0];
+    let mut p = vec![5, 0xf0, 0];
     if let Ok(ip) = host.parse::<Ipv4Addr>() {
         p.push(1);
         p.extend(ip.octets());
@@ -136,62 +136,30 @@ pub fn socks_encode(host: &str, port: u16, payload: &[u8]) -> io::Result<Vec<u8>
         p.extend(host.as_bytes());
     }
     p.extend(port.to_be_bytes());
-    p.extend(payload);
     Ok(p)
 }
-pub fn socks_decode(p: &[u8]) -> Option<(String, u16, &[u8])> {
-    if p.len() < 4 || p[..3] != [0, 0, 0] {
-        return None;
-    }
-    let (host, pos) = match p[3] {
-        1 if p.len() >= 10 => (Ipv4Addr::new(p[4], p[5], p[6], p[7]).to_string(), 8),
-        3 if p.len() >= 5 && p[4] > 0 && p.len() >= 7 + p[4] as usize => {
-            let n = p[4] as usize;
-            (
-                std::str::from_utf8(&p[5..5 + n]).ok()?.to_ascii_lowercase(),
-                5 + n,
-            )
-        }
-        _ => return None,
-    };
-    let port = u16::from_be_bytes([p[pos], p[pos + 1]]);
-    let payload = &p[pos + 2..];
-    if port == 0 || payload.len() > MAX_PAYLOAD {
-        return None;
-    }
-    Some((host, port, payload))
-}
-
-async fn associate(proxy: SocketAddr) -> io::Result<(UdpSocket, TcpStream)> {
+async fn open_framed(proxy: SocketAddr, target: &str, port: u16) -> io::Result<TcpStream> {
     if !proxy.is_ipv4() || !proxy.ip().is_loopback() {
-        return Err(io::Error::other("SOCKS UDP requires a loopback IPv4 proxy"));
+        return Err(io::Error::other("TUN UDP requires a loopback proxy"));
     }
     let tcp = TcpSocket::new_v4()?;
     tcp.bind("127.0.0.2:0".parse().unwrap())?;
-    let mut control = tcp.connect(proxy).await?;
-    let udp = UdpSocket::bind("127.0.0.2:0").await?;
-    control.write_all(&[5, 1, 0]).await?;
-    let mut auth = [0u8; 2];
-    control.read_exact(&mut auth).await?;
+    let mut stream = tcp.connect(proxy).await?;
+    stream.set_nodelay(true)?;
+    stream.write_all(&[5, 1, 0]).await?;
+    let mut auth = [0; 2];
+    stream.read_exact(&mut auth).await?;
     if auth != [5, 0] {
-        return Err(io::Error::other("SOCKS UDP authentication rejected"));
+        return Err(io::Error::other("SOCKS authentication rejected"));
     }
-    let endpoint = udp.local_addr()?;
-    let mut request = vec![5, 3, 0, 1, 127, 0, 0, 2];
-    request.extend(endpoint.port().to_be_bytes());
-    control.write_all(&request).await?;
-    let mut reply = [0u8; 10];
-    control.read_exact(&mut reply).await?;
+    let request = framed_command(target, port)?;
+    stream.write_all(&request).await?;
+    let mut reply = [0; 10];
+    stream.read_exact(&mut reply).await?;
     if reply[..4] != [5, 0, 0, 1] {
-        return Err(io::Error::other("SOCKS UDP association rejected"));
+        return Err(io::Error::other("TUN UDP command rejected"));
     }
-    let ip = Ipv4Addr::new(reply[4], reply[5], reply[6], reply[7]);
-    let port = u16::from_be_bytes([reply[8], reply[9]]);
-    if !ip.is_loopback() || port == 0 {
-        return Err(io::Error::other("Invalid SOCKS UDP relay"));
-    }
-    udp.connect((ip, port)).await?;
-    Ok((udp, control))
+    Ok(stream)
 }
 
 struct Flow {
@@ -309,43 +277,60 @@ async fn run_flow(
     mut rx: mpsc::Receiver<Vec<u8>>,
     replies: mpsc::Sender<Vec<u8>>,
 ) -> io::Result<()> {
-    let (socket, mut control) = tokio::time::timeout(Duration::from_secs(5), async {
-        match action {
-            RouteAction::Proxy => associate(proxy)
-                .await
-                .map(|(socket, control)| (socket, Some(control))),
-            RouteAction::Direct => direct
-                .connect_udp(&target, key.dst.port())
-                .await
-                .map(|socket| (socket, None)),
-            RouteAction::Reject => unreachable!(),
+    let reply_key = FlowKey {
+        src: key.dst,
+        dst: key.src,
+    };
+    let setup = Duration::from_secs(5);
+    if action == RouteAction::Proxy {
+        let stream =
+            tokio::time::timeout(setup, open_framed(proxy, &target, key.dst.port())).await??;
+        let (mut reader, mut writer) = stream.into_split();
+        let mut buffer = [0; MAX_PAYLOAD];
+        loop {
+            // Keep this read alive across outbound packets, including partial length/payload reads.
+            let read = async {
+                let size = reader.read_u16().await? as usize;
+                if size > buffer.len() {
+                    return Err(io::Error::other("Oversized TUN UDP frame"));
+                }
+                reader.read_exact(&mut buffer[..size]).await?;
+                Ok(packet(reply_key, &buffer[..size]))
+            };
+            tokio::pin!(read);
+            loop {
+                tokio::select! {
+                    result = &mut read => {
+                        let _ = replies.try_send(result?);
+                        break;
+                    }
+                    payload = rx.recv() => {
+                        let Some(payload) = payload else { return Ok(()); };
+                        let mut frame = Vec::with_capacity(2 + payload.len());
+                        frame.extend((payload.len() as u16).to_be_bytes());
+                        frame.extend(payload);
+                        tokio::time::timeout(IDLE, writer.write_all(&frame)).await??;
+                    }
+                    _ = tokio::time::sleep(IDLE) => return Ok(()),
+                }
+            }
         }
-    })
-    .await
-    .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "UDP setup timeout"))??;
-    let mut buffer = vec![0u8; 65535];
-    let mut deadline = tokio::time::Instant::now() + IDLE;
+    }
+    let socket = tokio::time::timeout(setup, direct.connect_udp(&target, key.dst.port())).await??;
+    let mut buffer = vec![0; 65535];
     loop {
         tokio::select! {
-            payload=rx.recv()=> {
-                let Some(payload)=payload else {return Ok(());};
-                if control.is_some() { socket.send(&socks_encode(&target,key.dst.port(),&payload)?).await?; }
-                else { socket.send(&payload).await?; }
-                deadline=tokio::time::Instant::now()+IDLE;
-            },
-            result=socket.recv(&mut buffer)=> {
-                let n=result?;
-                let payload=if control.is_some() {
-                    let Some((host,port,payload))=socks_decode(&buffer[..n]) else {continue;};
-                    if host!=target.to_ascii_lowercase() || port!=key.dst.port() {continue;}
-                    payload
-                } else { &buffer[..n] };
-                if payload.len()>MAX_PAYLOAD {continue;}
-                let reply=packet(FlowKey{src:key.dst,dst:key.src},payload);
-                let _=replies.try_send(reply); deadline=tokio::time::Instant::now()+IDLE;
-            },
-            _=async { if let Some(stream)=control.as_mut() {let mut one=[0u8;1]; let _=stream.read(&mut one).await;} else {std::future::pending::<()>().await;} }=>return Ok(()),
-            _=tokio::time::sleep_until(deadline)=>return Ok(()),
+            payload = rx.recv() => {
+                let Some(payload) = payload else { return Ok(()); };
+                socket.send(&payload).await?;
+            }
+            result = socket.recv(&mut buffer) => {
+                let size = result?;
+                if size <= MAX_PAYLOAD {
+                    let _ = replies.try_send(packet(reply_key, &buffer[..size]));
+                }
+            }
+            _ = tokio::time::sleep(IDLE) => return Ok(()),
         }
     }
 }
@@ -403,22 +388,17 @@ mod tests {
         assert!(parse(&optional_udp_checksum).is_some());
     }
     #[test]
-    fn socks_codec_keeps_boundary_and_rejects_fragments_and_bad_lengths() {
-        for host in ["1.2.3.4", "echo.test"] {
-            for n in [0, 1, 1472] {
-                let bytes = socks_encode(host, 443, &vec![42; n]).unwrap();
-                let (h, p, data) = socks_decode(&bytes).unwrap();
-                assert_eq!((h.as_str(), p, data.len()), (host, 443, n));
-                for len in 0..bytes.len() - n {
-                    assert!(socks_decode(&bytes[..len]).is_none());
-                }
-                let mut bad = bytes;
-                bad[2] = 1;
-                assert!(socks_decode(&bad).is_none());
-            }
-        }
-        assert!(socks_encode("echo.test", 443, &vec![0; 1473]).is_err());
-        assert!(socks_encode("::1", 443, &[]).is_err());
+    fn private_command_encodes_a_fixed_target() {
+        assert_eq!(
+            framed_command("1.2.3.4", 443).unwrap(),
+            [5, 0xf0, 0, 1, 1, 2, 3, 4, 1, 187]
+        );
+        let command = framed_command("echo.test", 443).unwrap();
+        assert_eq!(&command[..5], &[5, 0xf0, 0, 3, 9]);
+        assert_eq!(&command[5..14], b"echo.test");
+        assert!(framed_command("echo.test", 0).is_err());
+        assert!(framed_command("::1", 443).is_err());
+        assert!(framed_command(&"a".repeat(256), 443).is_err());
     }
     fn manager(action: &str, proxy: SocketAddr) -> UdpManager {
         let config = crate::config::RoutingConfig {
@@ -478,8 +458,6 @@ mod tests {
     async fn fake_ip_flow_passes_socks_and_restores_original_tuple_and_closes_on_drop() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let proxy_addr = listener.local_addr().unwrap();
-        let relay = UdpSocket::bind("127.0.0.1:0").await.unwrap();
-        let relay_addr = relay.local_addr().unwrap();
         let server = tokio::spawn(async move {
             let (mut control, peer) = listener.accept().await.unwrap();
             assert_eq!(peer.ip().to_string(), "127.0.0.2");
@@ -487,21 +465,21 @@ mod tests {
             control.read_exact(&mut auth).await.unwrap();
             assert_eq!(auth, [5, 1, 0]);
             control.write_all(&[5, 0]).await.unwrap();
-            let mut request = [0; 10];
+            let mut request = [0; 16];
             control.read_exact(&mut request).await.unwrap();
-            assert_eq!(&request[..8], &[5, 3, 0, 1, 127, 0, 0, 2]);
-            let mut response = vec![5, 0, 0, 1, 127, 0, 0, 1];
-            response.extend(relay_addr.port().to_be_bytes());
-            control.write_all(&response).await.unwrap();
-            let mut bytes = [0; 2048];
+            assert_eq!(&request[..5], &[5, 0xf0, 0, 3, 9]);
+            assert_eq!(&request[5..14], b"echo.test");
+            assert_eq!(&request[14..], &443u16.to_be_bytes());
+            control
+                .write_all(&[5, 0, 0, 1, 0, 0, 0, 0, 0, 0])
+                .await
+                .unwrap();
             for length in [0, 1, 1472] {
-                let (n, peer) = relay.recv_from(&mut bytes).await.unwrap();
-                let (host, port, data) = socks_decode(&bytes[..n]).unwrap();
-                assert_eq!(
-                    (host.as_str(), port, data.len()),
-                    ("echo.test", 443, length)
-                );
-                relay.send_to(&bytes[..n], peer).await.unwrap();
+                assert_eq!(control.read_u16().await.unwrap(), length);
+                let mut bytes = vec![0; length as usize];
+                control.read_exact(&mut bytes).await.unwrap();
+                control.write_u16(length).await.unwrap();
+                control.write_all(&bytes).await.unwrap();
             }
             assert_eq!(control.read(&mut [0; 1]).await.unwrap(), 0);
         });

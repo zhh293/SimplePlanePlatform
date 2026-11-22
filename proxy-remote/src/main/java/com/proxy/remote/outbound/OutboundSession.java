@@ -51,6 +51,27 @@ public class OutboundSession {
     private final AtomicReference<SessionState> state = new AtomicReference<>(SessionState.CONNECTING);
     private final CompletableFuture<Void> activeFuture = new CompletableFuture<>();
 
+    // Installed before publishing the session. Admission and draining share the inbound event loop.
+    private java.util.ArrayDeque<byte[]> openingDatagrams;
+    private int openingBytes;
+
+    public void beginFramedDatagrams(byte[] first) {
+        openingDatagrams = new java.util.ArrayDeque<>();
+        forwardFramedDatagram(first);
+    }
+
+    public synchronized void forwardFramedDatagram(byte[] data) {
+        if (openingDatagrams == null) return;
+        byte[] packet = data == null ? new byte[0] : data;
+        if (state.get() == SessionState.ACTIVE) {
+            forward(packet);
+        } else if (state.get() == SessionState.CONNECTING && packet.length <= MAX_UDP_PAYLOAD
+                && openingDatagrams.size() < 64 && openingBytes + packet.length <= 65536) {
+            openingDatagrams.addLast(packet);
+            openingBytes += packet.length;
+        }
+    }
+
     private volatile Channel outboundChannel;
     private volatile Runnable closeListener = () -> { };
 
@@ -89,6 +110,10 @@ public class OutboundSession {
         }
         this.outboundChannel = channel;
         if (state.compareAndSet(SessionState.CONNECTING, SessionState.ACTIVE)) {
+            if (openingDatagrams != null) {
+                while (!openingDatagrams.isEmpty()) forward(openingDatagrams.removeFirst());
+                openingBytes = 0;
+            }
             activeFuture.complete(null);
             log.debug("OutboundSession active: sessionKey={}, target={}:{}", sessionKey, targetHost, targetPort);
         }
@@ -239,6 +264,8 @@ public class OutboundSession {
             return false;
         }
         // 唤醒可能等待的 awaitActive
+        if (openingDatagrams != null) openingDatagrams.clear();
+        openingBytes = 0;
         activeFuture.completeExceptionally(new java.nio.channels.ClosedChannelException());
 
         if (outboundChannel != null && outboundChannel.isActive()) {

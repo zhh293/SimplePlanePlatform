@@ -69,12 +69,12 @@ public class NettyClient implements Client {
         StreamState state = streams.get(streamId);
         if (state == null) {
             if (message.getType() != ProxyMessage.MessageType.CONNECT
-                    && message.getType() != ProxyMessage.MessageType.UDP_CONNECT) {
+                    && !message.getType().opensUdp()) {
                 throw new IllegalStateException("No open HTTP/2 stream for " + streamId);
             }
             if (streams.size() >= 1024) throw new IllegalStateException("HTTP/2 stream limit reached");
             StreamState candidate = new StreamState();
-            candidate.udp = message.getType() == ProxyMessage.MessageType.UDP_CONNECT;
+            candidate.udp = message.getType().opensUdp();
             StreamState previous = streams.putIfAbsent(streamId, candidate);
             state = previous == null ? candidate : previous;
             if (previous == null) {

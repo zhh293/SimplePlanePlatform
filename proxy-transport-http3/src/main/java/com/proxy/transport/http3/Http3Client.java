@@ -76,11 +76,11 @@ public final class Http3Client implements Client {
         Http3StreamState state = streams.get(streamId);
         if (state == null) {
             if (message.getType() != ProxyMessage.MessageType.CONNECT
-                    && message.getType() != ProxyMessage.MessageType.UDP_CONNECT) {
+                    && !message.getType().opensUdp()) {
                 throw new IllegalStateException("No open HTTP/3 stream for " + streamId);
             }
             Http3StreamState candidate = new Http3StreamState(streamId);
-            candidate.udp = message.getType() == ProxyMessage.MessageType.UDP_CONNECT;
+            candidate.udp = message.getType().opensUdp();
             Http3StreamState existing = streams.putIfAbsent(streamId, candidate);
             state = existing != null ? existing : openStream(candidate);
         }
@@ -185,6 +185,11 @@ public final class Http3Client implements Client {
     }
 
     private void write(Http3StreamState state, QuicStreamChannel channel, ProxyMessage message) {
+        if (message.getType() == ProxyMessage.MessageType.UDP_OPEN
+                && !Boolean.TRUE.equals(channel.attr(Http3StreamHandler.UDP_OPEN_SUPPORTED).get())) {
+            failStream(state, new IllegalStateException("Remote does not support framed UDP"));
+            return;
+        }
         boolean counted = state.udp && message.getType() == ProxyMessage.MessageType.DATA;
         if (counted && state.writes.incrementAndGet() > 64) {
             state.writes.decrementAndGet();

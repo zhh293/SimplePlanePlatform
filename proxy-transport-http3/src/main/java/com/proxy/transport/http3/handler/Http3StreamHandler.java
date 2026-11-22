@@ -27,6 +27,8 @@ public final class Http3StreamHandler extends ChannelDuplexHandler {
     private final Runnable readyCallback;
     private final Runnable closedCallback;
     private final Runnable writableCallback;
+    public static final io.netty.util.AttributeKey<Boolean> UDP_OPEN_SUPPORTED =
+            io.netty.util.AttributeKey.valueOf("proxy.h3.udpOpenSupported");
     private boolean headersReady;
     private volatile Timeout cleanupTimeout;
     private volatile boolean removed;
@@ -134,6 +136,7 @@ public final class Http3StreamHandler extends ChannelDuplexHandler {
             DefaultHttp3Headers response = new DefaultHttp3Headers();
             response.status("200").set("content-type", "application/octet-stream")
                     .set("x-plane-protocol", "proxy-message-v1");
+            response.set("x-plane-udp-open", "1");
             headersReady = true;
             ctx.writeAndFlush(new DefaultHttp3HeadersFrame(response));
             // Http3HeadersFrame is reference-counted in Netty 4.2.  The frame is
@@ -142,6 +145,8 @@ public final class Http3StreamHandler extends ChannelDuplexHandler {
             ReferenceCountUtil.release(msg);
             return;
         }
+        ctx.channel().attr(UDP_OPEN_SUPPORTED).set("1".contentEquals(
+                frame.headers().get("x-plane-udp-open", "")));
         CharSequence status = frame.headers().status();
         if (!"200".contentEquals(status) || protocol == null || !"proxy-message-v1".contentEquals(protocol)) {
             ReferenceCountUtil.release(msg);

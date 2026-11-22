@@ -59,6 +59,9 @@ public class DispatchInvoker implements Invoker {
 
     @Override
     public CompletableFuture<Response> invoke(Invocation invocation) throws ProxyException {
+        if (invocation.getType() == ProxyMessage.MessageType.UDP_OPEN) {
+            return CompletableFuture.completedFuture(openDatagram(invocation));
+        }
         CompletableFuture<Response> future = new CompletableFuture<>();
 
         // DATA 消息：如果 session 已 ACTIVE 则直接在 IO 线程处理（非阻塞 writeAndFlush），
@@ -67,6 +70,10 @@ public class DispatchInvoker implements Invoker {
         if (invocation.getType() == ProxyMessage.MessageType.DATA && connector != null) {
             String sk = (String) invocation.getAttachment("streamId");
             OutboundSession sess = sessionManager.get(sk);
+            if (Boolean.TRUE.equals(invocation.getAttachment("framedUdp"))) {
+                if (sess != null) sess.forwardFramedDatagram(invocation.getData());
+                return CompletableFuture.completedFuture(null);
+            }
             if (sess != null && sess.getState() == OutboundSession.SessionState.ACTIVE) {
                 // 已就绪，直接在当前 IO 线程转发（保序）
                 try {
@@ -107,6 +114,39 @@ public class DispatchInvoker implements Invoker {
     /**
      * 根据消息类型分派到对应的处理方法
      */
+    private Response openDatagram(Invocation invocation) {
+        String host = invocation.getTargetHost();
+        int port = invocation.getTargetPort();
+        String key = (String) invocation.getAttachment("streamId");
+        ChannelHandlerContext inbound = (ChannelHandlerContext) invocation.getAttachment("inboundCtx");
+        byte[] data = invocation.getData();
+        if (connector == null || host == null || host.isEmpty() || port < 1 || port > 65535
+                || (data != null && data.length > OutboundSession.MAX_UDP_PAYLOAD) || !inbound.channel().isActive()
+                || sessionManager.get(key) != null) {
+            return Response.error("Invalid UDP first packet");
+        }
+        OutboundSession session = new OutboundSession(inbound, host, port, key,
+                (Long) invocation.getAttachment("rawStreamId"), true);
+        session.beginFramedDatagrams(data);
+        sessionManager.register(key, session);
+        CompletableFuture<Channel> opening = connector.connectUdp(host, port, session);
+        io.netty.util.concurrent.ScheduledFuture<?> timeout = inbound.executor().schedule(
+                () -> opening.cancel(false), activeWaitTimeoutMs, TimeUnit.MILLISECONDS);
+        opening.whenComplete((channel, error) -> {
+            timeout.cancel(false);
+            try {
+                inbound.executor().execute(() -> {
+                    if (error != null) session.closeFromTarget();
+                    else session.setOutboundChannel(channel);
+                });
+            } catch (RejectedExecutionException stopped) {
+                if (channel != null) channel.close();
+                session.close();
+            }
+        });
+        return null;
+    }
+
     private Response dispatch(Invocation invocation) {
         ProxyMessage.MessageType type = invocation.getType();
         if (type == null) {
