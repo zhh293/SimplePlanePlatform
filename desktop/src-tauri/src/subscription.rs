@@ -14,6 +14,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
 
 const ORIGIN: &str = "https://212.64.14.155";
+const ISSUER_CA: &[u8] = include_bytes!("subscription-web-ca.crt");
 type Result<T> = std::result::Result<T, String>;
 
 #[derive(Serialize, Deserialize)]
@@ -121,13 +122,16 @@ pub fn configure_java(cmd: &mut std::process::Command) -> Result<()> {
 }
 
 async fn post<T: DeserializeOwned>(path: &str, body: serde_json::Value) -> Result<T> {
-    let mut builder = reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(12))
-        .redirect(reqwest::redirect::Policy::none());
+    let ca = ISSUER_CA;
     #[cfg(debug_assertions)]
-    if let Some(pem) = option_env!("SP_SUBSCRIPTION_CA_PEM") {
-        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(pem.as_bytes())
-            .map_err(|_| "灰度 CA 无效")?);
-    }
+    let ca = option_env!("SP_SUBSCRIPTION_CA_PEM").map(str::as_bytes).unwrap_or(ca);
+    let root = reqwest::Certificate::from_pem(ca).map_err(|_| "订阅入口 CA 无效")?;
+    let builder = reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(12))
+        .redirect(reqwest::redirect::Policy::none())
+        .tls_built_in_root_certs(false)
+        .add_root_certificate(root);
     let mut response = builder.build().map_err(|_| "无法初始化 HTTPS")?
         .post(format!("{ORIGIN}/device/{path}")).json(&body).send().await.map_err(|_| "无法连接订阅服务或证书校验失败")?;
     if !response.status().is_success() { return Err(format!("订阅服务返回 HTTP {}", response.status().as_u16())); }
@@ -198,6 +202,18 @@ fn encode_lease(node: &IssuedNode, tls: &[u8], wrapping: &aead::LessSafeKey) -> 
     Ok(STANDARD.encode([nonce.as_slice(), &buffer].concat()))
 }
 
+fn replacement_selection(nodes: &[RemoteNode], id: &str) -> Option<String> {
+    let manual = nodes.iter().find(|node| {
+        node.id == id && node.remote.http3.device_credential_id.is_empty()
+    })?;
+    nodes.iter().find(|node| {
+        !node.remote.http3.device_credential_id.is_empty()
+            && node.remote.host.eq_ignore_ascii_case(&manual.remote.host)
+            && node.remote.port == manual.remote.port
+            && node.remote.transport == manual.remote.transport
+    }).map(|node| node.id.clone())
+}
+
 fn install(manifest: Manifest, tls: &[u8], tun_running: bool) -> Result<usize> {
     if manifest.version != 1 || manifest.expires_at <= now() || manifest.nodes.len() > 128 { return Err("节点清单无效或已过期".into()); }
     let dir = config::get_config_dir().join("subscription");
@@ -229,8 +245,16 @@ fn install(manifest: Manifest, tls: &[u8], tun_running: bool) -> Result<usize> {
                 ca_file:ca.to_string_lossy().into_owned(), ..Default::default()} } });
     }
     if let Some(first) = cfg.nodes.first() {
-        if !known.contains(&cfg.selected_node_id) { cfg.selected_node_id=first.id.clone(); }
-        if !known.contains(&cfg.preferred_node_id) { cfg.preferred_node_id=cfg.selected_node_id.clone(); }
+        if let Some(id) = replacement_selection(&cfg.nodes, &cfg.selected_node_id) {
+            cfg.selected_node_id = id;
+        } else if !known.contains(&cfg.selected_node_id) {
+            cfg.selected_node_id = first.id.clone();
+        }
+        if let Some(id) = replacement_selection(&cfg.nodes, &cfg.preferred_node_id) {
+            cfg.preferred_node_id = id;
+        } else if !known.contains(&cfg.preferred_node_id) {
+            cfg.preferred_node_id = cfg.selected_node_id.clone();
+        }
     } else if !cfg.remote.http3.device_credential_id.is_empty() {
         cfg.remote.transport="http2".into(); cfg.remote.host.clear(); cfg.remote.port=0;
         cfg.remote.http3=Http3Config::default(); cfg.node_selection_mode="manual".into();
@@ -278,4 +302,38 @@ pub async fn subscription_logout(state: tauri::State<'_, SubscriptionState>,
     }
     *pending = None;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node(id: &str, port: u16, credential: &str) -> RemoteNode {
+        RemoteNode {
+            id: id.into(),
+            name: id.into(),
+            remote: RemoteConfig {
+                host: "192.0.2.1".into(),
+                port,
+                transport: "http3".into(),
+                http3: Http3Config {
+                    device_credential_id: credential.into(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        }
+    }
+
+    #[test]
+    fn matching_manual_selection_moves_to_the_authenticated_endpoint() {
+        let nodes = [
+            node("original", 9090, ""),
+            node("different-port", 9091, ""),
+            node("subscription-node", 9090, "node"),
+        ];
+        assert_eq!(replacement_selection(&nodes, "original").as_deref(), Some("subscription-node"));
+        assert_eq!(replacement_selection(&nodes, "different-port"), None);
+        assert_eq!(replacement_selection(&nodes, "subscription-node"), None);
+    }
 }

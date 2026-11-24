@@ -935,10 +935,11 @@ const App = (function () {
     const qr = $('#subscriptionQr');
     const code = $('#subscriptionCode');
     const open = $('#subscriptionOpen');
+    const copy = $('#subscriptionCopyLink');
     const logout = $('#subscriptionLogout');
     let generation = 0;
     let url = '';
-    function hideVerification() { qr.hidden = true; code.textContent = ''; open.hidden = true; url = ''; }
+    function hideVerification() { qr.hidden = open.hidden = copy.hidden = true; code.textContent = ''; url = ''; }
     async function synchronize(current) {
       const count = await invoke('subscription_sync');
       if (current !== generation) return;
@@ -971,7 +972,7 @@ const App = (function () {
         pair.qr.forEach((on, i) => {
           if (on) ctx.fillRect((i % pair.width + margin) * scale, (Math.floor(i / pair.width) + margin) * scale, scale, scale);
         });
-        qr.hidden = open.hidden = false;
+        qr.hidden = open.hidden = copy.hidden = false;
         code.textContent = pair.code;
         message.textContent = '用手机扫码或打开浏览器，核对下方授权码。';
         while (current === generation && Date.now() < pair.expiry * 1000) {
@@ -988,6 +989,15 @@ const App = (function () {
     open.addEventListener('click', async () => {
       if (url) try { await invoke('plugin:shell|open', { path: url }); }
       catch (error) { message.textContent = String(error); }
+    });
+    copy.addEventListener('click', async () => {
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        message.textContent = '已复制确认链接。请粘贴到信任订阅站点证书的浏览器。';
+      } catch {
+        message.textContent = '无法复制链接，请打开浏览器或扫码确认。';
+      }
     });
     logout.addEventListener('click', async () => {
       try {

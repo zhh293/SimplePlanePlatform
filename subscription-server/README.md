@@ -13,7 +13,7 @@
 | 订阅管理 | [运营后台](https://212.64.14.155/admin/grants) |
 | 用户设备 | [我的设备](https://212.64.14.155/account/devices) |
 
-当前实例使用私有 CA 签发的 IP 证书。访问上述入口的浏览器和客户端需信任该 CA。向只使用系统默认信任根的设备交付时，入口需部署这些设备信任的 HTTPS 证书。
+当前实例使用私有 CA 签发的 IP 证书。桌面 0.3.3 为订阅 API 内置该公开 CA。浏览器沿用自己的证书信任，可以在订阅界面复制确认链接并在已信任本站的浏览器打开。向只使用系统默认信任根的浏览器交付时，入口需部署这些浏览器信任的 HTTPS 证书。
 
 ## 管理员和用户怎么用
 
@@ -60,4 +60,4 @@ java -jar subscription-server/target/subscription-server-1.0.0-SNAPSHOT.jar
 
 ## 验收和发布状态
 
-远端已验证 OIDC 登录、后台建用户、分组实时下发、停订、解绑和已有 9090 线路兼容。Windows 订阅流程在调试构建中验证，正式桌面安装包仍待发布。Android 真机浏览器、Keystore 和 VPN 联调仍待验收。[运营验收与截图](../docs/sdd/node-subscriptions/operations-console.md) · [协议设计](../docs/sdd/node-subscriptions/design.md) · [客户端验证记录](../docs/sdd/node-subscriptions/verification.md)
+远端已验证 OIDC 登录、后台建用户、分组下发、停订和解绑。现有 9090 线路向仅设备证书访问的模式切换，桌面 0.3.3 由 GitHub Actions 构建。Android 真机浏览器、Keystore 和 VPN 联调仍待验收。[切换与桌面构建](../docs/sdd/node-subscriptions/subscription-only.md) · [运营验收与截图](../docs/sdd/node-subscriptions/operations-console.md) · [协议设计](../docs/sdd/node-subscriptions/design.md)
