@@ -315,12 +315,13 @@ mod tests {
             remote: RemoteConfig {
                 host: "192.0.2.1".into(),
                 port,
+                cipher: "aes-gcm-v2".into(),
+                key: String::new(),
                 transport: "http3".into(),
                 http3: Http3Config {
                     device_credential_id: credential.into(),
                     ..Default::default()
                 },
-                ..Default::default()
             },
         }
     }
