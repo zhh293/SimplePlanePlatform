@@ -201,6 +201,7 @@ pub async fn start_proxy_local(state: &mut AppState) -> Result<(), String> {
     log::info!("Jar path: {:?}", jar_path);
 
     let mut cmd = Command::new(&java_path);
+    crate::subscription::configure_java(&mut cmd)?;
 
     // 设置工作目录：开发模式用项目根目录，生产模式用资源目录
     let work_dir = if cfg!(debug_assertions) {

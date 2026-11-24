@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>订阅授权 · SimplePlane</title><link rel="stylesheet" href="/subscription.css"></head>
+<body><main>
+  <header><strong>SimplePlane</strong><a href="/account/devices">我的设备</a></header>
+  <h1>订阅授权</h1><p>填写用户「我的设备」页面上的账号 ID。有效天数填 0 会立即停止续签。</p>
+  <form class="fields" method="post" th:action="@{/admin/grants}">
+    <label>账号 ID<input name="subject" required maxlength="255"></label>
+    <label>节点组<input name="groupId" required pattern="[A-Za-z0-9_-]{1,96}"></label>
+    <label>从今天起的有效天数<input type="number" name="days" min="0" max="3650" value="30" required></label>
+    <label>设备名额<input type="number" name="deviceLimit" min="0" max="100" value="2" required></label>
+    <button>保存授权</button>
+  </form><p role="status" th:if="${grantSaved == true}">已保存。</p>
+</main></body></html>

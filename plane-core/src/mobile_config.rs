@@ -42,6 +42,8 @@ pub struct AndroidConfig {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RemoteNode {
+    #[serde(default)]
+    pub subscription_id: String,
     #[serde(default = "default_node_name")]
     pub name: String,
     #[serde(default, alias = "remote_host")]
@@ -186,6 +188,7 @@ impl AndroidConfig {
         }
 
         let legacy = RemoteNode {
+            subscription_id: String::new(),
             name: "default".to_string(),
             host: self.remote_host.clone(),
             port: self.remote_port,

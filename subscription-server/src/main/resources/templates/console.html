@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title th:text="|${title} · SimplePlane|">运营概览 · SimplePlane</title>
+<link rel="stylesheet" href="/admin/console.css"><script defer src="/admin/console.js"></script></head>
+<body data-console><a class="skip" href="#content">跳至内容</a>
+<aside><a class="brand" href="/admin/grants"><i aria-hidden="true"></i>SimplePlane</a>
+<div class="railtitle">订阅运营后台</div>
+<nav aria-label="后台导航">
+<a href="/admin/grants" th:classappend="${tab=='home'}?'active'"><b aria-hidden="true">◫</b>运营概览</a>
+<a href="/admin/users" th:classappend="${tab=='users' or tab=='user'}?'active'"><b aria-hidden="true">◎</b>用户管理</a>
+<a href="/admin/groups" th:classappend="${tab=='groups' or tab=='group'}?'active'"><b aria-hidden="true">⊞</b>节点分组</a>
+<a href="/admin/nodes" th:classappend="${tab=='nodes' or tab=='node'}?'active'"><b aria-hidden="true">⌁</b>节点管理</a>
+<a href="/admin/audit" th:classappend="${tab=='audit'}?'active'"><b aria-hidden="true">≡</b>操作记录</a></nav>
+<a class="back" href="/account/devices">我的设备 ↗</a></aside>
+<main id="content">
+<header><div><p class="crumb"><a href="/admin/grants">管理后台</a> / <span th:text="${title}"></span></p>
+<h1 th:text="${tab=='user'?u.username:(tab=='group'?g.label:(tab=='node' and !newNode?n.label:title))}"></h1></div>
+<a th:if="${tab=='home'}" class="button" href="/admin/users#new-user">＋ 新增用户</a>
+<a th:if="${tab=='nodes'}" class="button" href="/admin/nodes/new">＋ 添加节点</a></header>
+<p class="notice" role="status" th:if="${notice}" th:text="${notice}"></p>
+
+<section th:if="${tab=='home'}">
+<div class="metrics">
+<a href="/admin/users"><span>身份用户</span><strong th:text="${userCount}"></strong></a>
+<a href="/admin/users"><span>有效订阅</span><strong th:text="${activeCount}"></strong></a>
+<a href="/admin/groups"><span>节点分组</span><strong th:text="${groupCount}"></strong></a>
+<a href="/admin/nodes"><span>已上线节点</span><strong th:text="${nodeCount}"></strong></a></div>
+<div class="split"><section class="panel"><div class="sectionhead"><h2>线路目录</h2><a href="/admin/nodes">管理节点 →</a></div>
+<div th:replace="~{console-parts :: nodes}"></div></section>
+<section class="panel"><div class="sectionhead"><h2>节点分组</h2><a href="/admin/groups">全部 →</a></div>
+<a class="groupitem" th:each="g:${groups}" th:href="@{/admin/groups/{id}(id=${g.group_id})}"><strong th:text="${g.label}"></strong><span th:text="|${g.nodes} 条线路 · ${g.users} 位用户|"></span></a>
+<p class="empty" th:if="${groups.empty}">还没有分组。</p></section></div>
+<section class="panel"><div class="sectionhead"><h2>最近操作</h2><a href="/admin/audit">全部记录 →</a></div><div th:replace="~{console-parts :: history}"></div></section></section>
+
+<section th:if="${tab=='users'}">
+<section class="panel"><div class="sectionhead"><h2>用户目录</h2><a href="#new-user">新增用户 ↓</a></div>
+<form class="search" method="get" action="/admin/users"><label for="q">搜索用户</label><input id="q" name="q" maxlength="255" th:value="${q}" placeholder="登录名、显示名或账号 ID"><button>搜索</button></form>
+<div class="scroll"><table><thead><tr><th>用户</th><th>节点组</th><th>订阅状态</th><th>设备</th><th>有效期至</th></tr></thead><tbody>
+<tr th:each="u:${users}"><td><a th:href="@{/admin/users/{id}(id=${u.subject_id})}" th:text="${u.username}"></a><small th:text="${u.display_name}"></small></td>
+<td th:text="${u.group_label?:'—'}"></td><td th:insert="~{console-parts :: userstate}"></td>
+<td th:text="|${u.devices} / ${u.device_limit?:0}|"></td><td class="num" th:text="${fmt.date(u.valid_until)}"></td></tr></tbody></table></div>
+<p class="empty" th:if="${users.empty}">没有找到符合条件的用户。</p>
+<div class="pages"><a th:if="${page>0}" th:href="@{/admin/users(q=${q},page=${page-1})}">上一页</a><a th:if="${more}" th:href="@{/admin/users(q=${q},page=${page+1})}">下一页</a></div></section>
+<section id="new-user" class="panel"><div class="sectionhead"><h2>新增登录用户</h2></div><form method="post" th:action="@{/admin/users}" class="fields">
+<label>登录名<input name="username" required maxlength="128" autocomplete="off" placeholder="例如 lin"></label>
+<label>显示名<input name="display" required maxlength="100"></label>
+<label>初始密码<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><small>至少 12 个字符，由你交给用户。</small></label>
+<label>开通节点组<select name="groupId"><option value="">只建账号，稍后授权</option><option th:each="g:${groups}" th:value="${g.group_id}" th:text="${g.label}"></option></select></label>
+<label>有效天数<input name="days" type="number" value="30" min="1" max="3650" required></label><label>设备名额<input name="deviceLimit" type="number" value="2" min="1" max="100" required></label>
+<div class="actions"><button>创建用户</button></div></form></section></section>
+
+<section th:if="${tab=='user'}"><div class="subtitle"><span th:insert="~{console-parts :: userstate}"></span><span th:text="${u.display_name}"></span><code th:text="${u.subject_id}"></code></div>
+<section class="panel"><div class="sectionhead"><h2>订阅授权</h2></div>
+<p class="hint" th:text="|${u.group_label?:'未开通'} · 当前到期时间 ${fmt.date(u.valid_until)} · 已绑定 ${u.devices} 台|"></p>
+<form method="post" th:action="@{/admin/grants}" class="fields"><input type="hidden" name="subject" th:value="${u.subject_id}">
+<label>分配节点组<select name="groupId" required><option th:each="g:${groups}" th:value="${g.group_id}" th:selected="${g.group_id==u.group_id}" th:text="${g.label}"></option></select></label>
+<label>从今天起的有效天数<input type="number" name="days" min="1" max="3650" value="30" required></label>
+<label>设备名额<input type="number" name="deviceLimit" min="1" max="100" th:value="${u.device_limit!=null and u.device_limit>0?u.device_limit:2}" required></label>
+<div class="actions"><button>保存授权</button></div></form>
+<form th:if="${u.group_id!=null}" method="post" th:action="@{/admin/grants}" data-confirm="停止后该账号不能续签，已发证书最多五分钟后失效。继续？">
+<input type="hidden" name="subject" th:value="${u.subject_id}"><input type="hidden" name="groupId" th:value="${u.group_id}"><input type="hidden" name="days" value="0"><input type="hidden" name="deviceLimit" th:value="${u.device_limit}"><button class="danger">停止订阅</button></form></section>
+<section class="panel"><div class="sectionhead"><h2>已绑定设备</h2></div><p class="empty" th:if="${devices.empty}">该用户还没有绑定设备。</p>
+<div class="device" th:each="d:${devices}"><div><strong th:text="${d.name()}"></strong><small th:text="${d.id()}"></small></div>
+<form method="post" th:action="@{/admin/users/{s}/devices/{d}/unbind(s=${u.subject_id},d=${d.id()})}" data-confirm="解除这台设备的绑定？"><button class="ghost">解绑</button></form></div></section>
+<section class="panel" th:if="${u.managed==true or u.managed==1}"><h2>重置登录密码</h2><form method="post" th:action="@{/admin/users/{s}/password(s=${u.subject_id})}" class="fields">
+<label>新密码<input type="password" name="password" minlength="12" maxlength="1024" autocomplete="new-password" required></label><div class="actions"><button>保存新密码</button></div></form></section></section>
+
+<section th:if="${tab=='groups'}"><section class="panel"><div class="sectionhead"><h2>所有分组</h2></div><div class="scroll"><table><thead><tr><th>分组</th><th>标识</th><th>组内节点</th><th>授权用户</th></tr></thead><tbody>
+<tr th:each="g:${groups}"><td><a th:href="@{/admin/groups/{id}(id=${g.group_id})}" th:text="${g.label}"></a></td><td><code th:text="${g.group_id}"></code></td><td th:text="${g.nodes}"></td><td th:text="${g.users}"></td></tr></tbody></table></div></section>
+<section class="panel"><h2>创建分组</h2><form method="post" th:action="@{/admin/groups}" class="fields">
+<label>组名<input name="label" maxlength="100" placeholder="例如 家人线路" required></label><label>固定标识<input name="id" maxlength="96" pattern="[a-z0-9][a-z0-9_-]*" placeholder="例如 family" required></label><div class="actions"><button>创建分组</button></div></form></section></section>
+<section th:if="${tab=='group'}"><div class="subtitle"><code th:text="${g.group_id}"></code><a href="/admin/groups">返回分组列表</a></div>
+<section class="panel"><h2>分配节点</h2><p class="hint">勾选用户可以领取的线路。下线的节点会保留分配关系，上线后开始下发。</p>
+<form method="post" th:action="@{/admin/groups/{id}/members(id=${g.group_id})}"><label class="checkrow" th:each="n:${nodes}">
+<input type="checkbox" name="nodeId" th:value="${n.node_id}" th:checked="${members.contains(n.node_id)}"><span><strong th:text="${n.label}"></strong><small th:text="|${n.host}:${n.port}|"></small></span><em th:text="${n.enabled?'已上线':'已下线'}"></em></label>
+<p class="empty" th:if="${nodes.empty}">请先在节点管理中添加节点。</p><button>保存节点分配</button></form></section>
+<section class="panel"><h2>分组设置</h2><form class="fields" method="post" th:action="@{/admin/groups/{id}/name(id=${g.group_id})}"><label>组名<input name="label" maxlength="100" required th:value="${g.label}"></label><div class="actions"><button>保存名称</button></div></form>
+<form method="post" th:action="@{/admin/groups/{id}/delete(id=${g.group_id})}" data-confirm="删除这个空分组？"><button class="danger">删除空分组</button></form></section></section>
+
+<section th:if="${tab=='nodes'}" class="panel"><div class="sectionhead"><h2>全部线路</h2></div><div th:replace="~{console-parts :: nodes}"></div></section>
+<section th:if="${tab=='node'}"><section class="panel"><h2>节点配置</h2><form method="post" th:action="${newNode}?@{/admin/nodes}:@{/admin/nodes/{id}/edit(id=${n.node_id})}" class="fields">
+<label th:if="${newNode}">固定标识<input name="id" maxlength="96" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="例如 zhh-3"></label>
+<label>节点名称<input name="label" required maxlength="100" th:value="${newNode?'':n.label}"></label>
+<label>公网主机<input name="host" required maxlength="253" th:value="${newNode?'':n.host}"></label><label>UDP 端口<input type="number" name="port" min="1" max="65535" required th:value="${newNode?9090:n.port}"></label>
+<label>证书服务器名<input name="serverName" required maxlength="253" th:value="${newNode?'':n.server_name}"><small>与服务端证书的 IP 或域名一致。</small></label>
+<label class="wide">服务端公开 CA 证书（PEM）<textarea name="ca" rows="4" maxlength="16000" th:placeholder="${newNode?'新服务器可在安装后补填':'留空保留当前证书' }"></textarea></label>
+<div class="actions"><button th:text="${newNode?'保存节点草稿':'保存节点配置'}"></button></div></form></section>
+<section class="panel" th:unless="${newNode}"><div class="sectionhead"><h2>发布与接入</h2><span class="pill" th:text="${n.enabled?'已上线':'已下线'}"></span></div>
+<p class="hint">新服务器请下载接入包和节点程序，按包内说明安装，将服务器输出的公开 CA 粘贴到上方。上线后，把线路分配到用户所在的组。</p>
+<div class="rowactions"><form method="post" th:action="@{/admin/nodes/{id}/bundle(id=${n.node_id})}"><button class="ghost">下载服务端接入包</button></form><a href="/admin/runtime.jar">下载节点程序</a>
+<form method="post" th:action="@{/admin/nodes/{id}/state(id=${n.node_id})}" th:attr="data-confirm=${n.enabled?'下线后，所有分组都将停止下发此节点。继续？':'确认服务端已配置并可连接，启用此节点？'}">
+<button name="action" th:value="${n.enabled?'off':'on'}" th:text="${n.enabled?'下线节点':'上线节点'}"></button></form>
+<form th:unless="${n.enabled}" method="post" th:action="@{/admin/nodes/{id}/state(id=${n.node_id})}" data-confirm="永久删除该节点及分组关系？"><button class="danger" name="action" value="delete">删除节点</button></form></div>
+<p>所属分组 <a th:each="g:${groups}" th:href="@{/admin/groups/{id}(id=${g.group_id})}" th:text="|${g.label}  |"></a><a th:if="${groups.empty}" href="/admin/groups">前往分配 →</a></p></section></section>
+<section th:if="${tab=='audit'}" class="panel"><div class="sectionhead"><h2>运营操作</h2><span class="hint">北京时间</span></div><div th:replace="~{console-parts :: history}"></div>
+<div class="pages"><a th:if="${page>0}" th:href="@{/admin/audit(page=${page-1})}">上一页</a><a th:if="${more}" th:href="@{/admin/audit(page=${page+1})}">下一页</a></div></section>
+<section th:if="${tab=='error'}" class="panel"><p role="alert" th:text="${message}"></p><a href="/admin/grants">返回运营概览</a></section>
+</main></body></html>

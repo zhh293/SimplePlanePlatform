@@ -22,6 +22,11 @@ toml = "0.8"
 dirs = "5"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 url = "2"
+base64 = "0.22"
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+ring = "0.17"
+qrcode = { version = "0.14", default-features = false }
+keyring = { version = "3", features = ["windows-native", "apple-native"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 

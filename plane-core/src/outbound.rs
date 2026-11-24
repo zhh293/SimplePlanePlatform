@@ -63,6 +63,9 @@ const PROXY_CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 ///
 /// 单测可注入一个 no-op 实现；生产由 JNI 桥接调用 Kotlin `protect`。
 pub trait SocketProtector: Send + Sync {
+    fn device_credential(&self, _node_id: &str) -> Result<Vec<u8>> {
+        Err(CoreError::Protocol("Device credential unavailable".into()))
+    }
     /// 保护给定 fd 的 socket，使其流量绕过 VPN 隧道。返回 `false` 表示保护失败。
     fn protect(&self, fd: i32) -> bool;
 

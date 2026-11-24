@@ -25,6 +25,7 @@ const App = (function () {
   async function init() {
     bindNavigation();
     bindActions();
+    bindSubscription();
     bindGlobalKeys();
     await loadConfig();
     await loadTunConfig();
@@ -925,6 +926,77 @@ const App = (function () {
     };
     reader.readAsText(file);
     e.target.value = ''; // 重置以允许重复选择同一文件
+  }
+
+  function bindSubscription() {
+    const panel = $('#subscriptionPanel');
+    if (!panel) return;
+    const message = $('#subscriptionMessage');
+    const qr = $('#subscriptionQr');
+    const code = $('#subscriptionCode');
+    const open = $('#subscriptionOpen');
+    const logout = $('#subscriptionLogout');
+    let generation = 0;
+    let url = '';
+    function hideVerification() { qr.hidden = true; code.textContent = ''; open.hidden = true; url = ''; }
+    async function synchronize(current) {
+      const count = await invoke('subscription_sync');
+      if (current !== generation) return;
+      hideVerification();
+      logout.hidden = false;
+      message.textContent = '已同步 ' + count + ' 个订阅节点。';
+      await loadConfig();
+    }
+    $('#btnSubscription').addEventListener('click', async () => {
+      if (hasChanges) { toast('请先保存节点配置，再同步订阅。', 'warning'); return; }
+      const current = ++generation;
+      panel.hidden = false;
+      hideVerification();
+      logout.hidden = true;
+      message.textContent = '正在连接订阅服务…';
+      try {
+        if (await invoke('subscription_bound')) {
+          logout.hidden = false;
+          await synchronize(current);
+          return;
+        }
+        const pair = await invoke('subscription_start');
+        if (current !== generation) return;
+        url = pair.url;
+        const scale = 4, margin = 4;
+        qr.width = qr.height = (pair.width + margin * 2) * scale;
+        const ctx = qr.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, qr.width, qr.height);
+        ctx.fillStyle = '#13251e';
+        pair.qr.forEach((on, i) => {
+          if (on) ctx.fillRect((i % pair.width + margin) * scale, (Math.floor(i / pair.width) + margin) * scale, scale, scale);
+        });
+        qr.hidden = open.hidden = false;
+        code.textContent = pair.code;
+        message.textContent = '用手机扫码或打开浏览器，核对下方授权码。';
+        while (current === generation && Date.now() < pair.expiry * 1000) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          if (current !== generation) return;
+          const result = await invoke('subscription_poll');
+          if (current !== generation) return;
+          if (result === 'approved') { logout.hidden = false; await synchronize(current); return; }
+          if (result !== 'pending') break;
+        }
+        if (current === generation) { hideVerification(); message.textContent = '本次授权已结束，可以重新登录。'; }
+      } catch (error) { if (current === generation) { hideVerification(); message.textContent = String(error); } }
+    });
+    open.addEventListener('click', async () => {
+      if (url) try { await invoke('plugin:shell|open', { path: url }); }
+      catch (error) { message.textContent = String(error); }
+    });
+    logout.addEventListener('click', async () => {
+      try {
+        await invoke('subscription_logout');
+        hideVerification(); logout.hidden = true; message.textContent = '已退出订阅账号。';
+        await loadConfig();
+      } catch (error) { message.textContent = String(error); }
+    });
+    $('#subscriptionClose').addEventListener('click', () => { generation++; hideVerification(); panel.hidden = true; });
   }
 
   async function doImportServers() {

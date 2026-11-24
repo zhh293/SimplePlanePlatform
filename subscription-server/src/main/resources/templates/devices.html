@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>我的设备 · SimplePlane</title><link rel="stylesheet" href="/subscription.css"></head>
+<body><main>
+  <header><strong>SimplePlane</strong><a th:if="${administrator}" href="/admin/grants">管理授权</a></header>
+  <h1>我的设备</h1><p>账号 ID <code th:text="${subject}"></code></p>
+  <p th:if="${devices.empty}">还没有绑定设备。打开客户端并选择「登录并同步节点」。</p>
+  <article th:each="device : ${devices}">
+    <div><h2 th:text="${device.name}"></h2><code th:text="${device.id}"></code></div>
+    <form method="post" th:action="@{/account/devices/{id}/unbind(id=${device.id})}"><button class="secondary">解除绑定</button></form>
+  </article>
+  <form th:action="@{/sso/logout}" method="post"><button class="secondary">退出登录</button></form>
+</main></body></html>

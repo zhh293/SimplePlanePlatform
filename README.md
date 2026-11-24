@@ -10,6 +10,10 @@
 
 规格、设计、任务和验收记录见 [UDP SDD](docs/sdd/desktop-udp/verification.md)。开发者可运行 `python scripts/test-desktop-udp.py`，验证 Rust、Java 与六组 TUN 包注入全链路；macOS 需预先配置项目使用的 `127.0.0.2` loopback 别名。
 
+## 节点订阅
+
+管理员可通过运营后台管理用户、设备和节点组。支持订阅的客户端经 AuthSystemSimple 登录并确认设备后，按授权同步节点和证书。服务端构建、认证入口和客户端发布状态见 [订阅服务 README](subscription-server/README.md)。
+
 ## 桌面端：添加节点与证书
 
 Windows 与 macOS 安装包内含 Java 运行时。安装后仍需填写与服务端一致的地址、端口、协议、加密方式和密钥；使用自签名证书的节点还需要导入该节点的公开证书。

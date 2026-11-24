@@ -18,6 +18,7 @@ data class RemoteNodeConfig(
     val transport: String = "http2",
     val serverName: String = "",
     val caPem: String = "",
+    val subscriptionId: String = "",
 )
 
 data class RouteRuleConfig(
@@ -95,7 +96,8 @@ data class AndroidVpnConfig(
                         .put("enabled", node.enabled)
                         .put("transport", node.transport)
                         .put("server_name", node.serverName)
-                        .put("ca_pem", node.caPem))
+                        .put("ca_pem", node.caPem)
+                        .put("subscription_id", node.subscriptionId))
                 }
             })
             .put("routing", JSONObject()
@@ -181,7 +183,7 @@ data class AndroidVpnConfig(
             val routing = parseRouting(root)
             return AndroidVpnConfig(
                 mtu = root.optInt("mtu", VpnConfigStore.DEFAULT_MTU),
-                remotes = remotes.ifEmpty {
+                remotes = if (root.has("remotes") || root.has("remoteServers")) remotes else {
                     listOf(RemoteNodeConfig(
                         name = "默认节点",
                         host = root.optString("remote_host", VpnConfigStore.DEFAULT_REMOTE_HOST),
@@ -236,6 +238,7 @@ data class AndroidVpnConfig(
                         transport = normalizeTransport(item.optString("transport", "http2")),
                         serverName = item.optString("server_name", item.optString("serverName")),
                         caPem = item.optString("ca_pem", item.optString("caPem")),
+                        subscriptionId = item.optString("subscription_id"),
                     ))
                 }
             }

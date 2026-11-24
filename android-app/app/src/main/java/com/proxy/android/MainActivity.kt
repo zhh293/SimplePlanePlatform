@@ -49,6 +49,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
+    private val subscriptionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (it.resultCode == RESULT_OK) bindConfigToForm(VpnConfigStore.load(this))
+    }
     private val routeActions = listOf("proxy", "direct", "reject")
     private val nodeRows = mutableListOf<NodeRow>()
 
@@ -186,6 +189,9 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { openSection(R.id.nav_settings, R.id.settingsPage, R.id.logSectionTitle) }
         }
         nodesContainer = findViewById(R.id.nodesContainer)
+        findViewById<Button>(R.id.subscriptionButton).setOnClickListener {
+            subscriptionLauncher.launch(Intent(this, SubscriptionActivity::class.java))
+        }
         addNodeButton = findViewById<Button>(R.id.addNodeButton).apply {
             setOnClickListener { addNodeRow(RemoteNodeConfig(name = "节点 ${nodeRows.size + 1}", host = "", port = 9090, key = "")) }
         }
@@ -569,6 +575,7 @@ class MainActivity : AppCompatActivity() {
                 transport = if (row.transportSpinner.selectedItemPosition == 1) "http3" else "http2",
                 serverName = row.serverNameInput.text.toString().trim(),
                 caPem = row.caPem,
+                subscriptionId = row.subscriptionId,
             )
         }
 

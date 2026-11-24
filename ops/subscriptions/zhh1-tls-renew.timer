@@ -1,0 +1,11 @@
+[Unit]
+Description=Check zhh-1 leaf validity daily
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30m
+Persistent=true
+Unit=zhh1-tls-renew.service
+
+[Install]
+WantedBy=timers.target

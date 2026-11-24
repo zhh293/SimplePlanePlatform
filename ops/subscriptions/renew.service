@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew the SimplePlane private IP certificate when due
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/simpleplane-subscriptions
+ExecStart=/usr/bin/python3 /opt/simpleplane-subscriptions/manage.py renew

@@ -87,6 +87,8 @@ pub struct RemoteConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Http3Config {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub device_credential_id: String,
     #[serde(default = "default_http3_server_name", alias = "serverName")]
     pub server_name: String,
     #[serde(default = "default_http3_ca_file", alias = "caFile")]
@@ -118,6 +120,7 @@ pub struct Http3Config {
 impl Default for Http3Config {
     fn default() -> Self {
         Self {
+            device_credential_id: String::new(),
             server_name: default_http3_server_name(),
             ca_file: default_http3_ca_file(),
             certificate_pin: default_http3_certificate_pin(),
@@ -315,12 +318,25 @@ fn default_route_proxy() -> String { "proxy".to_string() }
 
 /// 获取用户配置目录
 pub fn get_config_dir() -> PathBuf {
+    #[cfg(debug_assertions)]
+    if let Some(profile) = subscription_test_profile() {
+        let dir = std::env::temp_dir().join(profile).join("SimplePlane");
+        let _ = fs::create_dir_all(&dir);
+        return dir;
+    }
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
     let dir = base.join("SimplePlane");
     if !dir.exists() {
         let _ = fs::create_dir_all(&dir);
     }
     dir
+}
+
+#[cfg(debug_assertions)]
+pub(crate) fn subscription_test_profile() -> Option<String> {
+    let name = std::env::var("SP_SUBSCRIPTION_TEST_PROFILE").ok()?;
+    let suffix = name.strip_prefix("sp-sub-")?;
+    (suffix.len() == 12 && suffix.bytes().all(|c| c.is_ascii_hexdigit())).then_some(name)
 }
 
 /// 读取代理配置
@@ -351,11 +367,46 @@ pub fn save_proxy_config(config: &ProxyConfig) -> Result<(), String> {
     let content =
         serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize config: {}", e))?;
 
-    atomic_write(&config_path, &content)?;
-    atomic_write(&get_config_dir().join("proxy-java.yml"), &generate_java_compatible_yaml(&config))
+    let java_path = get_config_dir().join("proxy-java.yml");
+    let java = generate_java_compatible_yaml(&config);
+    replace_with_commit(&java_path, &java, || {
+        if fs::read(&config_path).ok().as_deref() == Some(content.as_bytes()) {
+            return Ok(());
+        }
+        atomic_write(&config_path, &content)
+    })
 }
 
-fn atomic_write(path: &std::path::Path, content: &str) -> Result<(), String> {
+/// Publish the dependent file first. Restore its previous contents if the
+/// canonical snapshot cannot be committed. Unchanged files keep their mtime.
+pub(crate) fn replace_with_commit<T>(
+    path: &std::path::Path, content: &str, commit: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    let previous = match fs::read(path) {
+        Ok(bytes) => Some(bytes),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+        Err(e) => return Err(e.to_string()),
+    };
+    if previous.as_deref() == Some(content.as_bytes()) { return commit(); }
+    atomic_write(path, content)?;
+    match commit() {
+        Ok(value) => Ok(value),
+        Err(original) => {
+            let restored = match previous {
+                Some(bytes) => atomic_write_bytes(path, &bytes),
+                None => fs::remove_file(path).map_err(|e| e.to_string()),
+            };
+            restored.map_err(|e| format!("{original}；还原配置失败：{e}"))?;
+            Err(original)
+        }
+    }
+}
+
+pub(crate) fn atomic_write(path: &std::path::Path, content: &str) -> Result<(), String> {
+    atomic_write_bytes(path, content.as_bytes())
+}
+
+pub(crate) fn atomic_write_bytes(path: &std::path::Path, content: &[u8]) -> Result<(), String> {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let temporary = path.with_extension(format!("tmp-{}-{}", std::process::id(), NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
     fs::write(&temporary, content).map_err(|e| format!("Failed to write configuration: {}", e))?;
@@ -818,6 +869,7 @@ pub fn generate_java_compatible_yaml(config: &ProxyConfig) -> String {
             "cipher": remote.cipher, "cipherKey": remote.key, "ssl": false, "transport": remote.transport,
             "http3": {
                 "serverName": if h.server_name.trim().is_empty() { &remote.host } else { &h.server_name }, "caFile": h.ca_file, "certificatePin": h.certificate_pin,
+                "deviceCredentialId": h.device_credential_id,
                 "handshakeTimeoutMs": h.handshake_timeout_ms, "idleTimeoutMs": h.idle_timeout_ms,
                 "maxStreams": h.max_streams, "initialConnectionWindow": h.initial_connection_window,
                 "initialStreamWindow": h.initial_stream_window, "maxProxyMessageBytes": h.max_proxy_message_bytes,
@@ -915,6 +967,18 @@ pub fn write_java_config() -> Result<PathBuf, String> {
 #[cfg(test)]
 mod node_tests {
     use super::*;
+
+    #[test]
+    fn failed_subscription_commit_restores_previous_lease_or_absent_file() {
+        let path = std::env::temp_dir().join(format!("simpleplane-lease-rollback-{}.tmp", std::process::id()));
+        let fail = || Err::<(), String>("injected snapshot failure".into());
+        assert!(replace_with_commit(&path, "first", fail).is_err());
+        assert!(!path.exists());
+        fs::write(&path, "previous").unwrap();
+        assert!(replace_with_commit(&path, "new", fail).is_err());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "previous");
+        fs::remove_file(path).unwrap();
+    }
 
     #[test]
     fn blank_tls_name_uses_each_node_host_without_changing_other_options() {

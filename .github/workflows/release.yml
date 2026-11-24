@@ -161,6 +161,10 @@ jobs:
           if (-not $modules) {
             $modules = "java.base,java.logging,java.management,java.naming,java.net.http,java.security.jgss,java.sql,jdk.crypto.ec,jdk.unsupported"
           }
+          # The JCA EC provider is loaded dynamically for device certificates.
+          if ('jdk.crypto.ec' -notin ($modules -split ',')) {
+            $modules = "$modules,jdk.crypto.ec"
+          }
           
           # Generate JRE (JDK 17 uses --compress=2, JDK 21+ uses --compress=zip-6)
           if (Test-Path $JRE_OUTPUT) { Remove-Item $JRE_OUTPUT -Recurse -Force }

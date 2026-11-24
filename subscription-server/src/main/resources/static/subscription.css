@@ -1,0 +1,21 @@
+:root { color-scheme: light; font-family: "Source Sans 3","Microsoft YaHei",sans-serif; color:#172c32; background:#f0f3ef; }
+* { box-sizing:border-box; }
+body { margin:0; }
+main { max-width:38rem; margin:clamp(1.2rem,8vh,6rem) auto; padding:0 clamp(1rem,5vw,3rem) 2.5rem; }
+header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #264e55; padding:1.25rem 0; }
+header strong { font-size:1.25rem; letter-spacing:-.04em; }
+h1 { margin:2.5rem 0 .75rem; font-size:clamp(2rem,7vw,3rem); }
+h2 { font-size:1.12rem; margin:1.25rem 0 .5rem; overflow-wrap:anywhere; }
+p { line-height:1.65; }
+a { color:#175e62; text-underline-offset:.22em; }
+.code { display:block; font:600 clamp(1.25rem,6vw,2.25rem)/1.5 "IBM Plex Mono",monospace; letter-spacing:.09em; padding:1.1rem 0; border-block:1px solid #98adab; }
+form { display:flex; gap:.7rem; flex-wrap:wrap; margin:1.25rem 0; }
+button,input { font:inherit; border-radius:.35rem; padding:.7rem 1rem; }
+button { background:#125c56; color:white; border:1px solid #125c56; cursor:pointer; }
+button.secondary { background:transparent; color:#264e55; border-color:#96a9a5; }
+button:focus-visible,a:focus-visible,input:focus-visible { outline:3px solid #bd6c16; outline-offset:3px; }
+.fields { display:grid; }
+label { display:grid; gap:.35rem; }
+input { width:100%; border:1px solid #879d98; background:#fff; }
+article { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.7rem; border-bottom:1px solid #bdcbc5; }
+code { overflow-wrap:anywhere; }

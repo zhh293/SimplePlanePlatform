@@ -7,6 +7,7 @@ mod logs;
 mod process;
 mod proxy;
 mod state;
+mod subscription;
 mod tun_process;
 mod update;
 
@@ -25,7 +26,27 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(app_state)
         .manage(update::UpdateState::default())
+        .manage(subscription::SubscriptionState::default())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    if matches!(subscription::subscription_bound().await, Ok(true)) {
+                        if let Err(error) = subscription::subscription_sync(handle.state(), handle.state()).await {
+                            log::warn!("Subscription refresh: {}", error);
+                        }
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(90)).await;
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
+            subscription::subscription_start,
+            subscription::subscription_poll,
+            subscription::subscription_sync,
+            subscription::subscription_bound,
+            subscription::subscription_logout,
             commands::connect,
             commands::disconnect,
             commands::status,

@@ -799,3 +799,7 @@ margin-top: -4px;
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+#subscriptionPanel { padding: 16px; margin: 12px 0; border: 1px solid currentColor; border-radius: 8px; }
+#subscriptionPanel[hidden], #subscriptionPanel [hidden] { display: none; }
+#subscriptionQr { display: block; margin: 12px 0; background: white; image-rendering: pixelated; }
+#subscriptionCode { display: block; margin: 10px 0 16px; font: 600 1.2rem monospace; letter-spacing: .08em; }

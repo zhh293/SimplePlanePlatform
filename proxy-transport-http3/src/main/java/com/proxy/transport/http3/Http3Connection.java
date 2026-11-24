@@ -54,7 +54,7 @@ public final class Http3Connection {
         this.url = url;
         this.eventLoop = new NioEventLoopGroup(url.getParameter("ioThreads", 0));
         try {
-            this.sslContext = createClientSslContext(url);
+            this.sslContext = url.getParameters().containsKey("http3.deviceCredentialId") ? null : createClientSslContext(url);
         } catch (Exception e) {
             eventLoop.shutdownGracefully();
             throw new IllegalArgumentException("Failed to initialize HTTP/3 TLS context", e);
@@ -71,6 +71,8 @@ public final class Http3Connection {
         // Fail safely before entering that builder path.
         io.netty.handler.codec.quic.QuicheNativePreflight.ensureConfigCanBeCreated();
         Bootstrap bootstrap = new Bootstrap();
+        // Subscribed devices renew certificates while the proxy is running.
+        QuicSslContext currentContext = sslContext == null ? createClientSslContext(url) : sslContext;
         String serverName = url.getParameter("http3.serverName", url.getHost());
         bootstrap.group(eventLoop).channel(NioDatagramChannel.class)
                 .option(ChannelOption.SO_REUSEADDR, true)
@@ -80,7 +82,7 @@ public final class Http3Connection {
                 // the QUIC TLS engine, which would otherwise make a valid certificate
                 // for the configured server name fail verification.
                 .sslEngineProvider(channel ->
-                        sslContext.newEngine(channel.alloc(), serverName, url.getPort()))
+                        currentContext.newEngine(channel.alloc(), serverName, url.getPort()))
                 .maxIdleTimeout(url.getParameter("http3.idleTimeoutMs", 60000), TimeUnit.MILLISECONDS)
                 .initialMaxData(url.getParameter("http3.initialConnectionWindow", 16777216L))
                 .initialMaxStreamDataBidirectionalLocal(
@@ -90,7 +92,7 @@ public final class Http3Connection {
                 .initialMaxStreamsBidirectional(url.getParameter("http3.maxStreams", 1000))
                 .build());
         datagramChannel = bootstrap.bind(0).sync().channel();
-        QuicChannelBootstrapHelper helper = new QuicChannelBootstrapHelper(datagramChannel, url, sslContext);
+        QuicChannelBootstrapHelper helper = new QuicChannelBootstrapHelper(datagramChannel, url, currentContext);
         quicChannel = helper.connect();
         Channel connectedDatagram = datagramChannel;
         quicChannel.closeFuture().addListener(f -> {
@@ -105,6 +107,10 @@ public final class Http3Connection {
         QuicSslContextBuilder builder = QuicSslContextBuilder.forClient()
                 .applicationProtocols(Http3.supportedApplicationProtocols())
                 .endpointIdentificationAlgorithm("HTTPS");
+        String deviceId = url.getParameters().get("http3.deviceCredentialId");
+        if (deviceId != null) {
+            DeviceCredential.configure(builder, deviceId);
+        }
         String caFile = url.getParameter("http3.caFile", "");
         if (!caFile.isEmpty()) {
             try (InputStream ignored = openCaStream(caFile)) {
