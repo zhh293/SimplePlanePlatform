@@ -28,21 +28,29 @@ export function publicUrl(request, publicBaseUrl, platform, version, fileName) {
   return `${base}/download/${encodeURIComponent(platform)}/${encodeURIComponent(version)}/${encodeURIComponent(fileName)}`;
 }
 
+async function artifactUrl(request, publicBaseUrl, dataDir, release) {
+  const { platform, version, file_name: fileName } = release;
+  if (release.github_release === 1) {
+    const tag = encodeURIComponent(`v${version}`);
+    return `https://github.com/zhh293/SimplePlanePlatform/releases/download/${tag}/${encodeURIComponent(fileName)}`;
+  }
+  await fs.access(resolveReleaseFile(dataDir, platform, version, fileName));
+  return publicUrl(request, publicBaseUrl, platform, version, fileName);
+}
+
 export async function buildLatestManifestResponse(db, request, publicBaseUrl, dataDir) {
   const platforms = {};
   for (const platform of ['windows-x86_64', 'darwin-aarch64']) {
     const latest = getLatestVersion(db, platform);
     if (!latest) continue;
-    const packagePath = resolveReleaseFile(dataDir, platform, latest.version, latest.file_name);
     try {
-      await fs.access(packagePath);
+      platforms[platform] = {
+        url: await artifactUrl(request, publicBaseUrl, dataDir, latest),
+        signature: latest.signature,
+      };
     } catch {
       continue;
     }
-    platforms[platform] = {
-      url: publicUrl(request, publicBaseUrl, platform, latest.version, latest.file_name),
-      signature: latest.signature,
-    };
   }
   const anyLatest = Object.keys(platforms).map((p) => getLatestVersion(db, p)).filter(Boolean)[0];
   if (!anyLatest) {
@@ -80,14 +88,11 @@ export async function resolvePlatformUpdate(db, request, target, arch, currentVe
   const latestParsed = parseVersion(latest.version);
   if (compareVersions(latestParsed, current) <= 0) return null;
 
-  const packagePath = resolveReleaseFile(dataDir, pkey, latest.version, latest.file_name);
-  await fs.access(packagePath);
-
   return {
     version: latest.version,
     notes: latest.notes || '',
     pub_date: latest.published_at || latest.created_at,
-    url: publicUrl(request, publicBaseUrl, pkey, latest.version, latest.file_name),
+    url: await artifactUrl(request, publicBaseUrl, dataDir, latest),
     signature: latest.signature,
   };
 }

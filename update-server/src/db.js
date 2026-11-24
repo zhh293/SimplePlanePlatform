@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS versions (
   file_size       INTEGER NOT NULL,
   file_sha256     TEXT NOT NULL,
   signature       TEXT NOT NULL,
+  github_release  INTEGER NOT NULL DEFAULT 0 CHECK (github_release IN (0, 1)),
   is_latest       INTEGER NOT NULL DEFAULT 0,
   created_at      TEXT NOT NULL,
   published_at    TEXT,
@@ -85,6 +86,9 @@ export function openDatabase(dataDir) {
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
   db.exec(SCHEMA);
+  if (!db.prepare('PRAGMA table_info(versions)').all().some(({ name }) => name === 'github_release')) {
+    db.exec('ALTER TABLE versions ADD COLUMN github_release INTEGER NOT NULL DEFAULT 0 CHECK (github_release IN (0, 1))');
+  }
   return db;
 }
 
@@ -102,7 +106,7 @@ export function withTransaction(db, fn) {
 
 export function getLatestVersion(db, platform) {
   return db.prepare(
-    'SELECT id, platform, version, notes, file_name, file_size, file_sha256, signature, is_latest, created_at, published_at FROM versions WHERE platform = ? AND is_latest = 1 LIMIT 1',
+    'SELECT id, platform, version, notes, file_name, file_size, file_sha256, signature, github_release, is_latest, created_at, published_at FROM versions WHERE platform = ? AND is_latest = 1 LIMIT 1',
   ).get(platform);
 }
 
@@ -114,7 +118,7 @@ export function findVersionById(db, id) {
 
 export function findVersionByPlatformAndVersion(db, platform, version) {
   return db.prepare(
-    'SELECT id, platform, version, notes, file_name, file_size, file_sha256, signature, is_latest, created_at, published_at FROM versions WHERE platform = ? AND version = ?',
+    'SELECT id, platform, version, notes, file_name, file_size, file_sha256, signature, github_release, is_latest, created_at, published_at FROM versions WHERE platform = ? AND version = ?',
   ).get(platform, version);
 }
 
@@ -131,8 +135,8 @@ export function listVersions(db, platform) {
 
 export function insertVersion(db, row) {
   db.prepare(
-    `INSERT INTO versions (id, platform, version, notes, file_name, file_size, file_sha256, signature, is_latest, created_at, published_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NULL)`,
+    `INSERT INTO versions (id, platform, version, notes, file_name, file_size, file_sha256, signature, github_release, is_latest, created_at, published_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NULL)`,
   ).run(
     row.id,
     row.platform,
@@ -142,6 +146,7 @@ export function insertVersion(db, row) {
     row.file_size,
     row.file_sha256,
     row.signature,
+    row.github_release ?? 0,
     row.created_at,
   );
 }
