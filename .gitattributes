@@ -2,3 +2,6 @@
 /docs/performance/proxy-comparison-2026-10-30/** -text -whitespace
 /docs/performance/proxy-comparison-2026-10-30.md -text whitespace=trailing-space,space-before-tab,cr-at-eol
 /scripts/perf/*.py -text
+
+# This resource is downloaded as an executable shell script from the portal.
+/subscription-server/src/main/resources/node-install.sh text eol=lf

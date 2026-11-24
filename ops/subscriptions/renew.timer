@@ -1,0 +1,11 @@
+[Unit]
+Description=Check SimplePlane private IP certificate validity
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30m
+Persistent=true
+Unit=simpleplane-subscription-renew.service
+
+[Install]
+WantedBy=timers.target

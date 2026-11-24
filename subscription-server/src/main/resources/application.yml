@@ -1,0 +1,42 @@
+server:
+  address: ${SP_BIND_ADDRESS:127.0.0.1}
+  port: ${SP_PORT:18181}
+  error:
+    include-message: never
+spring:
+  datasource:
+    url: ${SP_DB_URL}
+    username: ${SP_DB_USER}
+    password: ${SP_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+  data:
+    redis:
+      url: ${SP_REDIS_URL}
+sso:
+  client:
+    enabled: true
+    issuer: ${SSO_ISSUER}
+    client-id: ${SSO_CLIENT_ID}
+    client-secret: ${SSO_CLIENT_SECRET}
+    redirect-uri: ${SP_PUBLIC_ORIGIN}/sso/callback
+    secure-cookie: true
+    local-store: false
+    lookup-hmac-key: ${SSO_CLIENT_LOOKUP_HMAC_KEY}
+    refresh-encryption-key: ${SSO_CLIENT_REFRESH_AES_KEY}
+    redis-key-prefix: sso:simpleplane:subscription
+    scopes: [openid]
+    protected-paths: [/account/**, /admin/**]
+    public-paths: [/sso/login, /sso/callback, /sso/logout, /device/**, /error]
+subscription:
+  origin: ${SP_PUBLIC_ORIGIN}
+  admin-subjects: ${SP_ADMIN_SUBJECTS:}
+  identity-schema: ${SP_IDENTITY_SCHEMA:sso_authsystem_v2}
+  challenge-key: ${SP_CHALLENGE_KEY}
+  logs:
+    url: ${SP_LOG_ES_URL:}
+    prefix: ${SP_LOG_ES_PREFIX:sp-log-prod}
+    authorization: ${SP_LOG_ES_AUTH:}
+    operators: ${SP_LOG_OPERATORS:}
+    insecure-canary: ${SP_LOG_INSECURE_CANARY:false}
+    public-http: ${SP_LOG_PUBLIC_HTTP:false}

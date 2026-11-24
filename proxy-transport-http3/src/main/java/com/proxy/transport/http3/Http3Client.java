@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class Http3Client implements Client {
     private static final Logger log = LoggerFactory.getLogger(Http3Client.class);
 
+    private final AtomicLong receivedMessages = new AtomicLong();
+    private final AtomicLong submittedMessages = new AtomicLong();
     private final URL url;
     private final MessageHandler messageHandler;
     private final Http3Connection connection;
@@ -58,6 +60,7 @@ public final class Http3Client implements Client {
         try {
             connection.connect();
             attachConnectionListener();
+            if (Boolean.getBoolean("proxy.http3.diagnostics")) reconnectScheduler.scheduleWithFixedDelay(this::diagnostics, 3, 3, TimeUnit.SECONDS);
         } catch (Exception e) {
             connection.close();
             throw new IllegalStateException("Failed to establish HTTP/3 connection to " + url.getAddress(), e);
@@ -72,6 +75,7 @@ public final class Http3Client implements Client {
         if (!isAvailable()) {
             throw new IllegalStateException("HTTP/3 connection is not available");
         }
+        submittedMessages.incrementAndGet();
         long streamId = message.getStreamId();
         Http3StreamState state = streams.get(streamId);
         if (state == null) {
@@ -142,6 +146,12 @@ public final class Http3Client implements Client {
                 channel.pipeline().addLast("h3-encoder", new Http3ProxyMessageEncoder(
                         ExtensionLoader.getLoader(com.proxy.common.codec.Codec.class).getDefaultExtension(),
                         url.getParameter("http3.maxProxyMessageBytes", 8388608)));
+                channel.pipeline().addLast("diagnostic-rx", new io.netty.channel.ChannelInboundHandlerAdapter() {
+                    @Override public void channelRead(io.netty.channel.ChannelHandlerContext ctx, Object msg) throws Exception {
+                        receivedMessages.incrementAndGet();
+                        ctx.fireChannelRead(msg);
+                    }
+                });
                 channel.pipeline().addLast("exchange-handler", (ChannelHandler) messageHandler);
             }
         };
@@ -283,6 +293,30 @@ public final class Http3Client implements Client {
                 scheduleReconnect();
             }
         }, 500, TimeUnit.MILLISECONDS);
+    }
+
+    private void diagnostics() {
+        try {
+            io.netty.handler.codec.quic.QuicChannel channel = connection.channel();
+            if (channel == null) return;
+            int opening = 0, waiting = 0, ready = 0;
+            for (Http3StreamState state : streams.values()) {
+                if (state.channel == null) opening++;
+                else if (state.phase == Http3StreamState.Phase.READY) ready++;
+                else waiting++;
+            }
+            log.info("QUIC_DIAG channel={} active={} parentActive={} writable={} opening={} waiting={} ready={} pending={} submitted={} received={} streamCredit={}",
+                    channel.id(), channel.isActive(), channel.parent().isActive(), channel.isWritable(), opening, waiting, ready,
+                    connectionPendingBytes.get(), submittedMessages.get(), receivedMessages.get(),
+                    channel.peerAllowedStreams(io.netty.handler.codec.quic.QuicStreamType.BIDIRECTIONAL));
+            channel.collectStats().addListener(f -> {
+                if (f.isSuccess()) {
+                    io.netty.handler.codec.quic.QuicConnectionStats st = (io.netty.handler.codec.quic.QuicConnectionStats) f.getNow();
+                    log.info("QUIC_STATS channel={} recv={} sent={} lost={} retrans={} sentBytes={} recvBytes={}", channel.id(), st.recv(), st.sent(), st.lost(), st.retrans(), st.sentBytes(), st.recvBytes());
+                }
+            });
+            channel.collectPathStats(0).addListener(f -> { if (f.isSuccess()) log.info("QUIC_PATH channel={} {}", channel.id(), f.getNow()); });
+        } catch (Throwable error) { log.warn("QUIC diagnostics failed", error); }
     }
 
     private static long estimatedBytes(ProxyMessage message) {

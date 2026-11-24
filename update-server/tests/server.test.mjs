@@ -94,6 +94,33 @@ test('GET /api/v1/updates returns 204 when no update', async () => {
   });
 });
 
+test('GitHub-hosted releases work without a local installer', async () => {
+  await withTempServer(async (baseUrl, server) => {
+    insertVersion(server.ctx.db, {
+      id: 'v_test_034',
+      platform: 'windows-x86_64',
+      version: '0.3.4',
+      file_name: 'SimplePlane_0.3.4_x64-setup.exe',
+      file_size: 256,
+      file_sha256: 'a'.repeat(64),
+      github_release: 1,
+      signature: 'signed-installer',
+      created_at: '2026-11-24T12:00:00Z',
+    });
+    publishVersion(server.ctx.db, 'v_test_034');
+    const expected = 'https://github.com/zhh293/SimplePlanePlatform/releases/download/v0.3.4/SimplePlane_0.3.4_x64-setup.exe';
+    const response = await fetch(`${baseUrl}/api/v1/updates/windows/x86_64/0.3.3`);
+    assert.equal(response.status, 200);
+    const update = await response.json();
+    assert.equal(update.version, '0.3.4');
+    assert.equal(update.url, expected);
+    assert.equal(update.signature, 'signed-installer');
+    const manifest = await (await fetch(`${baseUrl}/latest.json`)).json();
+    assert.deepEqual(manifest.platforms['windows-x86_64'], { url: expected, signature: 'signed-installer' });
+    assert.equal((await fetch(`${baseUrl}/api/v1/updates/windows/x86_64/0.3.4`)).status, 204);
+  });
+});
+
 test('GET /api/v1/updates returns 400 for invalid version', async () => {
   await withTempServer(async (baseUrl) => {
     const res = await fetch(`${baseUrl}/api/v1/updates/windows/x86_64/garbage`);

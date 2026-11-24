@@ -36,6 +36,7 @@
 
         <activity android:name=".AppPickerActivity" android:exported="false"
             android:windowSoftInputMode="stateAlwaysHidden|adjustResize" />
+        <activity android:name=".SubscriptionActivity" android:exported="false" />
 
         <!--
             PlaneVpnService：系统 VPN 服务。

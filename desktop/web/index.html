@@ -248,11 +248,23 @@
               <h3>远端服务器</h3>
               <div class="header-btn-group">
                 <button class="btn-sm btn-add" id="btnImportServers">导入 YML</button>
+                <button class="btn-sm btn-add" id="btnSubscription">登录并同步节点</button>
                 <button class="btn-sm btn-add" id="btnAddServer">+ 添加</button>
               </div>
             </div>
             <div class="form-row"><label for="nodeSelectionMode">HTTP/3 节点选择</label><select id="nodeSelectionMode" class="select"><option value="manual">手动选择</option><option value="auto">自动切换</option></select></div>
             <div id="remoteServers" class="server-cards-container"></div>
+            <section id="subscriptionPanel" hidden aria-label="账号订阅">
+              <p id="subscriptionMessage" role="status"></p>
+              <canvas id="subscriptionQr" hidden aria-label="在手机上扫描以授权"></canvas>
+              <output id="subscriptionCode"></output>
+              <div class="header-btn-group">
+                <button class="btn-sm" id="subscriptionOpen" hidden>用本机浏览器确认</button>
+                <button class="btn-sm" id="subscriptionCopyLink" hidden>复制确认链接</button>
+                <button class="btn-sm" id="subscriptionLogout" hidden>退出订阅账号</button>
+                <button class="btn-sm" id="subscriptionClose">关闭</button>
+              </div>
+            </section>
             <p class="section-desc">自动模式优先使用首选节点，故障后随机选择健康备用，恢复后不自动切回。自动模式修改节点配置需重启；切换会中断旧连接。TUN 修改节点地址列表需先断开。</p>
             <p class="section-desc" id="nodeApplyStatus" role="status" aria-live="polite">等待运行时状态</p>
           </div>

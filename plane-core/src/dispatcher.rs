@@ -29,6 +29,7 @@ fn new_connection_pool(node_count: usize) -> ConnectionPool {
 
 #[derive(Clone)]
 pub struct RemoteNodeConfig {
+    pub subscription_id: String,
     pub name: String,
     pub host: String,
     pub port: u16,
@@ -338,7 +339,13 @@ where
     let cipher = Cipher::from_name(&node.cipher.to_ascii_lowercase(), &node.key)?;
     if node.transport == Transport::Http3 {
         let addr = resolve_server_addr_async(&node.host, node.port, Arc::clone(&protector)).await?;
-        return outbound_h3::OutboundConnection::connect(
+        let identity = if node.subscription_id.is_empty() { None } else {
+            let node_id = node.subscription_id.clone();
+            let platform = protector.clone();
+            Some(tokio::task::spawn_blocking(move || platform.device_credential(&node_id))
+                .await.map_err(|_| CoreError::Internal("Device credential worker stopped".into()))??)
+        };
+        return outbound_h3::OutboundConnection::connect_with_identity(
             addr,
             protector.as_ref(),
             cipher,
@@ -349,6 +356,7 @@ where
                 ca_pem: node.ca_pem.clone(),
                 tls: true,
             },
+            identity,
         )
         .await
         .map(ProxyConnection::Http3);
@@ -609,6 +617,44 @@ mod tests {
         resolved: Option<IpAddr>,
     }
 
+    #[tokio::test]
+    async fn subscription_requires_platform_identity_to_open_an_authenticated_stream() {
+        struct Device(Vec<u8>);
+        impl SocketProtector for Device {
+            fn protect(&self, _: i32) -> bool { true }
+            fn device_credential(&self, id: &str) -> Result<Vec<u8>> {
+                assert_eq!(id, "assigned-node");
+                Ok(self.0.clone())
+            }
+        }
+        let mut ca = rcgen::CertificateParams::default();
+        ca.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
+        let signer = rcgen::KeyPair::generate().unwrap();
+        let issuer = ca.self_signed(&signer).unwrap();
+        let mut leaf = rcgen::CertificateParams::default();
+        leaf.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ClientAuth];
+        let key = rcgen::KeyPair::generate().unwrap();
+        let cert = leaf.signed_by(&key, &issuer, &signer).unwrap();
+        let encoded = key.serialize_der();
+        let mut identity = (encoded.len() as u16).to_be_bytes().to_vec();
+        identity.extend_from_slice(&encoded);
+        identity.extend_from_slice(cert.der());
+        let (addr, ca_pem, server) = outbound_h3::tests::mock_proxy_with_client_ca(
+            200, Some(200), "aes-gcm-v2", &[0x42; 32], Some(issuer.der().clone()),
+        ).await;
+        let node = RemoteNodeConfig {
+            name: "subscription".into(), host: addr.ip().to_string(), port: addr.port(),
+            key: vec![0x42; 32], cipher: "aes-gcm-v2".into(), tls: true, transport: Transport::Http3,
+            server_name: "localhost".into(), ca_pem, subscription_id: "assigned-node".into(),
+        };
+        assert!(establish_outbound(&node, Arc::new(crate::outbound::NoopProtector)).await.is_err());
+        assert!(establish_outbound(&node, Arc::new(Device(vec![0, 32, 1, 2]))).await.is_err());
+        let mut conn = establish_outbound(&node, Arc::new(Device(identity))).await.unwrap();
+        conn.open_proxy_stream("tcp.test", 443).await.unwrap();
+        conn.open_udp_stream("udp.test", 53).await.unwrap();
+        server.abort();
+    }
+
     impl SocketProtector for ProtectedDnsOnly {
         fn protect(&self, _fd: i32) -> bool {
             true
@@ -735,6 +781,7 @@ mod tests {
                 transport: Transport::Http2,
                 server_name: String::new(),
                 ca_pem: String::new(),
+                subscription_id: String::new(),
             }],
             routing: RoutingConfig {
                 default_action: "proxy".to_string(),
@@ -814,6 +861,7 @@ mod tests {
         let config = DispatcherConfig {
             nodes: vec![RemoteNodeConfig {
                 name: "network-test".into(),
+                subscription_id: String::new(),
                 host: "127.0.0.1".into(),
                 port: addr.port(),
                 key: b"test-key".to_vec(),
@@ -897,6 +945,7 @@ mod tests {
                 name: "mock".into(),
                 host: "127.0.0.1".into(),
                 port: addr.port(),
+                subscription_id: String::new(),
                 key: b"test-key".to_vec(),
                 cipher: "chacha20".into(),
                 tls: true,
@@ -983,6 +1032,7 @@ mod tests {
                 .ok()
                 .map(|path| std::fs::read_to_string(path).unwrap())
                 .unwrap_or_default(),
+            subscription_id: String::new(),
         };
         let mut connection = establish_outbound(&node, Arc::new(crate::outbound::NoopProtector))
             .await

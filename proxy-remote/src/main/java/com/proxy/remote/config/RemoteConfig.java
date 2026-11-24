@@ -77,6 +77,22 @@ public class RemoteConfig {
                 getIntValue(config, "backpressurePermits", DEFAULT_BACKPRESSURE_PERMITS));
 
         Map<String, Object> http3 = getMapValue(config, "http3");
+        // Attach the subscription trust domain to the service, outside its reloadable YAML.
+        // An unreadable YAML must never start a legacy listener for a protected service.
+        String deviceCa = System.getProperty("simpleplane.deviceCaFile");
+        String subscriptionKeyFile = System.getProperty("simpleplane.subscriptionFrameKeyFile");
+        if (subscriptionKeyFile != null) {
+            if (subscriptionKeyFile.isBlank() || deviceCa == null || !"chacha20".equals(url.getParameter("cipher", ""))) {
+                throw new IllegalArgumentException("A shared subscription listener requires a device CA and a legacy chacha20 profile");
+            }
+            url.addParameter("http3.subscriptionFrameKeyFile", subscriptionKeyFile);
+        }
+        if (deviceCa != null) {
+            if (deviceCa.trim().isEmpty() || !"http3".equals(url.getParameter("transport", ""))) {
+                throw new IllegalArgumentException("A device-authenticated service requires HTTP/3 and a device CA");
+            }
+            url.addParameter("http3.deviceCaFile", deviceCa);
+        }
         copyHttp3Parameter(url, http3, "certificateFile", "");
         copyHttp3Parameter(url, http3, "privateKeyFile", "");
         copyHttp3Parameter(url, http3, "serverName", "");

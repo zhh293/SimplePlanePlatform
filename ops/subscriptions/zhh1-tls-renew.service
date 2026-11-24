@@ -1,0 +1,7 @@
+[Unit]
+Description=Check the zhh-1 subscription listener certificate
+After=proxy-remote.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/simpleplane-subscription-9090/refresh-zhh1-tls.py renew

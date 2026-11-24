@@ -8,7 +8,16 @@ public record TelemetryEvent(String eventId, String sessionId, long captureSeque
                              long eventTime, long capturedAt, long monotonicNanos,
                              TelemetryKind kind, String connectionId, String streamId,
                              String peerAddress, String transport, String targetHost, int targetPort,
-                             String status, String closeReason, long uplinkBytes, long downlinkBytes) {
+                             String status, String closeReason, long uplinkBytes, long downlinkBytes,
+                             String deviceId, String accountId, String proxySessionId) {
+    public TelemetryEvent(String eventId, String sessionId, long captureSequence,
+                          long eventTime, long capturedAt, long monotonicNanos, TelemetryKind kind,
+                          String connectionId, String streamId, String peerAddress, String transport, String targetHost,
+                          int targetPort, String status, String closeReason, long uplinkBytes, long downlinkBytes) {
+        this(eventId, sessionId, captureSequence, eventTime, capturedAt, monotonicNanos, kind, connectionId, streamId,
+                peerAddress, transport, targetHost, targetPort, status, closeReason, uplinkBytes, downlinkBytes,
+                null, null, null);
+    }
     public TelemetryEvent {
         eventId = eventId == null ? UUID.randomUUID().toString() : eventId;
         Objects.requireNonNull(sessionId, "sessionId");
@@ -22,6 +31,6 @@ public record TelemetryEvent(String eventId, String sessionId, long captureSeque
     public TelemetryEvent withCaptureSequence(long value) {
         return new TelemetryEvent(eventId, sessionId, value, eventTime, capturedAt, monotonicNanos,
                 kind, connectionId, streamId, peerAddress, transport, targetHost, targetPort,
-                status, closeReason, uplinkBytes, downlinkBytes);
+                status, closeReason, uplinkBytes, downlinkBytes, deviceId, accountId, proxySessionId);
     }
 }

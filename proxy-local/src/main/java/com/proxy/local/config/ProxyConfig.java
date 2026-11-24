@@ -204,6 +204,7 @@ public class ProxyConfig {
             private String serverName = "";
             private String caFile = "";
             private String certificatePin = "";
+            private String deviceCredentialId = "";
             private int handshakeTimeoutMs = 5000;
             private int idleTimeoutMs = 60000;
             private int maxStreams = 1000;
@@ -221,6 +222,9 @@ public class ProxyConfig {
                 }
                 url.addParameter("http3.caFile", caFile);
                 url.addParameter("http3.certificatePin", certificatePin);
+                if (deviceCredentialId != null && !deviceCredentialId.isEmpty()) {
+                    url.addParameter("http3.deviceCredentialId", deviceCredentialId);
+                }
                 url.addParameter("http3.handshakeTimeoutMs", handshakeTimeoutMs);
                 url.addParameter("http3.idleTimeoutMs", idleTimeoutMs);
                 url.addParameter("http3.maxStreams", maxStreams);
@@ -238,6 +242,8 @@ public class ProxyConfig {
             public String getCaFile() { return caFile; }
             public void setCaFile(String value) { caFile = value; }
             public String getCertificatePin() { return certificatePin; }
+            public String getDeviceCredentialId() { return deviceCredentialId; }
+            public void setDeviceCredentialId(String value) { deviceCredentialId = value; }
             public void setCertificatePin(String value) { certificatePin = value; }
             public int getHandshakeTimeoutMs() { return handshakeTimeoutMs; }
             public void setHandshakeTimeoutMs(int value) { handshakeTimeoutMs = value; }

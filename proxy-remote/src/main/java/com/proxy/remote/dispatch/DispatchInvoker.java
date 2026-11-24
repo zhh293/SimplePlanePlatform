@@ -12,6 +12,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -212,13 +213,32 @@ public class DispatchInvoker implements Invoker {
         try {
             Channel channel = connecting.get(activeWaitTimeoutMs, TimeUnit.MILLISECONDS);
             if (!session.setOutboundChannel(channel)) return Response.error("Stream closed during CONNECT");
-            log.info("CONNECT success: target={}:{}, sessionKey={}", targetHost, targetPort, sessionKey);
+            logConnectionOutcome(session, null);
             return udp ? Response.ok("udp-v1".getBytes(java.nio.charset.StandardCharsets.US_ASCII)) : Response.ok();
         } catch (Exception e) {
             connecting.cancel(true);
-            log.error("CONNECT failed: target={}:{}, sessionKey={}", targetHost, targetPort, sessionKey, e);
+            logConnectionOutcome(session, e);
             sessionManager.remove(sessionKey, session);
             return Response.error("Connect to " + targetHost + ":" + targetPort + " failed: " + e.getMessage());
+        }
+    }
+
+    private void logConnectionOutcome(OutboundSession session, Exception error) {
+        java.util.Map<String, String> previous = MDC.getCopyOfContextMap();
+        try {
+            MDC.put("sp.proxySessionId", session.getSessionKey());
+            if (session.getDeviceId() != null) MDC.put("sp.deviceId", session.getDeviceId());
+            else MDC.remove("sp.deviceId");
+            if (session.getAccountId() != null) MDC.put("sp.accountId", session.getAccountId());
+            else MDC.remove("sp.accountId");
+            if (error == null) {
+                log.info("CONNECT success: target={}:{}, sessionKey={}", session.getTargetHost(), session.getTargetPort(), session.getSessionKey());
+            } else {
+                log.error("CONNECT failed: target={}:{}, sessionKey={}", session.getTargetHost(), session.getTargetPort(), session.getSessionKey(), error);
+            }
+        } finally {
+            if (previous == null) MDC.clear();
+            else MDC.setContextMap(previous);
         }
     }
 

@@ -174,9 +174,12 @@ pub async fn save_config(
 ) -> Result<String, String> {
     // 更新运行时端口
     let mut s = state.lock().await;
+    let previous = config::load_proxy_config()?;
+    config_data.nodes.retain(|n| n.remote.http3.device_credential_id.is_empty());
+    config_data.nodes.extend(previous.nodes.iter()
+        .filter(|n| !n.remote.http3.device_credential_id.is_empty()).cloned());
     config_data.normalize_nodes()?;
     if s.tun_status == ServiceStatus::Running {
-        let previous = config::load_proxy_config()?;
         let hosts = |c: &config::ProxyConfig| c.nodes.iter().map(|n| n.remote.host.clone()).collect::<std::collections::BTreeSet<_>>();
         if hosts(&previous) != hosts(&config_data) {
             return Err("节点地址列表变化需要重新配置 TUN 路由，请先断开连接再保存".into());
@@ -186,8 +189,6 @@ pub async fn save_config(
         s.proxy_port = config_data.local.port;
         s.http_port = config_data.local.http_proxy_port;
     }
-    drop(s);
-
     config::save_proxy_config(&config_data)?;
     Ok("saved".to_string())
 }

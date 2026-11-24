@@ -31,6 +31,7 @@ internal class NodeRow private constructor(
     val transportSpinner: Spinner,
     val serverNameInput: EditText,
     var caPem: String,
+    var subscriptionId: String,
     val tlsCheckBox: CheckBox,
     val enabledCheckBox: CheckBox,
     private val removeButton: Button,
@@ -45,6 +46,7 @@ internal class NodeRow private constructor(
     fun saveDraft() = Bundle().apply {
         draftInputs.forEach { (name, input) -> putString(name, input.text.toString()) }
         putString("caPem", caPem)
+        putString("subscriptionId", subscriptionId)
         putInt("transport", transportSpinner.selectedItemPosition)
         putBoolean("tls", tlsCheckBox.isChecked)
         putBoolean("enabled", enabledCheckBox.isChecked)
@@ -54,6 +56,7 @@ internal class NodeRow private constructor(
     fun restoreDraft(draft: Bundle) {
         draftInputs.forEach { (name, input) -> input.setText(draft.getString(name, "")) }
         caPem = draft.getString("caPem", "")
+        subscriptionId = draft.getString("subscriptionId", "")
         transportSpinner.setSelection(draft.getInt("transport"))
         tlsCheckBox.isChecked = draft.getBoolean("tls")
         enabledCheckBox.isChecked = draft.getBoolean("enabled")
@@ -151,7 +154,7 @@ internal class NodeRow private constructor(
             val remove = MaterialButton(context, null, com.google.android.material.R.attr.borderlessButtonStyle).apply { text = context.getString(R.string.node_remove) }
             content.addView(enabled)
             content.addView(remove, LinearLayout.LayoutParams(-1, -2))
-            val row = NodeRow(root, name, host, port, key, cipher, transport, serverName, node.caPem, tls, enabled, remove, fields, advanced)
+            val row = NodeRow(root, name, host, port, key, cipher, transport, serverName, node.caPem, node.subscriptionId, tls, enabled, remove, fields, advanced)
             remove.setOnClickListener { onRemove(row) }
             remove.tag = "removeNode"
             return row

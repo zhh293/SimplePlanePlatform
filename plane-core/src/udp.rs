@@ -360,6 +360,7 @@ mod tests {
             transport: Transport::Http2,
             server_name: String::new(),
             ca_pem: String::new(),
+            subscription_id: String::new(),
         }
     }
 

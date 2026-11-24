@@ -25,6 +25,11 @@ import android.util.Log
  *   （仅探活场景会出现，数据面场景必须传入）。
  */
 class NativeBridge(private val vpn: PlaneVpnService? = null) {
+    @androidx.annotation.Keep
+    fun deviceCredential(nodeId: String): ByteArray? {
+        val context = vpn ?: return null
+        return runCatching { NodeSubscription.credential(context, nodeId) }.getOrNull()
+    }
 
     /**
      * 返回 native crate 的版本号。仅用于 A1 探活，证明 JNI 链路与 .so 加载正常。

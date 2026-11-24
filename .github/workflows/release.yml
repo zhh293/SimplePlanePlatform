@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - feat/desktop-client
+      - feat/desktop-udp-sdd-canary-20261121
       - feature/http3-desktop-platform-sync
       - feature/proxy-route-provider
       - codex/windows-tun-direct-egress
@@ -160,6 +161,10 @@ jobs:
           $modules = & jdeps --ignore-missing-deps --print-module-deps $FAT_JAR 2>$null
           if (-not $modules) {
             $modules = "java.base,java.logging,java.management,java.naming,java.net.http,java.security.jgss,java.sql,jdk.crypto.ec,jdk.unsupported"
+          }
+          # The JCA EC provider is loaded dynamically for device certificates.
+          if ('jdk.crypto.ec' -notin ($modules -split ',')) {
+            $modules = "$modules,jdk.crypto.ec"
           }
           
           # Generate JRE (JDK 17 uses --compress=2, JDK 21+ uses --compress=zip-6)

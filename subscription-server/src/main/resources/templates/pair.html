@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>确认设备 · SimplePlane</title><link rel="stylesheet" href="/subscription.css"></head>
+<body><main>
+  <header><strong>SimplePlane</strong><a href="/account/devices">我的设备</a></header>
+  <h1>确认设备</h1>
+  <p th:if="${pair.status == 'pending'}">请核对设备上的授权码，然后决定是否允许它同步你的节点。</p>
+  <h2 th:text="${pair.name}"></h2>
+  <output class="code" th:text="${pair.userCode}"></output>
+  <form th:if="${pair.status == 'pending'}" method="post" th:action="@{/account/pair/{code}(code=${pair.userCode})}">
+    <button type="submit" name="decision" value="allow">允许这台设备</button>
+    <button type="submit" class="secondary" name="decision" value="deny">拒绝</button>
+  </form>
+  <p role="status" th:if="${pair.status == 'approved' or pair.status == 'redeemed'}">授权已完成。请返回客户端查看节点。</p>
+  <p role="status" th:if="${pair.status == 'denied'}">已拒绝设备申请。</p>
+</main></body></html>

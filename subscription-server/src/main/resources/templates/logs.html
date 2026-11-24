@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section th:fragment="workspace" class="log-workspace"
+         th:data-csrf="${_csrf.token}" th:data-csrf-header="${_csrf.headerName}"
+         th:data-endpoint="${logPreview ? '/admin/logs-preview' : '/admin/logs'}"
+         th:data-subject="${logUser == null ? '' : logUser.subject_id}"
+         th:data-username="${logUser == null ? '' : logUser.username}">
+    <p th:if="${logPreview}" class="log-preview">灰度环境 · 此页显示测试日志</p>
+    <div class="log-modes" aria-label="日志类型">
+        <button type="button" data-dataset="connection" aria-pressed="true">连接事件</button>
+        <button type="button" data-dataset="application" aria-pressed="false">应用日志</button>
+    </div>
+    <form id="log-query" class="panel log-query">
+        <div class="log-filters">
+            <label>时间范围
+                <select name="range">
+                    <option value="1">最近 1 小时</option><option value="24" selected>最近 24 小时</option>
+                    <option value="168">最近 7 天</option><option value="336">最近 14 天</option><option value="custom">自定义</option>
+                </select>
+            </label>
+            <label class="log-user-filter">用户
+                <input id="log-user" type="search" placeholder="登录名、显示名或账号 ID" autocomplete="off" maxlength="255">
+                <ul id="log-user-options" class="log-user-options" hidden></ul>
+            </label>
+            <label>节点
+                <select name="node"><option value="">全部节点</option>
+                    <option th:each="n:${logNodes}" th:value="${n.node_id}" th:text="${n.label}"
+                            th:selected="${logNode == n.node_id}"></option>
+                    <option th:if="${logNode != '' and !#lists.contains(logNodes.![node_id],logNode)}"
+                            th:value="${logNode}" th:text="${logNode}" selected></option>
+                </select>
+            </label>
+            <label data-view="connection">目标域名或 IP
+                <input name="target" placeholder="example.com 或 IP" maxlength="255">
+            </label>
+            <label data-view="application" hidden>日志正文
+                <input name="text" type="search" placeholder="timeout 或异常消息" maxlength="200">
+            </label>
+            <div class="log-submit"><button>查询</button></div>
+        </div>
+        <div id="log-selection" class="log-selection" hidden></div>
+        <div id="log-custom" class="log-advanced" hidden>
+            <label>开始<input type="datetime-local" name="from"></label>
+            <label>结束<input type="datetime-local" name="to"></label>
+        </div>
+        <details class="log-detail-filters">
+            <summary>高级筛选</summary>
+            <div class="log-advanced">
+                <label class="log-check"><input type="checkbox" name="unknown">归属未知</label>
+                <label>设备 ID<input name="device" maxlength="36"></label>
+                <label>会话 ID<input name="session" maxlength="512"></label>
+                <label data-view="connection" class="log-check"><input type="checkbox" name="subdomains">包含子域</label>
+                <label data-view="connection">目标端口<input type="number" name="port" min="1" max="65535"></label>
+                <label data-view="connection">协议<select name="transport"><option value="">全部</option><option>http3</option><option>http2</option></select></label>
+                <label data-view="connection">事件<select name="outcome">
+                    <option value="">全部</option><option value="SESSION_OPENED">发起</option><option value="SESSION_ACTIVE">连接成功</option>
+                    <option value="SESSION_CONNECT_FAILED">连接失败</option><option value="SESSION_CLOSED">已关闭</option>
+                </select></label>
+                <label data-view="connection">连接 ID<input name="connection" maxlength="512"></label>
+                <label data-view="connection">Stream ID<input name="stream" maxlength="80"></label>
+                <label data-view="application" hidden>级别<select name="level"><option value="">全部</option>
+                    <option>ERROR</option><option>WARN</option><option>INFO</option><option>DEBUG</option><option>TRACE</option></select></label>
+                <label data-view="application" hidden>Logger<input name="logger" maxlength="512"></label>
+                <label data-view="application" hidden>异常类型<input name="exceptionType" maxlength="512"></label>
+                <label data-view="application" hidden>Trace ID<input name="trace" maxlength="128"></label>
+                <label data-view="application" hidden>正文匹配<select name="mode">
+                    <option value="match">全文</option><option value="phrase">短语</option>
+                    <option value="fuzzy">拼写容错</option><option value="boolean">布尔（+ | -）</option>
+                </select></label>
+                <label data-view="application" class="log-check" hidden><input type="checkbox" name="relevance">按相关性排序</label>
+            </div>
+        </details>
+    </form>
+    <p id="log-status" class="log-status" role="status" aria-live="polite"></p>
+    <div class="log-metrics" id="log-metrics" hidden></div>
+    <div class="log-charts" id="log-charts" hidden>
+        <section class="panel log-time-panel">
+            <div class="sectionhead"><h2>时间趋势</h2><span id="log-chart-key" class="hint"></span></div>
+            <div id="log-trend" class="log-trend" aria-label="按时间查看事件"></div>
+            <div id="log-time-labels" class="log-time-labels"></div>
+        </section>
+        <section class="panel">
+            <div class="sectionhead"><h2 id="log-leader-title">目标域名排行</h2>
+                <button id="log-show-nodes" class="ghost" type="button">节点排行</button></div>
+            <ol id="log-leaders" class="log-leaders"></ol>
+        </section>
+    </div>
+    <section class="panel log-results">
+        <div class="sectionhead"><h2>事件明细</h2><button id="log-clear-time" type="button" class="ghost" hidden>清除图表时间筛选</button></div>
+        <div class="scroll"><table><thead id="log-columns"></thead><tbody id="log-rows"></tbody></table></div>
+        <p id="log-empty" class="empty" hidden>此范围没有匹配事件。</p>
+        <button id="log-more" class="ghost" type="button" hidden>加载更多</button>
+    </section>
+    <dialog id="log-session" class="log-session">
+        <div class="sectionhead"><h2>会话上下文</h2><form method="dialog"><button class="ghost">关闭</button></form></div>
+        <code id="log-session-id"></code>
+        <div id="log-session-content" role="status" aria-live="polite"></div>
+    </dialog>
+</section>
+</body>
+</html>

@@ -1,5 +1,7 @@
 package com.proxy.remote.outbound;
 
+import com.proxy.transport.http3.DeviceIdentity;
+
 import com.proxy.common.model.ProxyMessage;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,6 +40,7 @@ public class OutboundSession {
     private final long rawStreamId;
     private final boolean udp;
     public static final int MAX_UDP_PAYLOAD = 1472;
+    private final DeviceIdentity deviceIdentity;
     private final java.util.concurrent.atomic.AtomicInteger udpWrites = new java.util.concurrent.atomic.AtomicInteger();
     private final java.util.concurrent.atomic.AtomicInteger udpReplies = new java.util.concurrent.atomic.AtomicInteger();
     private boolean reserve(java.util.concurrent.atomic.AtomicInteger counter) {
@@ -97,7 +100,11 @@ public class OutboundSession {
         this.sessionKey = sessionKey;
         this.rawStreamId = rawStreamId;
         this.udp = udp;
+        this.deviceIdentity = DeviceIdentity.forStream(inboundCtx.channel());
     }
+
+    public String getDeviceId() { return deviceIdentity == null ? null : deviceIdentity.getDeviceId(); }
+    public String getAccountId() { return deviceIdentity == null ? null : deviceIdentity.getAccountId(); }
 
     /**
      * 设置出站 Channel（连接成功后调用），状态迁移到 ACTIVE

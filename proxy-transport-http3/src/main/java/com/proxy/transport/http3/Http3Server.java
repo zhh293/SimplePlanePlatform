@@ -16,6 +16,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
@@ -26,10 +28,15 @@ import io.netty.handler.codec.http3.Http3ServerConnectionHandler;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicSslContext;
 import io.netty.handler.codec.quic.QuicSslContextBuilder;
+import io.netty.handler.ssl.ClientAuth;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import io.netty.util.AttributeKey;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,6 +51,9 @@ public final class Http3Server implements Server {
     private final AtomicInteger connections = new AtomicInteger();
     private EventLoopGroup eventLoop;
     private Channel datagramChannel;
+    private static final AttributeKey<Boolean> DEVICE_AUTHENTICATED =
+            AttributeKey.valueOf(Http3Server.class, "deviceAuthenticated");
+    private String subscriptionKey;
 
     public Http3Server(URL url, ChannelHandler exchangeHandler) {
         this.url = url;
@@ -56,6 +66,16 @@ public final class Http3Server implements Server {
             return;
         }
         try {
+            String keyFile = url.getParameters().get("http3.subscriptionFrameKeyFile");
+            if (keyFile != null) {
+                subscriptionKey = Files.readString(Path.of(keyFile)).trim();
+                if (!subscriptionKey.matches("[0-9a-fA-F]{32}") ||
+                        subscriptionKey.equals(url.getParameter("cipherKey", "")) ||
+                        !url.getParameters().containsKey("http3.deviceCaFile") ||
+                        !"chacha20".equals(url.getParameter("cipher", ""))) {
+                    throw new IllegalArgumentException("Invalid shared listener key configuration");
+                }
+            }
             QuicSslContext sslContext = createServerSslContext();
             eventLoop = new NioEventLoopGroup(url.getParameter("workerThreads", 0));
             ChannelInitializer<QuicChannel> connectionInitializer = new ChannelInitializer<QuicChannel>() {
@@ -68,6 +88,9 @@ public final class Http3Server implements Server {
                         return;
                     }
                     channel.closeFuture().addListener(f -> connections.decrementAndGet());
+                    if (url.getParameters().containsKey("http3.deviceCaFile")) {
+                        channel.pipeline().addLast("device-expiry", new DeviceCertificateExpiry(subscriptionKey != null));
+                    }
                     channel.pipeline().addLast("http3-connection", new Http3ServerConnectionHandler(
                             new ChannelInitializer<io.netty.handler.codec.quic.QuicStreamChannel>() {
                                 @Override
@@ -107,7 +130,16 @@ public final class Http3Server implements Server {
     }
 
     private void installStreamPipeline(io.netty.handler.codec.quic.QuicStreamChannel stream) {
-        Cipher cipher = createCipher();
+        boolean deviceCipher = false;
+        if (subscriptionKey != null) {
+            Boolean authenticated = stream.parent().attr(DEVICE_AUTHENTICATED).get();
+            if (authenticated == null) {
+                stream.close();
+                return;
+            }
+            deviceCipher = authenticated;
+        }
+        Cipher cipher = createCipher(deviceCipher);
         int maxMessage = url.getParameter("http3.maxProxyMessageBytes", 8388608);
         stream.config().setOption(ChannelOption.WRITE_BUFFER_WATER_MARK,
                 new WriteBufferWaterMark(
@@ -135,15 +167,54 @@ public final class Http3Server implements Server {
             throw new IllegalArgumentException("HTTP/3 certificate/private key is not readable");
         }
         // Netty's File overload is (privateKeyFile, password, certificateChainFile).
-        return QuicSslContextBuilder.forServer(privateKeyFile, null, certificateFile)
-                .applicationProtocols(Http3.supportedApplicationProtocols())
-                .build();
+        QuicSslContextBuilder builder = QuicSslContextBuilder.forServer(privateKeyFile, null, certificateFile)
+                .applicationProtocols(Http3.supportedApplicationProtocols());
+        String deviceCa = url.getParameters().get("http3.deviceCaFile");
+        if (deviceCa != null) {
+            builder.trustManager(new File(deviceCa))
+                    .clientAuth(subscriptionKey == null ? ClientAuth.REQUIRE : ClientAuth.OPTIONAL).earlyData(false);
+        }
+        return builder.build();
     }
 
-    private Cipher createCipher() {
+    private static final class DeviceCertificateExpiry extends ChannelInboundHandlerAdapter {
+        private final boolean allowLegacy;
+
+        DeviceCertificateExpiry(boolean allowLegacy) {
+            this.allowLegacy = allowLegacy;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            QuicChannel channel = (QuicChannel) ctx.channel();
+            try {
+                X509Certificate certificate = (X509Certificate)
+                        channel.sslEngine().getSession().getPeerCertificates()[0];
+                certificate.checkValidity();
+                DeviceIdentity.record(channel, certificate);
+                channel.attr(DEVICE_AUTHENTICATED).set(true);
+                long remaining = certificate.getNotAfter().getTime() - System.currentTimeMillis();
+                io.netty.util.concurrent.ScheduledFuture<?> expiry = ctx.executor().schedule(
+                        (Runnable) channel::close, Math.max(0, remaining), TimeUnit.MILLISECONDS);
+                channel.closeFuture().addListener(future -> expiry.cancel(false));
+            } catch (javax.net.ssl.SSLPeerUnverifiedException noPeerCertificate) {
+                if (!allowLegacy) {
+                    channel.close();
+                    return;
+                }
+                channel.attr(DEVICE_AUTHENTICATED).set(false);
+            } catch (java.security.cert.CertificateException invalid) {
+                channel.close();
+                return;
+            }
+            ctx.fireChannelActive();
+        }
+    }
+
+    private Cipher createCipher(boolean deviceCipher) {
         Cipher cipher = ExtensionLoader.getLoader(Cipher.class)
-                .newExtension(url.getParameter("cipher", "none"));
-        String key = url.getParameter("cipherKey", "");
+                .newExtension(deviceCipher ? "aes-gcm-v2" : url.getParameter("cipher", "none"));
+        String key = deviceCipher ? subscriptionKey : url.getParameter("cipherKey", "");
         CipherConfig config = new CipherConfig(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         config.setServerSide(true);
         cipher.init(config);
