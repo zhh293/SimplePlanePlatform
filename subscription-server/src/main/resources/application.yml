@@ -33,3 +33,10 @@ subscription:
   admin-subjects: ${SP_ADMIN_SUBJECTS:}
   identity-schema: ${SP_IDENTITY_SCHEMA:sso_authsystem_v2}
   challenge-key: ${SP_CHALLENGE_KEY}
+  logs:
+    url: ${SP_LOG_ES_URL:}
+    prefix: ${SP_LOG_ES_PREFIX:sp-log-prod}
+    authorization: ${SP_LOG_ES_AUTH:}
+    operators: ${SP_LOG_OPERATORS:}
+    insecure-canary: ${SP_LOG_INSECURE_CANARY:false}
+    public-http: ${SP_LOG_PUBLIC_HTTP:false}

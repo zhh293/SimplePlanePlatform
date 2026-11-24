@@ -26,15 +26,16 @@ import java.util.function.Predicate;
 public final class ProxyRemoteMonitor implements CaptureBridge.TelemetryCallback, AutoCloseable {
     private record Connection(String id, String peer, String transport, long openedAt) {}
     private static final class Session {
-        final String key, streamId, connectionId, peer, transport, host;
+        final String key, streamId, connectionId, peer, transport, host, deviceId, accountId;
         final int port;
         final long openedAt;
         final LongAdder up = new LongAdder(), down = new LongAdder();
         volatile boolean active;
         Session(String key, String streamId, String connectionId, String peer, String transport,
-                String host, int port, long openedAt) {
+                String host, int port, long openedAt, String deviceId, String accountId) {
             this.key=key; this.streamId=streamId; this.connectionId=connectionId; this.peer=peer;
             this.transport=transport; this.host=host; this.port=port; this.openedAt=openedAt;
+            this.deviceId=deviceId; this.accountId=accountId;
         }
     }
     private final String sessionId;
@@ -78,27 +79,38 @@ public final class ProxyRemoteMonitor implements CaptureBridge.TelemetryCallback
         String connectionId=channelId(physical), peer=remoteAddress(physical), transport=transport(physical);
         String stream=string(call(object,"getRawStreamId"));
         String host=string(call(object,"getTargetHost")); int port=integer(call(object,"getTargetPort"));
-        Session s=new Session(key,stream,connectionId,peer,transport,host,port,System.currentTimeMillis());
+        Session s=new Session(key,stream,connectionId,peer,transport,host,port,System.currentTimeMillis(),
+                (String) call(object,"getDeviceId"), (String) call(object,"getAccountId"));
         if (sessions.containsKey(key)) return;
         if (!reserve(sessionSlots,maxSessions)) { dropped.incrementAndGet(); return; }
-        if (sessions.putIfAbsent(key,s)==null) emit(TelemetryKind.SESSION_OPENED,connectionId,stream,peer,transport,host,port,"connecting",null,0,0);
+        if (sessions.putIfAbsent(key,s)==null) emitSession(TelemetryKind.SESSION_OPENED,s,"connecting",null);
         else sessionSlots.decrementAndGet();
     }
     @Override public void sessionActive(Object object) {
-        Session s=find(object); if(s!=null && !s.active){s.active=true;emit(TelemetryKind.SESSION_ACTIVE,s.connectionId,s.streamId,s.peer,s.transport,s.host,s.port,"active",null,s.up.sum(),s.down.sum());}
+        Session s=find(object); if(s!=null && !s.active){s.active=true;emitSession(TelemetryKind.SESSION_ACTIVE,s,"active",null);}
     }
     @Override public void sessionClosed(Object object) {
         Session s=find(object); if(s==null || !sessions.remove(s.key,s)) return; sessionSlots.decrementAndGet();
         String status=s.active?"closed":"connect-failed";
-        emit(s.active?TelemetryKind.SESSION_CLOSED:TelemetryKind.SESSION_CONNECT_FAILED,s.connectionId,s.streamId,s.peer,s.transport,s.host,s.port,status,s.active?"closed-before-active":"closed",s.up.sum(),s.down.sum());
+        emitSession(s.active?TelemetryKind.SESSION_CLOSED:TelemetryKind.SESSION_CONNECT_FAILED,s,status,
+                s.active?"closed":"closed-before-active");
     }
     @Override public void uplink(Object object,int count){Session s=find(object);if(s!=null&&count>0)s.up.add(count);}
     @Override public void downlink(Object object,int count){Session s=find(object);if(s!=null&&count>0)s.down.add(count);}
     private Session find(Object object){String key=string(call(object,"getSessionKey"));return sessions.get(key);}
     private static boolean reserve(AtomicInteger slots,int maximum){for(;;){int current=slots.get();if(current>=maximum)return false;if(slots.compareAndSet(current,current+1))return true;}}
-    private void sample(){if(closed)return;for(Session s:sessions.values())emit(TelemetryKind.TRAFFIC_SAMPLE,s.connectionId,s.streamId,s.peer,s.transport,s.host,s.port,s.active?"active":"connecting",null,s.up.sum(),s.down.sum());}
+    private void sample(){if(closed)return;for(Session s:sessions.values())emitSession(TelemetryKind.TRAFFIC_SAMPLE,s,s.active?"active":"connecting",null);}
+    private void emitSession(TelemetryKind kind, Session s, String status, String reason) {
+        long now = System.currentTimeMillis();
+        emit(new TelemetryEvent(null, sessionId, 0, now, now, Math.max(0L, System.nanoTime()),
+                kind, s.connectionId, s.streamId, s.peer, s.transport, s.host, Math.max(0, s.port), status,
+                reason, s.up.sum(), s.down.sum(), s.deviceId, s.accountId, s.key));
+    }
     private void emit(TelemetryKind kind,String connection,String stream,String peer,String transport,String host,int port,String status,String reason,long up,long down){
         long now=System.currentTimeMillis(); TelemetryEvent event=new TelemetryEvent(UUID.randomUUID().toString(),sessionId,0,now,now,Math.max(0L,System.nanoTime()),kind,connection,stream,peer,transport,host,Math.max(0,port),status,reason,up,down);
+        emit(event);
+    }
+    private void emit(TelemetryEvent event) {
         try{if(!publish.test(event))dropped.incrementAndGet();}catch(Throwable ignored){dropped.incrementAndGet();}
     }
     public List<TelemetryEvent> activeSnapshot(){List<TelemetryEvent> out=new ArrayList<>();for(Connection c:connections.values())out.add(new TelemetryEvent(UUID.randomUUID().toString(),sessionId,0,c.openedAt(),System.currentTimeMillis(),Math.max(0L,System.nanoTime()),TelemetryKind.CLIENT_CONNECTED,c.id(),null,c.peer(),c.transport(),null,0,"connected",null,0,0));for(Session s:sessions.values())out.add(new TelemetryEvent(UUID.randomUUID().toString(),sessionId,0,s.openedAt,System.currentTimeMillis(),Math.max(0L,System.nanoTime()),TelemetryKind.TRAFFIC_SAMPLE,s.connectionId,s.streamId,s.peer,s.transport,s.host,s.port,s.active?"active":"connecting",null,s.up.sum(),s.down.sum()));return List.copyOf(out);}
@@ -137,5 +149,5 @@ public final class ProxyRemoteMonitor implements CaptureBridge.TelemetryCallback
     private static String string(Object value){return value==null?"":String.valueOf(value);}
     private static int integer(Object value){return value instanceof Number n?n.intValue():0;}
     @Override public void close(){closed=true;sampler.shutdownNow();for(Session s:sessions.values())sessionClosedByShutdown(s);sessions.clear();connections.clear();sessionSlots.set(0);connectionSlots.set(0);}
-    private void sessionClosedByShutdown(Session s){emit(TelemetryKind.SESSION_CLOSED,s.connectionId,s.streamId,s.peer,s.transport,s.host,s.port,"agent-shutdown","agent-shutdown",s.up.sum(),s.down.sum());}
+    private void sessionClosedByShutdown(Session s){emitSession(TelemetryKind.SESSION_CLOSED,s,"agent-shutdown","agent-shutdown");}
 }

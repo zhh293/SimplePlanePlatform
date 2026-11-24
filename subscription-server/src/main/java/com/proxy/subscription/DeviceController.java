@@ -5,6 +5,7 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 import javax.crypto.Mac;
@@ -83,7 +84,8 @@ public class DeviceController {
             throw forbidden();
         }
         long expiry = Math.min(grant.validUntil(), now + 300);
-        return new Manifest(1, expiry, catalog.issue(grant.group(), id.toString(), tlsKey, Instant.ofEpochSecond(expiry)));
+        String accountId = HexFormat.of().formatHex(owners.get(0));
+        return new Manifest(1, expiry, catalog.issue(grant.group(), id.toString(), accountId, tlsKey, Instant.ofEpochSecond(expiry)));
     }
 
     private String mac(UUID id, String payload) {

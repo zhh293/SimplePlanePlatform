@@ -62,6 +62,11 @@ class EnrollmentIntegrationTest {
         assertTrue(catalog.issue(group,deviceId,key,end).isEmpty());
         ops.nodeAction("admin",ref,"on");
         assertEquals(ref,catalog.issue(group,deviceId,key,end).get(0).id());
+        String account = HexFormat.of().formatHex(DeviceKeys.digest("https://issuer.test\0test-subject"));
+        var issued = catalog.issue(group,deviceId,account,key,end).get(0);
+        var leaf = NodeMaterial.certificate(issued.deviceCertificatePem().getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        assertEquals("CN=" + deviceId, leaf.getSubjectX500Principal().getName());
+        assertTrue(leaf.getSubjectAlternativeNames().contains(List.of(6,"https://simpleplane.invalid/account/" + account)));
         assertEquals(ref,catalog.issue(other,deviceId,key,end).get(0).id());
         ops.membership("admin",other,List.of());
         assertTrue(catalog.issue(other,deviceId,key,end).isEmpty());

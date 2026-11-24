@@ -191,6 +191,7 @@ public final class Http3Server implements Server {
                 X509Certificate certificate = (X509Certificate)
                         channel.sslEngine().getSession().getPeerCertificates()[0];
                 certificate.checkValidity();
+                DeviceIdentity.record(channel, certificate);
                 channel.attr(DEVICE_AUTHENTICATED).set(true);
                 long remaining = certificate.getNotAfter().getTime() - System.currentTimeMillis();
                 io.netty.util.concurrent.ScheduledFuture<?> expiry = ctx.executor().schedule(

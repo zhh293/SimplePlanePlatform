@@ -1,5 +1,7 @@
 package com.proxy.subscription;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -10,16 +12,24 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
 
 @Controller
 @RequestMapping("/admin")
 public class ConsoleController {
     private final ConsoleService ops;
     private final AccountController access;
+    private final LogSearchService logs;
     private static final DateTimeFormatter TIME=DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.of("Asia/Shanghai"));
-    ConsoleController(ConsoleService ops,AccountController access){this.ops=ops;this.access=access;}
+    ConsoleController(ConsoleService ops,AccountController access,LogSearchService logs){
+        this.ops=ops;this.access=access;this.logs=logs;
+    }
 
-    @ModelAttribute("actor") String authorize(){return access.requireAdmin();}
+    @ModelAttribute("actor") String authorize(Model model){
+        String actor = access.requireAdmin();
+        model.addAttribute("logAccess", logs.permitted(actor));
+        return actor;
+    }
     private String view(Model m,String tab,String title){
         m.addAttribute("tab",tab); m.addAttribute("title",title);
         m.addAttribute("now",Instant.now().getEpochSecond());m.addAttribute("fmt",this);
@@ -111,6 +121,52 @@ public class ConsoleController {
         if(!file.isReadable())throw new ConsoleService.Problem("当前部署尚未提供节点程序。");
         return ResponseEntity.ok().header("Content-Disposition","attachment; filename=\"simpleplane-node.jar\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM).body(file);
+    }
+    @GetMapping({"/logs", "/logs-preview"})
+    String logs(@ModelAttribute("actor") String actor, @RequestParam(required=false) String subject,
+                @RequestParam(required=false) String node, Model model, HttpServletRequest request,
+                HttpServletResponse response){
+        requireLogs(actor, request);
+        response.setHeader("Cache-Control", "no-store");
+        if (subject != null) model.addAttribute("logUser", ops.user(ConsoleService.text(subject, 255, "用户")));
+        model.addAttribute("logNode", node == null ? "" : ConsoleService.id(node));
+        model.addAttribute("logNodes", ops.nodes());
+        model.addAttribute("logPreview", logs.preview());
+        return view(model, "logs", "日志中心");
+    }
+
+    record LogUser(String subject, String username, String displayName) {}
+
+    @GetMapping({"/logs/users", "/logs-preview/users"})
+    @ResponseBody ResponseEntity<List<LogUser>> logUsers(@ModelAttribute("actor") String actor, @RequestParam String q,
+                                                        HttpServletRequest request){
+        requireLogs(actor, request);
+        String term = ConsoleService.text(q, 255, "用户");
+        var users = ops.users(term, 0).stream().limit(10).map(user -> new LogUser(
+                (String) user.get("subject_id"), (String) user.get("username"), (String) user.get("display_name"))).toList();
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(users);
+    }
+
+    @PostMapping(value={"/logs/search", "/logs-preview/search"}, consumes=MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody ResponseEntity<LogSearchService.Result> searchLogs(@ModelAttribute("actor") String actor,
+                                                                    @RequestBody LogSearchService.Query input,
+                                                                    HttpServletRequest request){
+        requireLogs(actor, request);
+        var result = logs.search(actor, input);
+        if (input.cursor() == null || input.cursor().isEmpty()) {
+            ops.audit(actor, "查询日志", switch (input.dataset()) {
+                case "application" -> "应用日志";
+                case "connection" -> "连接事件";
+                default -> "会话上下文";
+            });
+        }
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(result);
+    }
+
+    private void requireLogs(String actor, HttpServletRequest request){
+        if (!logs.permitted(actor)) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        boolean previewPath = request.getRequestURI().startsWith(request.getContextPath() + "/admin/logs-preview");
+        if (previewPath != logs.preview()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
     @GetMapping("/audit") String audit(@RequestParam(defaultValue="0") int page,Model m){
         page=page(page);var rows=ops.history(40,page);m.addAttribute("recent",rows.stream().limit(40).toList());m.addAttribute("page",page);m.addAttribute("more",rows.size()>40);

@@ -450,3 +450,42 @@ T16–T24 的 Proxy Remote 融合验收已完成。边界仍为：没有用真�
 更新 Docker Remote 镜像，使其在 Java 17+ runtime 中启动 Proxy Remote 与同 JVM LogLens Agent；新增 loopback 面板 relay、持久化数据挂载、外部 Agent YAML、仅本机发布的面板/代理端口，以及显式的公网 9090 compose override。使用 LogLens runtime 内的 SnakeYAML 2.3 在 Corretto 17.0.14 下解析 `docker-compose.yml`、`docker-compose.remote-public.yml`、`docker/remote.yml`、`docker/proxy.yml` 与 `docker/loglens-proxyremote.yaml`；并由真实 `ConfigLoader` 加载 Agent 配置，确认 Proxy Remote 监控、结构化存储与 `127.0.0.1:9527` loopback Web 均启用。静态检查通过。
 
 当前执行环境没有 Docker 或 Compose CLI，因此尚未实际构建镜像、启动容器、验证 `network_mode: service:proxy-remote` 下的 relay 发布与容器重启行为，也未通过 Docker 部署执行 SSH 隧道浏览器验收。R35/T26 保持待容器环境验收，不因 YAML/Agent 配置校验通过而标为完成。
+
+
+## 运营日志中心增量验收（2026-11-24）
+
+| 范围 | 实际验证 |
+|---|---|
+| R36 | WSL 独立网络命名空间，Linux Java 17 候选代理、客户端和打包 Agent。两个受信设备和一个兼容客户端访问同一回环目标，分别完成 TCP、帧 UDP 和目标端口拒绝测试。结构化遥测与 Logback 关联的会话和账号一致，兼容客户端的账号为空。证据 `.build/log-center/wsl-proxy-canary.log`。 |
+| R37 | 远端 Elasticsearch 7.12.1 隔离索引验证失败后续传、未完成行、幂等重放、目标和账号筛选。实际 Linux 测试生成的合成 LogLens 日志也完成远端入库及关联查询。脚本结束清理该临时索引。 |
+| R38 | 订阅服务 7 项测试通过，包含 Thymeleaf 真实渲染以及远端 ES 聚合、账号过滤、短语检索和签名分页。Chromium 合成界面验证用户搜索、图表和会话明细，验证日志正文按纯文本渲染。证据 `.build/log-center/es-end-to-end.log`、`.build/log-center/log-center-ui.png`。 |
+| R39 | 公网 9200 匿名查询返回 HTTP 200，现有公网客户端需要继续使用该端口。管理主机资源余量有限，现有代理线路中一台根盘已满。远端 SSH 传输三种方式均出现中断或长时间低速，独立候选容器未启动；已终止续传并清理该临时目录。检查正式 identity、portal、relay、sessions 正常运行，HTTPS 运营后台返回预期的未登录 302。正式私有 ES、远端登录灰度和生产切流待验。 |
+
+Windows JBR 21 的 HTTP/3 集成测试在 Netty QUIC 原生库发生 `EXCEPTION_ACCESS_VIOLATION`，保留 `.build/log-center/proxy-test.log`。Linux Java 17 上重新执行 HTTP/3、UDP 隔离和会话生命周期回归，构建通过，默认关闭的手动生命周期诊断项跳过，见 `.build/log-center/wsl-quic-tests.log`。LogLens 模块测试及 Agent 发布包布局校验通过，见 `.build/log-center/loglens-test.log` 与 `.build/log-center/agent-package.log`。
+
+
+### 日志中心远端后台预览（2026-11-24 23:19 UTC+8）
+
+候选后台包 SHA-256 为 `7101d2ae9a969f0cd5ec3320d1192dfd5870fd1ffc942b7690fef8b89f35fc3a`。通过差量上传并在远端验证整包哈希，于 `127.0.0.1:18182` 启动独立候选容器。预览使用专用 MySQL schema 和 ES 合成索引，入库 272 条事件，候选实例实测约 193 MiB，内存限额 288 MiB。
+
+通过 Nginx 校验和平滑重载后新增 `/admin/logs-preview`。从公网用受信 CA 验证 HTTPS，灰度页面、用户查询、脚本和原 `/admin/grants` 均对未登录请求返回 302，灰度入口跟随跳转到现有 OIDC 登录页返回 200。MockMvc 验证灰度地址、提示、API 路径和正式路由隔离。远端验证止于登录页，未使用真实管理员账号提交登录。发布后原 identity、portal、relay、sessions 容器继续运行。两条正式节点重新检查，`zhh-1` 根盘仍为 100%，正式采集与切流待验。
+
+部署、路由和公网验证见工作区 `.build/log-center/remote-preview-deploy.log`、`.build/log-center/remote-preview-publish.log` 与 `.build/log-center/remote-preview-verify.log`。
+
+
+### 正式发布预置与同机存储验证（2026-11-24）
+
+`zhh-1` 清理 pip、DNF 下载缓存和 20 个未被进程打开、超过 14 天的 Agent 解包目录。根盘可用空间从接近零增至 949 MiB；预置代理和 Agent 候选包后为 857 MiB。正在使用的运行文件和历史 LogLens 会话均保留。两条正式代理候选包已验证 SHA-256，正式代理仍由原 PID 提供 UDP 9090。证据 `.build/log-center/stage-zhh1.log`、`.build/log-center/stage-zhh2.log`。
+
+为保留现有公网 9200 客户端，在管理机用相同 ES 7.12.1 镜像测试独立回环认证实例，容器限制 336 MiB。ES 启动后在初始化权限索引时触发 cgroup OOM。测试实例与卷已回收，灰度已恢复。发布后复查原公网 ES、后台和 relay 容器正常。证据 `.build/log-center/private-es-probe.log` 与内核诊断。真实日志入库和正式切流未获验收。
+
+
+### 日志中心正式发布（2026-11-25）
+
+运营方明确选择保留并复用现有公网 Elasticsearch 9200。后台候选使用 `SP_LOG_PUBLIC_HTTP=true`，采集进程使用 `--allow-public-http`，仅写正式前缀 `sp-log-prod-*`。既有 ES 实例持续运行，正式日志页仍使用后台管理员鉴权。
+
+两台正式代理先在独立回环监听完成设备证书、TCP 与帧 UDP 回显。用两台生产节点的 Nginx 二进制在回环实验中验证，UDP 上游切换会把已存在的会话发往新后端，故生产采用逐连接的 nftables 规则。两台节点的隔离网络命名空间均验证了保留旧流、分流新连接、拒绝直接访问候选端口，以及回退后继续承接已建立映射。正式切流保持旧驱动存活，先切 `zhh-1`，再切 `zhh-2`。两条公网 9090 均通过 HTTP/3 设备证书、TCP、帧 UDP 以及账号标记入库验证。验证后删除本轮 12 条合成账号事件。
+
+正式后台监听回环 18183，Nginx 已将生产路由指向该实例。公网 `/admin/logs`、`/admin/logs.js`、`/admin/grants`、`/account/devices` 均验证身份跳转，OIDC 登录页及设备 challenge 接口返回 200。原后台容器与旧代理进程保留供回退。未使用真实管理员凭据验证登录后的后台查询。
+
+两台节点持久服务为 `simpleplane-log-node.service`、`simpleplane-log-ship.service`、`simpleplane-log-routing.service`，数据与采集检查点在 `/var/lib/simpleplane-loglens`。控制面正式容器为 `simpleplane-subscriptions-portal-next`，原站点配置和灰度片段的备份位于正式包的 SHA-256 发布目录。

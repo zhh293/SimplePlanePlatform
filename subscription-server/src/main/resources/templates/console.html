@@ -2,7 +2,9 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title th:text="|${title} · SimplePlane|">运营概览 · SimplePlane</title>
-<link rel="stylesheet" href="/admin/console.css"><script defer src="/admin/console.js"></script></head>
+<link rel="stylesheet" href="/admin/console.css"><script defer src="/admin/console.js"></script>
+<link th:if="${tab=='logs'}" rel="stylesheet" href="/admin/logs.css">
+<script th:if="${tab=='logs'}" defer src="/admin/logs.js"></script></head>
 <body data-console><a class="skip" href="#content">跳至内容</a>
 <aside><a class="brand" href="/admin/grants"><i aria-hidden="true"></i>SimplePlane</a>
 <div class="railtitle">订阅运营后台</div>
@@ -11,13 +13,16 @@
 <a href="/admin/users" th:classappend="${tab=='users' or tab=='user'}?'active'"><b aria-hidden="true">◎</b>用户管理</a>
 <a href="/admin/groups" th:classappend="${tab=='groups' or tab=='group'}?'active'"><b aria-hidden="true">⊞</b>节点分组</a>
 <a href="/admin/nodes" th:classappend="${tab=='nodes' or tab=='node'}?'active'"><b aria-hidden="true">⌁</b>节点管理</a>
+<a th:if="${logAccess}" href="/admin/logs" th:classappend="${tab=='logs'}?'active'"><b aria-hidden="true">▥</b>日志中心</a>
 <a href="/admin/audit" th:classappend="${tab=='audit'}?'active'"><b aria-hidden="true">≡</b>操作记录</a></nav>
 <a class="back" href="/account/devices">我的设备 ↗</a></aside>
 <main id="content">
 <header><div><p class="crumb"><a href="/admin/grants">管理后台</a> / <span th:text="${title}"></span></p>
 <h1 th:text="${tab=='user'?u.username:(tab=='group'?g.label:(tab=='node' and !newNode?n.label:title))}"></h1></div>
 <a th:if="${tab=='home'}" class="button" href="/admin/users#new-user">＋ 新增用户</a>
-<a th:if="${tab=='nodes'}" class="button" href="/admin/nodes/new">＋ 添加节点</a></header>
+<a th:if="${tab=='nodes'}" class="button" href="/admin/nodes/new">＋ 添加节点</a>
+<a th:if="${logAccess and tab=='user'}" class="button ghost" th:href="@{/admin/logs(subject=${u.subject_id})}">查看用户日志</a>
+<a th:if="${logAccess and tab=='node' and !newNode}" class="button ghost" th:href="@{/admin/logs(node=${n.node_id})}">查看节点日志</a></header>
 <p class="notice" role="status" th:if="${notice}" th:text="${notice}"></p>
 
 <section th:if="${tab=='home'}">
@@ -96,4 +101,5 @@
 <section th:if="${tab=='audit'}" class="panel"><div class="sectionhead"><h2>运营操作</h2><span class="hint">北京时间</span></div><div th:replace="~{console-parts :: history}"></div>
 <div class="pages"><a th:if="${page>0}" th:href="@{/admin/audit(page=${page-1})}">上一页</a><a th:if="${more}" th:href="@{/admin/audit(page=${page+1})}">下一页</a></div></section>
 <section th:if="${tab=='error'}" class="panel"><p role="alert" th:text="${message}"></p><a href="/admin/grants">返回运营概览</a></section>
+<th:block th:if="${tab=='logs'}"><section th:replace="~{logs :: workspace}"></section></th:block>
 </main></body></html>

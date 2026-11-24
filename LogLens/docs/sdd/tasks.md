@@ -43,3 +43,12 @@
 | T24 | [x] | T19,T23 | 最终 Agent 在 Java 17/21 实际 ProxyRemoteServer 中完成启动及 100 个 loopback 连接开关烟测（生命周期事件全量落盘）；实际 OutboundSession 字节计数、队列满载/排空、保留、gap 恢复、只读/loopback 安全和 Java 8 禁用守卫均有测试；部署说明已写入 `docs/proxy-remote-monitoring.md` | R25–R34 |
 | T25 | [x] | T24 | 将发布 Agent 接入实际 systemd proxy-remote.service，验证 Java 17 启动、面板健康和服务 MainPID 持有 loopback Web 端口；通过本地 SSH 隧道验证 UI/API，并记录脱敏部署证据与运维步骤 | R25,R31,R34 |
 | T26 | [~] | T24 | 更新 Docker Remote 至 Java 17+，构建并注入 LogLens Agent；为配置/历史数据增加挂载，为 loopback 面板增加受限 relay 与 SSH 访问文档；默认关闭公网 9090 发布并提供显式 override；需完成 compose 解析与镜像/容器验收 | R29,R32,R34,R35 |
+
+## 运营日志中心任务
+
+| 任务 | 状态 | 目标 | 需求 |
+|---|---|---|---|
+| T27 | [x] | Linux Java 17 隔离验证不同设备归属、兼容凭据、TCP/UDP 与关联日志 | R36 |
+| T28 | [x] | 远端 ES 7.12.1 合成索引验证增量采集、断线恢复、重放和实际采集样本入库 | R37 |
+| T29 | [x] | 运营页模板与浏览器测试、远端 ES 查询和聚合 | R38 |
+| T30 | [x] | 按确认的公网 9200 配置完成两节点逐连接切换及正式后台发布，公网代理、索引和登录入口已验证 | R39 |

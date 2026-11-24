@@ -93,6 +93,10 @@ public class NodeCatalog implements ApplicationRunner {
     }
 
     List<IssuedNode> issue(String group, String device, byte[] spki, Instant expires) {
+        return issue(group, device, null, spki, expires);
+    }
+
+    List<IssuedNode> issue(String group, String device, String accountId, byte[] spki, Instant expires) {
         List<IssuedNode> nodes = new ArrayList<>();
         try {
             var publicKey = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(spki));
@@ -108,6 +112,11 @@ public class NodeCatalog implements ApplicationRunner {
                 cert.addExtension(Extension.basicConstraints, true, new BasicConstraints(false));
                 cert.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature));
                 cert.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(KeyPurposeId.id_kp_clientAuth));
+                if (accountId != null) {
+                    if (!accountId.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Invalid account identifier");
+                    cert.addExtension(Extension.subjectAlternativeName, false, new GeneralNames(
+                            new GeneralName(GeneralName.uniformResourceIdentifier, "https://simpleplane.invalid/account/" + accountId)));
+                }
                 X509Certificate leaf = new JcaX509CertificateConverter().getCertificate(cert.build(
                         new JcaContentSignerBuilder("SHA256withECDSA").build(keys.signer())));
                 nodes.add(new IssuedNode(n.id(),n.label(),n.host(),n.port(),"http3",n.serverName(),n.ca(),
