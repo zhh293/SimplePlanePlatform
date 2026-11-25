@@ -339,11 +339,18 @@ where
     let cipher = Cipher::from_name(&node.cipher.to_ascii_lowercase(), &node.key)?;
     if node.transport == Transport::Http3 {
         let addr = resolve_server_addr_async(&node.host, node.port, Arc::clone(&protector)).await?;
-        let identity = if node.subscription_id.is_empty() { None } else {
+        let identity = if node.subscription_id.is_empty() {
+            None
+        } else {
             let node_id = node.subscription_id.clone();
             let platform = protector.clone();
-            Some(tokio::task::spawn_blocking(move || platform.device_credential(&node_id))
-                .await.map_err(|_| CoreError::Internal("Device credential worker stopped".into()))??)
+            Some(
+                tokio::task::spawn_blocking(move || platform.device_credential(&node_id))
+                    .await
+                    .map_err(|_| {
+                        CoreError::Internal("Device credential worker stopped".into())
+                    })??,
+            )
         };
         return outbound_h3::OutboundConnection::connect_with_identity(
             addr,
@@ -621,7 +628,9 @@ mod tests {
     async fn subscription_requires_platform_identity_to_open_an_authenticated_stream() {
         struct Device(Vec<u8>);
         impl SocketProtector for Device {
-            fn protect(&self, _: i32) -> bool { true }
+            fn protect(&self, _: i32) -> bool {
+                true
+            }
             fn device_credential(&self, id: &str) -> Result<Vec<u8>> {
                 assert_eq!(id, "assigned-node");
                 Ok(self.0.clone())
@@ -640,16 +649,38 @@ mod tests {
         identity.extend_from_slice(&encoded);
         identity.extend_from_slice(cert.der());
         let (addr, ca_pem, server) = outbound_h3::tests::mock_proxy_with_client_ca(
-            200, Some(200), "aes-gcm-v2", &[0x42; 32], Some(issuer.der().clone()),
-        ).await;
+            200,
+            Some(200),
+            "aes-gcm-v2",
+            &[0x42; 32],
+            Some(issuer.der().clone()),
+        )
+        .await;
         let node = RemoteNodeConfig {
-            name: "subscription".into(), host: addr.ip().to_string(), port: addr.port(),
-            key: vec![0x42; 32], cipher: "aes-gcm-v2".into(), tls: true, transport: Transport::Http3,
-            server_name: "localhost".into(), ca_pem, subscription_id: "assigned-node".into(),
+            name: "subscription".into(),
+            host: addr.ip().to_string(),
+            port: addr.port(),
+            key: vec![0x42; 32],
+            cipher: "aes-gcm-v2".into(),
+            tls: true,
+            transport: Transport::Http3,
+            server_name: "localhost".into(),
+            ca_pem,
+            subscription_id: "assigned-node".into(),
         };
-        assert!(establish_outbound(&node, Arc::new(crate::outbound::NoopProtector)).await.is_err());
-        assert!(establish_outbound(&node, Arc::new(Device(vec![0, 32, 1, 2]))).await.is_err());
-        let mut conn = establish_outbound(&node, Arc::new(Device(identity))).await.unwrap();
+        assert!(
+            establish_outbound(&node, Arc::new(crate::outbound::NoopProtector))
+                .await
+                .is_err()
+        );
+        assert!(
+            establish_outbound(&node, Arc::new(Device(vec![0, 32, 1, 2])))
+                .await
+                .is_err()
+        );
+        let mut conn = establish_outbound(&node, Arc::new(Device(identity)))
+            .await
+            .unwrap();
         conn.open_proxy_stream("tcp.test", 443).await.unwrap();
         conn.open_udp_stream("udp.test", 53).await.unwrap();
         server.abort();

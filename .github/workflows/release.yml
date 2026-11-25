@@ -250,8 +250,8 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Step 5b: Build + Release (tag push only)
-      - name: Build & Release Tauri Desktop App
+      # Stage both desktop packages for review with the signed Android APK.
+      - name: Build Tauri Desktop App and upload to the release draft
         if: startsWith(github.ref, 'refs/tags/')
         uses: tauri-apps/tauri-action@v0
         env:
@@ -261,21 +261,8 @@ jobs:
           projectPath: desktop
           tagName: ${{ github.ref_name }}
           releaseName: 'SimplePlane ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download and install this version.'
-          releaseDraft: false
+          releaseBody: 'Install SimplePlane from the asset for your platform.'
+          releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}
           updaterJsonPreferNsis: true
-
-      # Step 6: Verify updater endpoint (post-release sanity check)
-      - name: Verify latest.json is accessible
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          sleep 10
-          STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
-            "https://github.com/zhh293/SimplePlanePlatform/releases/latest/download/latest.json")
-          echo "latest.json HTTP status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "::warning::latest.json not yet accessible (status=$STATUS), CDN may need time to propagate"
-          fi

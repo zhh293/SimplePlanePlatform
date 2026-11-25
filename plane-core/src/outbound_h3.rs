@@ -248,7 +248,10 @@ impl OutboundConnection {
     }
 
     pub(crate) async fn connect_with_identity<P: SocketProtector>(
-        addr: SocketAddr, protector: &P, cipher: Cipher, config: OutboundConfig,
+        addr: SocketAddr,
+        protector: &P,
+        cipher: Cipher,
+        config: OutboundConfig,
         identity: Option<Vec<u8>>,
     ) -> Result<Self> {
         let bind_addr = if addr.is_ipv4() {
@@ -286,8 +289,7 @@ impl OutboundConnection {
             }
         }
         let builder = if pinned_legacy_certificates.is_empty() {
-            rustls::ClientConfig::builder()
-                .with_root_certificates(roots)
+            rustls::ClientConfig::builder().with_root_certificates(roots)
         } else {
             let verifier = Arc::new(PinnedServerCertVerifier::new(
                 pinned_legacy_certificates,
@@ -298,14 +300,21 @@ impl OutboundConnection {
                 .with_custom_certificate_verifier(verifier)
         };
         let mut tls_config = if let Some(bytes) = identity {
-            if bytes.len() < 4 || bytes.len() > 16384 { return Err(CoreError::Protocol("Invalid device credential".into())); }
+            if bytes.len() < 4 || bytes.len() > 16384 {
+                return Err(CoreError::Protocol("Invalid device credential".into()));
+            }
             let end = 2 + u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
-            if end <= 2 || end >= bytes.len() { return Err(CoreError::Protocol("Invalid device key length".into())); }
+            if end <= 2 || end >= bytes.len() {
+                return Err(CoreError::Protocol("Invalid device key length".into()));
+            }
             let key = rustls::pki_types::PrivatePkcs8KeyDer::from(bytes[2..end].to_vec());
             let cert = rustls::pki_types::CertificateDer::from(bytes[end..].to_vec());
-            builder.with_client_auth_cert(vec![cert], key.into())
+            builder
+                .with_client_auth_cert(vec![cert], key.into())
                 .map_err(|_| CoreError::Protocol("Invalid device TLS identity".into()))?
-        } else { builder.with_no_client_auth() };
+        } else {
+            builder.with_no_client_auth()
+        };
         tls_config.alpn_protocols = vec![b"h3".to_vec()];
         let quic_crypto = quinn::crypto::rustls::QuicClientConfig::try_from(tls_config)
             .map_err(|e| CoreError::Protocol(format!("HTTP/3 TLS config failed: {e}")))?;
@@ -728,7 +737,11 @@ pub(crate) mod tests {
             Some(ca) => {
                 let mut roots = rustls::RootCertStore::empty();
                 roots.add(ca).unwrap();
-                builder.with_client_cert_verifier(rustls::server::WebPkiClientVerifier::builder(Arc::new(roots)).build().unwrap())
+                builder.with_client_cert_verifier(
+                    rustls::server::WebPkiClientVerifier::builder(Arc::new(roots))
+                        .build()
+                        .unwrap(),
+                )
             }
             None => builder.with_no_client_auth(),
         };
