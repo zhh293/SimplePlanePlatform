@@ -94,10 +94,23 @@ struct JniProtector {
 impl SocketProtector for JniProtector {
     fn device_credential(&self, node_id: &str) -> Result<Vec<u8>> {
         let mut env = self.cb.vm.attach_current_thread()?;
-        let bridge = self.cb.bridge.as_ref().ok_or_else(|| CoreError::Internal("JNI bridge unavailable".into()))?;
+        let bridge = self
+            .cb
+            .bridge
+            .as_ref()
+            .ok_or_else(|| CoreError::Internal("JNI bridge unavailable".into()))?;
         let node = env.new_string(node_id)?;
-        let value = env.call_method(bridge.as_obj(), "deviceCredential", "(Ljava/lang/String;)[B", &[JValue::Object(&node)])?.l()?;
-        if value.is_null() { return Err(CoreError::Protocol("Device credential unavailable".into())); }
+        let value = env
+            .call_method(
+                bridge.as_obj(),
+                "deviceCredential",
+                "(Ljava/lang/String;)[B",
+                &[JValue::Object(&node)],
+            )?
+            .l()?;
+        if value.is_null() {
+            return Err(CoreError::Protocol("Device credential unavailable".into()));
+        }
         Ok(env.convert_byte_array(jni::objects::JByteArray::from(value))?)
     }
     fn protect(&self, fd: i32) -> bool {
